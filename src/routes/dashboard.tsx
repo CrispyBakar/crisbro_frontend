@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, LogOut, Gift, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { getUser, logout, type AuthUser } from "@/lib/auth";
+import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -19,6 +19,7 @@ const REWARD_THRESHOLD = 2000;
 function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const u = getUser();
@@ -27,6 +28,21 @@ function DashboardPage() {
       return;
     }
     setUser(u);
+
+    apiProfile()
+      .then((freshUser) => {
+        setUser(freshUser);
+        setError("");
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message.toLowerCase().includes("token")) {
+          logout();
+          navigate({ to: "/login" });
+          return;
+        }
+
+        setError(err instanceof Error ? err.message : "Gagal memperbarui data profil");
+      });
   }, [navigate]);
 
   if (!user) return null;
@@ -60,6 +76,12 @@ function DashboardPage() {
             <LogOut className="h-4 w-4" /> Keluar
           </Button>
         </div>
+
+        {error && (
+          <div className="mb-5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+            {error}
+          </div>
+        )}
 
         {/* Membership Card */}
         <div

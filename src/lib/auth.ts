@@ -45,6 +45,22 @@ export function logout() {
   window.dispatchEvent(new Event("auth-change"));
 }
 
+export async function apiProfile() {
+  const token = getToken();
+  if (!token) throw new Error("Token tidak ditemukan");
+
+  const res = await fetch(`${API_BASE}/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Gagal mengambil profil");
+
+  localStorage.setItem(USER_KEY, JSON.stringify(data));
+  window.dispatchEvent(new Event("auth-change"));
+
+  return data as AuthUser;
+}
+
 export async function apiLogin(phone_number: string, password: string) {
   const res = await fetch(`${API_BASE}/login`, {
     method: "POST",
