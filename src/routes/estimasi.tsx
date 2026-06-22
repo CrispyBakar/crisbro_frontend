@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, ArrowLeft, Camera } from "lucide-react";
-import { getDemoUser, type DemoUser } from "@/lib/demo-auth";
+import { getUser, type AuthUser } from "@/lib/auth";
 
 // State yang dikirim dari cart saat checkout berhasil
 export type EstimasiState = {
@@ -23,11 +23,11 @@ export const Route = createFileRoute("/estimasi")({
 
 function EstimasiPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState<DemoUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [state, setState] = useState<EstimasiState | null>(null);
 
   useEffect(() => {
-    const u = getDemoUser();
+    const u = getUser();
     if (!u) {
       navigate({ to: "/login" });
       return;
@@ -46,7 +46,9 @@ function EstimasiPage() {
   if (!user || !state) return null;
 
   const pointsAfter = state.pointsBefore - state.totalPoints;
-  const initials = user.name
+  const customerName = user.customer?.name ?? "Sahabat Crispy";
+  const phoneNumber = user.phone_number ?? "-";
+  const initials = customerName
     .split(" ")
     .slice(0, 2)
     .map((w) => w[0])
@@ -97,8 +99,8 @@ function EstimasiPage() {
                 {initials}
               </div>
               <div>
-                <p className="font-extrabold text-base leading-tight">{user.name}</p>
-                <p className="text-sm text-muted-foreground">{user.tel}</p>
+                <p className="font-extrabold text-base leading-tight">{customerName}</p>
+                <p className="text-sm text-muted-foreground">{phoneNumber}</p>
               </div>
             </div>
 
