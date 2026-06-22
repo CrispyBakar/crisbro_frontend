@@ -70,7 +70,7 @@ function Home() {
             </span>
             <h1 className="text-4xl md:text-6xl font-black leading-[1.05] tracking-tight text-foreground">
               Nikmati <span className="text-primary">Katsu</span> Favoritmu & Kumpulkan{" "}
-              <span className="text-[oklch(0.65_0.2_45)] text-[#e82c2c]">Poinnya!</span> 🍱
+              <span className="text-[oklch(0.65_0.2_45)]">Poinnya!</span> 🍱
             </h1>
             <p className="text-lg text-muted-foreground max-w-md">
               Katsu crispy gurih dengan saus rahasia. Tiap gigitan bikin happy, tiap pesanan dapat
