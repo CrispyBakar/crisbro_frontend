@@ -69,7 +69,7 @@ function EstimasiPage() {
 
       {/* Ticket Card */}
       <section className="mx-auto max-w-md">
-        <div className="rounded-[2rem] overflow-hidden border border-border shadow-[var(--shadow-soft)] bg-card">
+        <div className="rounded-[2rem] overflow-hidden border border-border shadow-(--shadow-soft) bg-card">
           {/* Header merah */}
           <div
             className="px-6 py-5 flex items-center gap-3"
@@ -187,7 +187,7 @@ function EstimasiPage() {
         {/* Action */}
         <Button
           asChild
-          className="mt-5 w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[var(--shadow-pop)]"
+          className="mt-5 w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop)"
         >
           <Link to="/dashboard">Kembali ke Dashboard</Link>
         </Button>

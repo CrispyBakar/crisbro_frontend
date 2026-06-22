@@ -54,7 +54,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 px-4 pt-4">
-      <nav className="mx-auto max-w-6xl flex items-center justify-between gap-4 rounded-full bg-card/80 backdrop-blur-md border border-border px-4 py-2 shadow-[var(--shadow-soft)]">
+      <nav className="mx-auto max-w-6xl flex items-center justify-between gap-4 rounded-full bg-card/80 backdrop-blur-md border border-border px-4 py-2 shadow-(--shadow-soft)">
         <Link
           to="/"
           className="flex items-center gap-2 pl-1"
@@ -99,7 +99,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => setDropdownOpen((v) => !v)}
-                className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-black text-base grid place-items-center shadow-[var(--shadow-pop)] hover:bg-primary/90 transition-colors focus:outline-none"
+                className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-black text-base grid place-items-center shadow-(--shadow-pop) hover:bg-primary/90 transition-colors focus:outline-none"
                 aria-label="Profil saya"
                 aria-expanded={dropdownOpen}
               >
@@ -108,7 +108,7 @@ export function Navbar() {
 
               {/* Dropdown card */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-card border border-border shadow-[var(--shadow-soft)] overflow-hidden">
+                <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-card border border-border shadow-(--shadow-soft) overflow-hidden">
                   {/* Arrow */}
                   <div className="absolute -top-2 right-3.5 h-3 w-3 rotate-45 bg-card border-l border-t border-border" />
 
@@ -152,7 +152,7 @@ export function Navbar() {
             <Button
               asChild
               variant="default"
-              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[var(--shadow-pop)]"
+              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop)"
             >
               <Link to="/login">
                 <Coins className="h-4 w-4" /> Cek Poin
@@ -179,7 +179,7 @@ export function Navbar() {
           open ? "max-h-96 opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
         }`}
       >
-        <div className="rounded-2xl bg-[#FDEC80] border border-border shadow-[var(--shadow-soft)] p-4">
+        <div className="rounded-2xl bg-[#FDEC80] border border-border shadow-(--shadow-soft) p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-foreground/80 px-2">Menu</span>
             <button
@@ -284,7 +284,7 @@ export function Navbar() {
           ) : (
             <Button
               asChild
-              className="mt-4 w-full rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[var(--shadow-pop)] h-12 text-base"
+              className="mt-4 w-full rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop) h-12 text-base"
             >
               <Link to="/login" onClick={close}>
                 <Coins className="h-5 w-5" /> Cek Poin

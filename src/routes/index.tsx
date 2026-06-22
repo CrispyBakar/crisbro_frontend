@@ -65,7 +65,7 @@ function Home() {
 
         <div className="grid md:grid-cols-2 gap-8 items-center p-6 md:p-12">
           <div className="space-y-6">
-            <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-1.5 text-sm font-bold text-primary shadow-[var(--shadow-pop)]">
+            <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-1.5 text-sm font-bold text-primary shadow-(--shadow-pop)">
               <Coins className="h-4 w-4" /> Crisbar Rewards
             </span>
             <h1 className="text-4xl md:text-6xl font-black leading-[1.05] tracking-tight text-foreground">
@@ -80,7 +80,7 @@ function Home() {
               <Button
                 asChild
                 size="lg"
-                className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 px-7 shadow-[var(--shadow-pop)]"
+                className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 px-7 shadow-(--shadow-pop)"
               >
                 <Link to="/menu">
                   <UtensilsCrossed className="h-5 w-5" /> Lihat Menu
@@ -116,9 +116,9 @@ function Home() {
               alt="Katsu ayam crispy Crisbar with special sauce"
               width={1024}
               height={1024}
-              className="relative rounded-[3rem] w-full h-auto object-cover shadow-[var(--shadow-soft)]"
+              className="relative rounded-[3rem] w-full h-auto object-cover shadow-(--shadow-soft)"
             />
-            <div className="absolute -bottom-3 -left-3 rounded-2xl bg-card px-4 py-2.5 shadow-[var(--shadow-soft)] border border-border rotate-[-6deg]">
+            <div className="absolute -bottom-3 -left-3 rounded-2xl bg-card px-4 py-2.5 shadow-(--shadow-soft) border border-border -rotate-6">
               <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                 Best Seller
               </p>
@@ -141,7 +141,7 @@ function Home() {
         ].map(({ icon: Icon, title, desc }) => (
           <div
             key={title}
-            className="rounded-3xl bg-card p-7 border border-border shadow-[var(--shadow-soft)] hover:-translate-y-1 transition-transform"
+            className="rounded-3xl bg-card p-7 border border-border shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
           >
             <div className="h-14 w-14 rounded-2xl bg-secondary grid place-items-center mb-5 border-[#fddd0d]">
               <Icon className="h-7 w-7 text-primary" />
@@ -165,7 +165,7 @@ function Home() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 px-7 shadow-[var(--shadow-pop)]"
+              className="rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 px-7 shadow-(--shadow-pop)"
             >
               <Link to="/lokasi">
                 <MapPin className="h-5 w-5" /> Cari Lokasi

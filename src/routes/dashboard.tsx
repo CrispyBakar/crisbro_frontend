@@ -85,7 +85,7 @@ function DashboardPage() {
 
         {/* Membership Card */}
         <div
-          className="relative rounded-[2rem] p-7 md:p-9 text-primary-foreground shadow-[var(--shadow-soft)] overflow-hidden"
+          className="relative rounded-[2rem] p-7 md:p-9 text-primary-foreground shadow-(--shadow-soft) overflow-hidden"
           style={{
             background:
               "linear-gradient(135deg, oklch(0.62 0.22 27) 0%, oklch(0.55 0.2 15) 60%, oklch(0.7 0.18 45) 100%)",
@@ -186,7 +186,7 @@ function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-extrabold">Riwayat Poin</h2>
           </div>
-          <div className="rounded-3xl bg-card border border-border shadow-[var(--shadow-soft)] p-8 text-center text-muted-foreground">
+          <div className="rounded-3xl bg-card border border-border shadow-(--shadow-soft) p-8 text-center text-muted-foreground">
             <p className="font-semibold">Belum ada riwayat transaksi poin.</p>
           </div>
         </section>

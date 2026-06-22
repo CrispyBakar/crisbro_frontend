@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 const API_BASE = "/api";
 const TOKEN_KEY = "crisbar_token";
 const USER_KEY = "crisbar_user";

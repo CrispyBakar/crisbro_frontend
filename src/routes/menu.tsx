@@ -1,13 +1,3 @@
-// src/routes/menu.tsx
-//
-// PERUBAHAN UTAMA dari versi sebelumnya:
-// 1. Hapus konstanta REDEEM_SKUS yang di-hardcode (sekarang dikelola di database
-//    via endpoint admin /api/admin/redeem-menu).
-// 2. Fetch langsung dari endpoint baru /api/catalog/redeem-menu, yang sudah
-//    melakukan join SKU + poin di backend.
-// 3. Field harga sekarang points_required (poin), BUKAN sell_price lagi,
-//    karena nilai poin redeem independen dari harga jual Runchise.
-
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -111,7 +101,7 @@ function MenuPage() {
   return (
     <main className="px-4 mt-10">
       <section className="mx-auto max-w-6xl text-center mb-8">
-        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-[var(--shadow-pop)]">
+        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-(--shadow-pop)">
           🍽️ Menu Redeem
         </span>
         <h1 className="mt-4 text-5xl md:text-6xl font-black tracking-tight">
@@ -125,13 +115,13 @@ function MenuPage() {
       {/* Filter bar — hanya tampil jika ada lebih dari 1 kategori */}
       {!loading && !error && categories.length > 1 && (
         <section className="mx-auto max-w-6xl mb-10 flex justify-center">
-          <div className="inline-flex flex-wrap justify-center gap-2 rounded-full bg-card border border-border p-2 shadow-[var(--shadow-soft)]">
+          <div className="inline-flex flex-wrap justify-center gap-2 rounded-full bg-card border border-border p-2 shadow-(--shadow-soft)">
             <button
               onClick={() => setActiveCategoryId(null)}
               className={cn(
                 "px-5 py-2 rounded-full text-sm font-bold transition-all",
                 activeCategoryId === null
-                  ? "bg-primary text-primary-foreground shadow-[var(--shadow-pop)]"
+                  ? "bg-primary text-primary-foreground shadow-(--shadow-pop)"
                   : "text-foreground/70 hover:bg-secondary hover:text-foreground",
               )}
             >
@@ -144,7 +134,7 @@ function MenuPage() {
                 className={cn(
                   "px-5 py-2 rounded-full text-sm font-bold transition-all",
                   activeCategoryId === cat.id
-                    ? "bg-primary text-primary-foreground shadow-[var(--shadow-pop)]"
+                    ? "bg-primary text-primary-foreground shadow-(--shadow-pop)"
                     : "text-foreground/70 hover:bg-secondary hover:text-foreground",
                 )}
               >
@@ -163,9 +153,9 @@ function MenuPage() {
         {filtered.map((item) => (
           <article
             key={item.id}
-            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-[var(--shadow-soft)] hover:-translate-y-1 transition-transform flex flex-col"
+            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+            <div className="relative aspect-4/3 overflow-hidden bg-secondary">
               {item.image_url ? (
                 <img
                   src={item.image_url}
@@ -179,7 +169,7 @@ function MenuPage() {
                 <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
               )}
               {item.category && (
-                <Badge className="absolute top-3 left-3 rounded-full bg-card text-primary hover:bg-card font-bold shadow-[var(--shadow-pop)] border border-border">
+                <Badge className="absolute top-3 left-3 rounded-full bg-card text-primary hover:bg-card font-bold shadow-(--shadow-pop) border border-border">
                   {item.category}
                 </Badge>
               )}
@@ -198,7 +188,7 @@ function MenuPage() {
                 </span>
                 <button
                   onClick={() => handleTukar(item)}
-                  className="rounded-full bg-primary text-primary-foreground font-bold px-5 py-2 shadow-[var(--shadow-pop)] hover:bg-primary/90 transition-colors"
+                  className="rounded-full bg-primary text-primary-foreground font-bold px-5 py-2 shadow-(--shadow-pop) hover:bg-primary/90 transition-colors"
                 >
                   Tukar
                 </button>

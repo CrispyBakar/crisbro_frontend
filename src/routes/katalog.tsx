@@ -1,4 +1,3 @@
-// src/routes/katalog.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +134,7 @@ function KatalogPage() {
   return (
     <main className="px-4 mt-10">
       <section className="mx-auto max-w-6xl text-center mb-10">
-        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-[var(--shadow-pop)]">
+        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-(--shadow-pop)">
           🛍️ Katalog Produk
         </span>
         <h1 className="mt-4 text-5xl md:text-6xl font-black tracking-tight">
@@ -156,7 +155,7 @@ function KatalogPage() {
               placeholder="Cari produk atau kategori..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-10 py-3 rounded-full border border-border bg-card text-sm font-medium shadow-[var(--shadow-soft)] focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full pl-11 pr-10 py-3 rounded-full border border-border bg-card text-sm font-medium shadow-(--shadow-soft) focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {search && (
               <button
@@ -169,7 +168,7 @@ function KatalogPage() {
           </div>
 
           {/* Filter kategori */}
-          <div className="rounded-3xl bg-card border border-border p-4 shadow-[var(--shadow-soft)]">
+          <div className="rounded-3xl bg-card border border-border p-4 shadow-(--shadow-soft)">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-muted-foreground">
                 Kategori <span className="text-foreground">({categories.length})</span>
@@ -190,7 +189,7 @@ function KatalogPage() {
                 onClick={() => setActiveCategoryId(null)}
                 className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
                   activeCategoryId === null
-                    ? "bg-primary text-primary-foreground border-primary shadow-[var(--shadow-pop)]"
+                    ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
                     : "bg-background border-border hover:bg-secondary"
                 }`}
               >
@@ -203,7 +202,7 @@ function KatalogPage() {
                   onClick={() => setActiveCategoryId(activeCategoryId === cat.id ? null : cat.id)}
                   className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
                     activeCategoryId === cat.id
-                      ? "bg-primary text-primary-foreground border-primary shadow-[var(--shadow-pop)]"
+                      ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
                       : "bg-secondary border-secondary-foreground/20 hover:bg-secondary/70 text-secondary-foreground"
                   }`}
                 >
@@ -267,9 +266,9 @@ function KatalogPage() {
         {paginated.map((p) => (
           <article
             key={p.id}
-            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-[var(--shadow-soft)] hover:-translate-y-1 transition-transform flex flex-col"
+            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+            <div className="relative aspect-4/3 overflow-hidden bg-secondary">
               {p.image_url ? (
                 <img
                   src={p.image_url}
@@ -280,7 +279,7 @@ function KatalogPage() {
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
               )}
-              <Badge className="absolute top-3 left-3 rounded-full bg-card text-primary font-bold shadow-[var(--shadow-pop)] border border-border">
+              <Badge className="absolute top-3 left-3 rounded-full bg-card text-primary font-bold shadow-(--shadow-pop) border border-border">
                 {p.category}
               </Badge>
             </div>
@@ -345,7 +344,7 @@ function KatalogPage() {
                 aria-current={p === currentPage ? "page" : undefined}
                 className={`h-10 w-10 grid place-items-center rounded-full text-sm font-bold transition-all border ${
                   p === currentPage
-                    ? "bg-primary text-primary-foreground border-primary shadow-[var(--shadow-pop)]"
+                    ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
                     : "bg-card border-border hover:bg-secondary"
                 }`}
               >

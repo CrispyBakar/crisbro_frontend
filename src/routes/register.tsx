@@ -68,7 +68,7 @@ function RegisterPage() {
     <main className="px-4 mt-10">
       <section className="mx-auto max-w-md">
         <div className="text-center mb-6">
-          <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-[var(--shadow-pop)]">
+          <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-(--shadow-pop)">
             <Sparkles className="h-4 w-4" /> Crisbar Rewards
           </span>
           <h1 className="mt-4 text-4xl md:text-5xl font-black tracking-tight">
@@ -81,7 +81,7 @@ function RegisterPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-3xl bg-card border border-border p-7 shadow-[var(--shadow-soft)] space-y-4"
+          className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) space-y-4"
         >
           <label className="block">
             <span className="text-sm font-bold text-foreground/80">Nama Lengkap</span>
@@ -143,7 +143,7 @@ function RegisterPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[var(--shadow-pop)]"
+            className="w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop)"
           >
             <UserPlus className="h-5 w-5" /> {loading ? "Memproses..." : "Daftar Sekarang"}
           </Button>

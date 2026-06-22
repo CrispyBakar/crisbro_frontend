@@ -63,7 +63,7 @@ function LokasiPage() {
         {locations.map((o) => (
           <article
             key={o.id}
-            className="rounded-3xl bg-card border border-border p-7 shadow-[var(--shadow-soft)] hover:-translate-y-1 transition-transform"
+            className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
           >
             <div className="flex items-start gap-4">
               <div className="h-14 w-14 rounded-2xl bg-secondary grid place-items-center shrink-0">
