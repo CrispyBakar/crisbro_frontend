@@ -46,8 +46,20 @@ function MenuPage() {
 
   useEffect(() => {
     fetch(`${API_BASE}/catalog/redeem-menu`)
-      .then((r) => r.json())
-      .then((data: MenuItem[]) => {
+      .then(async (r) => {
+        const data = await r.json();
+
+        if (!r.ok) {
+          throw new Error(data?.message || data?.error || "Gagal memuat menu redeem");
+        }
+
+        if (!Array.isArray(data)) {
+          throw new Error("Format data menu redeem tidak valid");
+        }
+
+        return data as MenuItem[];
+      })
+      .then((data) => {
         setItems(data);
 
         // Kategori diturunkan langsung dari hasil redeem-menu, tidak perlu
@@ -113,7 +125,7 @@ function MenuPage() {
       </section>
 
       {/* Filter bar — hanya tampil jika ada lebih dari 1 kategori */}
-      {!loading && !error && categories.length > 1 && (
+      {!loading && !error && (
         <section className="mx-auto max-w-6xl mb-10 flex justify-center">
           <div className="inline-flex flex-wrap justify-center gap-2 rounded-full bg-card border border-border p-2 shadow-(--shadow-soft)">
             <button
