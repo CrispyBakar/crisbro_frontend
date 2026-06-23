@@ -130,7 +130,7 @@ function LoginPage() {
         </form>
 
         <p className="text-center mt-6 text-sm text-muted-foreground">
-          Sudah terdaftar di Crisbro namun belum punya akun?{" "}
+          Belum punya akun?{" "}
           <Link to="/register" className="font-bold text-primary hover:underline">
             Hubungi Admin Kami
           </Link>
