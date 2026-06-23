@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { getUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/menu")({
@@ -31,16 +30,9 @@ type MenuItem = {
   sort_order: number;
 };
 
-type Category = {
-  id: number | null;
-  name: string;
-};
-
 function MenuPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -61,23 +53,10 @@ function MenuPage() {
       })
       .then((data) => {
         setItems(data);
-
-        // Kategori diturunkan langsung dari hasil redeem-menu, tidak perlu
-        // fetch endpoint kategori terpisah seperti sebelumnya.
-        const catMap = new Map<number, Category>();
-        data.forEach((item) => {
-          if (item.category_id !== null && item.category) {
-            catMap.set(item.category_id, { id: item.category_id, name: item.category });
-          }
-        });
-        setCategories(Array.from(catMap.values()));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
-
-  const filtered =
-    activeCategoryId === null ? items : items.filter((i) => i.category_id === activeCategoryId);
 
   const handleTukar = (item: MenuItem) => {
     const user = getUser();
@@ -124,45 +103,12 @@ function MenuPage() {
         </p>
       </section>
 
-      {/* Filter bar — hanya tampil jika ada lebih dari 1 kategori */}
-      {!loading && !error && (
-        <section className="mx-auto max-w-6xl mb-10 flex justify-center">
-          <div className="inline-flex flex-wrap justify-center gap-2 rounded-full bg-card border border-border p-2 shadow-(--shadow-soft)">
-            <button
-              onClick={() => setActiveCategoryId(null)}
-              className={cn(
-                "px-5 py-2 rounded-full text-sm font-bold transition-all",
-                activeCategoryId === null
-                  ? "bg-primary text-primary-foreground shadow-(--shadow-pop)"
-                  : "text-foreground/70 hover:bg-secondary hover:text-foreground",
-              )}
-            >
-              Semua
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className={cn(
-                  "px-5 py-2 rounded-full text-sm font-bold transition-all",
-                  activeCategoryId === cat.id
-                    ? "bg-primary text-primary-foreground shadow-(--shadow-pop)"
-                    : "text-foreground/70 hover:bg-secondary hover:text-foreground",
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
       {loading && <p className="text-center text-muted-foreground mt-10">Memuat menu...</p>}
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
       {/* Grid Menu */}
       <section className="mx-auto max-w-6xl grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((item) => (
+        {items.map((item) => (
           <article
             key={item.id}
             className="group rounded-3xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
@@ -210,7 +156,7 @@ function MenuPage() {
         ))}
       </section>
 
-      {!loading && !error && filtered.length === 0 && (
+      {!loading && !error && items.length === 0 && (
         <div className="text-center mt-12 space-y-2">
           <p className="text-4xl">🍽️</p>
           <p className="text-muted-foreground font-semibold">
