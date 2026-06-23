@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Sparkles, LogOut, Gift, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Sparkles, LogOut, Gift } from "lucide-react";
 import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
@@ -19,22 +19,36 @@ const REWARD_THRESHOLD = 2000;
 function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const u = getUser();
-    if (!u) {
+    let cancelled = false;
+
+    const cachedUser = getUser();
+    if (!cachedUser) {
       navigate({ to: "/login" });
       return;
     }
-    setUser(u);
 
-    apiProfile()
-      .then((freshUser) => {
+    async function refreshProfile({ silent = false } = {}) {
+      if (silent) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      try {
+        const freshUser = await apiProfile();
+
+        if (cancelled) return;
+
         setUser(freshUser);
         setError("");
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
+        if (cancelled) return;
+
         if (err instanceof Error && err.message.toLowerCase().includes("token")) {
           logout();
           navigate({ to: "/login" });
@@ -42,8 +56,44 @@ function DashboardPage() {
         }
 
         setError(err instanceof Error ? err.message : "Gagal memperbarui data profil");
-      });
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    }
+
+    function handleWindowFocus() {
+      refreshProfile({ silent: true });
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshProfile({ silent: true });
+      }
+    }
+
+    refreshProfile();
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [navigate]);
+
+  if (loading) {
+    return (
+      <main className="px-4 mt-10">
+        <section className="mx-auto max-w-3xl">
+          <p className="text-center text-muted-foreground font-semibold">Memuat dashboard...</p>
+        </section>
+      </main>
+    );
+  }
 
   if (!user) return null;
 
@@ -80,6 +130,11 @@ function DashboardPage() {
         {error && (
           <div className="mb-5 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
             {error}
+          </div>
+        )}
+        {refreshing && !error && (
+          <div className="mb-5 rounded-2xl bg-secondary/70 px-4 py-3 text-sm font-bold text-secondary-foreground">
+            Memperbarui data poin...
           </div>
         )}
 
