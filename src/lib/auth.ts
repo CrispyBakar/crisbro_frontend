@@ -68,7 +68,7 @@ export async function apiLogin(phone_number: string, password: string) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message || "Login gagal");
-  return data as { token: string; user: AuthUser };
+  return data as { token: string; expiresIn: string; user: AuthUser };
 }
 
 export async function apiRegister(name: string, phone_number: string, password: string) {
