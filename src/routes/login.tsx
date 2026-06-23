@@ -131,9 +131,12 @@ function LoginPage() {
 
         <p className="text-center mt-6 text-sm text-muted-foreground">
           Belum punya akun?{" "}
-          <Link to="/register" className="font-bold text-primary hover:underline">
+          <a
+            href="https://wa.me/6282121214145?text=Halo%20Minbar!%20Aku%20mau%20nambah%20poin%20Crisbro%20dong"
+            className="font-bold text-primary hover:underline"
+          >
             Hubungi Admin Kami
-          </Link>
+          </a>
         </p>
       </section>
     </main>
