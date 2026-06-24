@@ -45,6 +45,7 @@ export function Navbar() {
   const customerName = user?.customer?.name ?? "";
   const initial = customerName.charAt(0).toUpperCase() || "?";
   const phoneNumber = user?.phone_number ?? "-";
+  const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   const linkClass =
     "px-4 py-2 rounded-full text-sm font-semibold text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-all";
@@ -89,6 +90,11 @@ export function Navbar() {
           <Link to="/lokasi" className={linkClass} activeProps={{ className: activeClass }}>
             Lokasi
           </Link>
+          {isAdmin && (
+            <Link to="/admin" className={linkClass} activeProps={{ className: activeClass }}>
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* Desktop CTA — kondisional */}
@@ -135,6 +141,16 @@ export function Navbar() {
                       <LayoutDashboard className="h-4 w-4 text-primary" />
                       Dashboard
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-primary" />
+                        Admin
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -249,6 +265,19 @@ export function Navbar() {
             >
               Lokasi
             </Link>
+            {isAdmin && (
+              <Link
+                to="/admin"
+                onClick={close}
+                className="px-4 py-3 rounded-xl text-base font-semibold text-foreground hover:bg-background/60 transition-colors"
+                activeProps={{
+                  className:
+                    "px-4 py-3 rounded-xl text-base font-semibold text-primary bg-background",
+                }}
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Mobile CTA — kondisional */}
@@ -270,6 +299,15 @@ export function Navbar() {
               >
                 <LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={close}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
+                >
+                  <LayoutDashboard className="h-4 w-4 text-primary" /> Admin
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => {
