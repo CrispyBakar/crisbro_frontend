@@ -18,6 +18,10 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
+type RegisterError = Error & {
+  whatsappUrl?: string;
+};
+
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.startsWith("62")) return digits.slice(2);
@@ -32,6 +36,7 @@ function RegisterPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [whatsappUrl, setWhatsappUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -58,7 +63,15 @@ function RegisterPage() {
       await apiRegister(name.trim(), normalized, password);
       navigate({ to: "/login" });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registrasi gagal, coba lagi.");
+      if (err instanceof Error) {
+        setError(err.message);
+
+        const registerError = err as RegisterError;
+        setWhatsappUrl(registerError.whatsappUrl || "");
+      } else {
+        setError("Registrasi gagal, coba lagi.");
+        setWhatsappUrl("");
+      }
     } finally {
       setLoading(false);
     }
@@ -136,7 +149,18 @@ function RegisterPage() {
 
           {error && (
             <div className="rounded-2xl bg-destructive/10 text-destructive text-sm font-medium px-4 py-3">
-              {error}
+              <p>{error}</p>
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block font-bold underline text-primary"
+                >
+                  Hubungi Admin via WhatsApp
+                </a>
+              )}
             </div>
           )}
 

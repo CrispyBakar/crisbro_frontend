@@ -2,6 +2,10 @@ const API_BASE = "/api";
 const TOKEN_KEY = "crisbar_token";
 const USER_KEY = "crisbar_user";
 
+type RegisterError = Error & {
+  whatsappUrl?: string;
+};
+
 export type AuthUser = {
   id: number;
   email?: string;
@@ -78,6 +82,10 @@ export async function apiRegister(name: string, phone_number: string, password: 
     body: JSON.stringify({ name, phone_number, password }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Registrasi gagal");
+  if (!res.ok) {
+    const error = new Error(data.message || "Registrasi gagal") as RegisterError;
+    error.whatsappUrl = data.whatsappUrl;
+    throw error;
+  }
   return data;
 }
