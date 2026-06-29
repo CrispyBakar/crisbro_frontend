@@ -32,8 +32,6 @@ export type LoyaltySummary = {
   points_earned: number;
   points_redeemed: number;
   redemption_count: number;
-  pending_redemptions: number;
-  claimed_redemptions: number;
   top_rewards: Array<{
     reward_id: number;
     reward_name: string;

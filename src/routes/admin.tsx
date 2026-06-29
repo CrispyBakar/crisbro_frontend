@@ -280,8 +280,6 @@ function AdminPage() {
               <Metric title="Poin Ditukar" value={numberFormat(summary.points_redeemed)} />
               <Metric title="Poin Tersedia" value={numberFormat(summary.total_points_available)} />
               <Metric title="Total Redeem" value={numberFormat(summary.redemption_count)} />
-              <Metric title="Pending" value={numberFormat(summary.pending_redemptions)} />
-              <Metric title="Claimed" value={numberFormat(summary.claimed_redemptions)} />
             </div>
             <Panel title="Reward paling sering ditukar">
               <DataTable
