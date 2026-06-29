@@ -95,7 +95,30 @@ export type Redemption = {
   };
 };
 
+export type AdminUser = {
+  id: number;
+  email: string | null;
+  phone_number: string | null;
+  role: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminUserPayload = {
+  email?: string | null;
+  phone_number?: string | null;
+  password?: string;
+  role?: string;
+};
+
 export const adminApi = {
+  users: (search = "") =>
+    adminRequest<AdminUser[]>(`/users${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  createUser: (payload: AdminUserPayload) =>
+    adminRequest<AdminUser>("/users", { method: "POST", body: JSON.stringify(payload) }),
+  updateUser: (id: number, payload: AdminUserPayload) =>
+    adminRequest<AdminUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteUser: (id: number) => adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
   summary: () => adminRequest<LoyaltySummary>("/loyalty-summary"),
   rewards: () => adminRequest<Reward[]>("/rewards"),
   createReward: (payload: Partial<Reward>) =>

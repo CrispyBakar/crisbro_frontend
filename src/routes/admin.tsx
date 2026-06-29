@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
+  type AdminUser,
   type CatalogMenuItem,
   type LoyaltySummary,
   type RedeemCategory,
@@ -12,7 +13,7 @@ import {
   type Redemption,
   type Reward,
 } from "@/lib/admin";
-import { BarChart3, Gift, ListChecks, RefreshCw, TicketCheck } from "lucide-react";
+import { BarChart3, Gift, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "report" | "rewards" | "redeem" | "redemptions";
+type Tab = "report" | "users" | "rewards" | "redeem" | "redemptions";
 
 const emptyReward = {
   id: 0,
@@ -36,6 +37,14 @@ const emptyReward = {
   is_active: true,
 };
 
+const emptyUserForm = {
+  id: 0,
+  email: "",
+  phone_number: "",
+  password: "",
+  role: "marketing",
+};
+
 function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
@@ -43,6 +52,9 @@ function numberFormat(value: number) {
 function AdminPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("report");
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [userForm, setUserForm] = useState(emptyUserForm);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [rewardForm, setRewardForm] = useState(emptyReward);
@@ -71,10 +83,9 @@ function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const canAccess = useMemo(() => {
-    const user = getUser();
-    return user?.role === "admin" || user?.role === "staff";
-  }, []);
+  const currentUser = useMemo(() => getUser(), []);
+  const canAccess = currentUser?.role === "admin" || currentUser?.role === "staff";
+  const canManageUsers = currentUser?.role === "admin";
 
   async function loadAll() {
     setLoading(true);
@@ -95,6 +106,10 @@ function AdminPage() {
       setRedeemItems(redeemData);
       setRedemptions(redemptionData);
 
+      if (canManageUsers) {
+        setUsers(await adminApi.users(userSearch));
+      }
+
       if (!redeemForm.category_id && categoryData[0]) {
         setRedeemForm((form) => ({ ...form, category_id: categoryData[0].id }));
       }
@@ -102,6 +117,15 @@ function AdminPage() {
       setError(err instanceof Error ? err.message : "Gagal memuat data admin");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function searchUsers() {
+    setError("");
+    try {
+      setUsers(await adminApi.users(userSearch));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mencari user");
     }
   }
 
@@ -150,6 +174,48 @@ function AdminPage() {
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan reward");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveUser() {
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        email: userForm.email || null,
+        phone_number: userForm.phone_number || null,
+        role: userForm.role,
+        ...(userForm.password ? { password: userForm.password } : {}),
+      };
+
+      if (userForm.id) {
+        await adminApi.updateUser(userForm.id, payload);
+      } else {
+        await adminApi.createUser(payload);
+      }
+
+      setUserForm(emptyUserForm);
+      setUsers(await adminApi.users(userSearch));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan user");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteUser(id: number) {
+    if (!window.confirm("Hapus user ini?")) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      await adminApi.deleteUser(id);
+      setUsers(await adminApi.users(userSearch));
+      if (userForm.id === id) setUserForm(emptyUserForm);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus user");
     } finally {
       setSaving(false);
     }
@@ -244,6 +310,14 @@ function AdminPage() {
             icon={<BarChart3 className="h-4 w-4" />}
             label="Laporan"
           />
+          {canManageUsers && (
+            <TabButton
+              active={tab === "users"}
+              onClick={() => setTab("users")}
+              icon={<Users className="h-4 w-4" />}
+              label="User"
+            />
+          )}
           <TabButton
             active={tab === "rewards"}
             onClick={() => setTab("rewards")}
@@ -290,6 +364,118 @@ function AdminPage() {
                   numberFormat(reward.points_spent),
                 ])}
               />
+            </Panel>
+          </section>
+        )}
+
+        {!loading && tab === "users" && canManageUsers && (
+          <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
+            <Panel title={userForm.id ? "Edit User" : "Tambah User"}>
+              <FormInput
+                label="Email"
+                type="email"
+                value={userForm.email}
+                onChange={(v) => setUserForm({ ...userForm, email: v })}
+              />
+              <FormInput
+                label="Nomor Telepon"
+                value={userForm.phone_number}
+                onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
+              />
+              <FormInput
+                label={userForm.id ? "Password Baru" : "Password"}
+                type="password"
+                value={userForm.password}
+                onChange={(v) => setUserForm({ ...userForm, password: v })}
+              />
+              <Select
+                label="Role"
+                value={userForm.role}
+                onChange={(v) => setUserForm({ ...userForm, role: v })}
+                options={[
+                  { value: "marketing", label: "Marketing" },
+                  { value: "staff", label: "Staff" },
+                  { value: "admin", label: "Admin" },
+                ]}
+              />
+              <div className="mt-3 flex gap-2">
+                <Button
+                  onClick={saveUser}
+                  disabled={saving}
+                  className="flex-1 rounded-full font-bold"
+                >
+                  Simpan User
+                </Button>
+                {userForm.id > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setUserForm(emptyUserForm)}
+                    className="rounded-full font-bold"
+                  >
+                    Batal
+                  </Button>
+                )}
+              </div>
+            </Panel>
+            <Panel title="Daftar User Admin">
+              <div className="mb-4 flex gap-2">
+                <input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Cari email, nomor, atau role..."
+                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                />
+                <Button onClick={searchUsers} variant="outline">
+                  Cari
+                </Button>
+              </div>
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="p-2">Email</th>
+                      <th className="p-2">Nomor</th>
+                      <th className="p-2">Role</th>
+                      <th className="p-2">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className="border-t border-border">
+                        <td className="p-2 font-bold">{user.email ?? "-"}</td>
+                        <td className="p-2">{user.phone_number ?? "-"}</td>
+                        <td className="p-2 capitalize">{user.role}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-3">
+                            <button
+                              className="font-bold text-primary"
+                              onClick={() =>
+                                setUserForm({
+                                  id: user.id,
+                                  email: user.email ?? "",
+                                  phone_number: user.phone_number ?? "",
+                                  password: "",
+                                  role: user.role,
+                                })
+                              }
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
+                              disabled={saving || user.id === currentUser?.id}
+                              onClick={() => deleteUser(user.id)}
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Panel>
           </section>
         )}
