@@ -111,6 +111,73 @@ export type AdminUserPayload = {
   role?: string;
 };
 
+export type AdminBrand = {
+  id: number;
+  name: string;
+};
+
+export type AdminLocation = {
+  id: number;
+  name: string;
+  city: string | null;
+};
+
+export type AdminCustomer = {
+  id: number;
+  user_id: number;
+  name: string;
+  phone_number: string | null;
+  phone_number_country_code: number;
+  address: string | null;
+  province: string | null;
+  city: string | null;
+  country: string | null;
+  postal_code: string | null;
+  dob: string | null;
+  gender: string | null;
+  status: string | null;
+  balance: string | number;
+  brand_id: number;
+  owner_location_id: number | null;
+  user: { id: number; email: string | null; phone_number: string | null; role: string };
+  brand: AdminBrand;
+  owner_location: AdminLocation | null;
+  customer_point: {
+    total_point: number;
+    available_point: number;
+    next_reward_threshold: number;
+  } | null;
+};
+
+export type AdminCustomerPayload = {
+  name?: string;
+  email?: string | null;
+  phone_number?: string | null;
+  phone_number_country_code?: number;
+  address?: string | null;
+  province?: string | null;
+  city?: string | null;
+  country?: string | null;
+  postal_code?: string | null;
+  dob?: string | null;
+  gender?: string;
+  status?: string;
+  balance?: number;
+  brand_id?: number;
+  owner_location_id?: number | null;
+  total_point?: number;
+  available_point?: number;
+  next_reward_threshold?: number;
+};
+
+export type AdminCustomerPage = {
+  items: AdminCustomer[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 export const adminApi = {
   users: (search = "") =>
     adminRequest<AdminUser[]>(`/users${search ? `?search=${encodeURIComponent(search)}` : ""}`),
@@ -119,6 +186,21 @@ export const adminApi = {
   updateUser: (id: number, payload: AdminUserPayload) =>
     adminRequest<AdminUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteUser: (id: number) => adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
+  customers: (search = "", page = 1, limit = 20) =>
+    adminRequest<AdminCustomerPage>(
+      `/customers?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+    ),
+  createCustomer: (payload: AdminCustomerPayload) =>
+    adminRequest<AdminCustomer>("/customers", { method: "POST", body: JSON.stringify(payload) }),
+  updateCustomer: (id: number, payload: AdminCustomerPayload) =>
+    adminRequest<AdminCustomer>(`/customers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteCustomer: (id: number) =>
+    adminRequest<{ message: string }>(`/customers/${id}`, { method: "DELETE" }),
+  brands: () => adminRequest<AdminBrand[]>("/brands"),
+  locations: () => adminRequest<AdminLocation[]>("/locations"),
   summary: () => adminRequest<LoyaltySummary>("/loyalty-summary"),
   rewards: () => adminRequest<Reward[]>("/rewards"),
   createReward: (payload: Partial<Reward>) =>

@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
+  type AdminBrand,
+  type AdminCustomer,
+  type AdminLocation,
   type AdminUser,
   type CatalogMenuItem,
   type LoyaltySummary,
@@ -25,7 +28,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "report" | "users" | "rewards" | "redeem" | "redemptions";
+type Tab = "report" | "users" | "customers" | "rewards" | "redeem" | "redemptions";
 
 const emptyReward = {
   id: 0,
@@ -45,6 +48,28 @@ const emptyUserForm = {
   role: "marketing",
 };
 
+const emptyCustomerForm = {
+  id: 0,
+  name: "",
+  email: "",
+  phone_number: "",
+  phone_number_country_code: 62,
+  address: "",
+  province: "",
+  city: "",
+  country: "Indonesia",
+  postal_code: "",
+  dob: "",
+  gender: "unknown",
+  status: "active",
+  balance: 0,
+  brand_id: 1,
+  owner_location_id: 0,
+  total_point: 0,
+  available_point: 0,
+  next_reward_threshold: 2000,
+};
+
 function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
@@ -55,6 +80,15 @@ function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [userForm, setUserForm] = useState(emptyUserForm);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerPage, setCustomerPage] = useState(1);
+  const [customerTotalPages, setCustomerTotalPages] = useState(1);
+  const [customerTotal, setCustomerTotal] = useState(0);
+  const customerLimit = 20;
+  const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
+  const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [rewardForm, setRewardForm] = useState(emptyReward);
@@ -110,6 +144,21 @@ function AdminPage() {
         setUsers(await adminApi.users(userSearch));
       }
 
+      const [customerData, brandData, locationData] = await Promise.all([
+        adminApi.customers(customerSearch, customerPage, customerLimit),
+        adminApi.brands(),
+        adminApi.locations(),
+      ]);
+      setCustomers(customerData.items ?? []);
+      setCustomerTotalPages(customerData.total_pages ?? 1);
+      setCustomerTotal(customerData.total ?? 0);
+      setBrands(brandData);
+      setLocations(locationData);
+
+      if (!customerForm.brand_id && brandData[0]) {
+        setCustomerForm((form) => ({ ...form, brand_id: brandData[0].id }));
+      }
+
       if (!redeemForm.category_id && categoryData[0]) {
         setRedeemForm((form) => ({ ...form, category_id: categoryData[0].id }));
       }
@@ -126,6 +175,33 @@ function AdminPage() {
       setUsers(await adminApi.users(userSearch));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari user");
+    }
+  }
+
+  async function searchCustomers() {
+    setError("");
+    try {
+      setCustomerPage(1);
+      const data = await adminApi.customers(customerSearch, 1, customerLimit);
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mencari customer");
+    }
+  }
+
+  async function loadCustomersPage(page: number) {
+    const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
+    setError("");
+    try {
+      const data = await adminApi.customers(customerSearch, nextPage, customerLimit);
+      setCustomers(data.items ?? []);
+      setCustomerPage(data.page ?? nextPage);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat customer");
     }
   }
 
@@ -216,6 +292,66 @@ function AdminPage() {
       if (userForm.id === id) setUserForm(emptyUserForm);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus user");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveCustomer() {
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        name: customerForm.name,
+        email: customerForm.email || null,
+        phone_number: customerForm.phone_number || null,
+        phone_number_country_code: Number(customerForm.phone_number_country_code),
+        address: customerForm.address || null,
+        province: customerForm.province || null,
+        city: customerForm.city || null,
+        country: customerForm.country || null,
+        postal_code: customerForm.postal_code || null,
+        dob: customerForm.dob || null,
+        gender: customerForm.gender,
+        status: customerForm.status,
+        balance: Number(customerForm.balance),
+        brand_id: Number(customerForm.brand_id || brands[0]?.id || 1),
+        owner_location_id: customerForm.owner_location_id
+          ? Number(customerForm.owner_location_id)
+          : null,
+        total_point: Number(customerForm.total_point),
+        available_point: Number(customerForm.available_point),
+        next_reward_threshold: Number(customerForm.next_reward_threshold),
+      };
+
+      if (customerForm.id) {
+        await adminApi.updateCustomer(customerForm.id, payload);
+      } else {
+        await adminApi.createCustomer(payload);
+      }
+
+      setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
+      await loadCustomersPage(customerForm.id ? customerPage : 1);
+      setSummary(await adminApi.summary());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan customer");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteCustomer(id: number) {
+    if (!window.confirm("Hapus customer ini beserta akun login dan riwayat terkait?")) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      await adminApi.deleteCustomer(id);
+      await loadCustomersPage(customers.length === 1 && customerPage > 1 ? customerPage - 1 : customerPage);
+      setSummary(await adminApi.summary());
+      if (customerForm.id === id) setCustomerForm(emptyCustomerForm);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus customer");
     } finally {
       setSaving(false);
     }
@@ -315,9 +451,15 @@ function AdminPage() {
               active={tab === "users"}
               onClick={() => setTab("users")}
               icon={<Users className="h-4 w-4" />}
-              label="User"
+              label="User Admin"
             />
           )}
+          <TabButton
+            active={tab === "customers"}
+            onClick={() => setTab("customers")}
+            icon={<Users className="h-4 w-4" />}
+            label="Customers"
+          />
           <TabButton
             active={tab === "rewards"}
             onClick={() => setTab("rewards")}
@@ -358,10 +500,20 @@ function AdminPage() {
             <Panel title="Reward paling sering ditukar">
               <DataTable
                 headers={["Reward", "Jumlah", "Poin"]}
-                rows={summary.top_rewards.map((reward) => [
+                rows={(summary.top_rewards ?? []).map((reward) => [
                   reward.reward_name,
                   numberFormat(reward.redemption_count),
                   numberFormat(reward.points_spent),
+                ])}
+              />
+            </Panel>
+            <Panel title="Aktivasi akun per outlet">
+              <DataTable
+                headers={["Outlet", "Kota", "Jumlah Aktivasi"]}
+                rows={(summary.activation_by_outlet ?? []).map((outlet) => [
+                  outlet.outlet_name,
+                  outlet.city ?? "-",
+                  numberFormat(outlet.activated_count),
                 ])}
               />
             </Panel>
@@ -475,6 +627,265 @@ function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </Panel>
+          </section>
+        )}
+
+        {!loading && tab === "customers" && (
+          <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
+            <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
+              <div className="grid gap-3 md:grid-cols-2">
+                <FormInput
+                  label="Nama"
+                  value={customerForm.name}
+                  onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
+                />
+                <FormInput
+                  label="Nomor Telepon"
+                  value={customerForm.phone_number}
+                  onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
+                />
+              </div>
+              <FormInput
+                label="Email"
+                type="email"
+                value={customerForm.email}
+                onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
+              />
+              <div className="grid gap-3 md:grid-cols-2">
+                <Select
+                  label="Brand"
+                  value={String(customerForm.brand_id)}
+                  onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
+                  options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map((brand) => ({
+                    value: String(brand.id),
+                    label: brand.name,
+                  }))}
+                />
+                <Select
+                  label="Outlet"
+                  value={String(customerForm.owner_location_id)}
+                  onChange={(v) =>
+                    setCustomerForm({ ...customerForm, owner_location_id: Number(v) })
+                  }
+                  options={[
+                    { value: "0", label: "Tanpa outlet" },
+                    ...(locations ?? []).map((location) => ({
+                      value: String(location.id),
+                      label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
+                    })),
+                  ]}
+                />
+              </div>
+              <FormInput
+                label="Alamat"
+                value={customerForm.address}
+                onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
+              />
+              <div className="grid gap-3 md:grid-cols-2">
+                <FormInput
+                  label="Kota"
+                  value={customerForm.city}
+                  onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
+                />
+                <FormInput
+                  label="Provinsi"
+                  value={customerForm.province}
+                  onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
+                />
+                <FormInput
+                  label="Tanggal Lahir"
+                  type="date"
+                  value={customerForm.dob}
+                  onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
+                />
+                <Select
+                  label="Gender"
+                  value={customerForm.gender}
+                  onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
+                  options={[
+                    { value: "unknown", label: "Unknown" },
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                  ]}
+                />
+                <Select
+                  label="Status"
+                  value={customerForm.status}
+                  onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
+                  options={[
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                />
+                <FormInput
+                  label="Saldo"
+                  type="number"
+                  value={String(customerForm.balance)}
+                  onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <FormInput
+                  label="Total Poin"
+                  type="number"
+                  value={String(customerForm.total_point)}
+                  onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
+                />
+                <FormInput
+                  label="Poin Tersedia"
+                  type="number"
+                  value={String(customerForm.available_point)}
+                  onChange={(v) => setCustomerForm({ ...customerForm, available_point: Number(v) })}
+                />
+                <FormInput
+                  label="Target Reward"
+                  type="number"
+                  value={String(customerForm.next_reward_threshold)}
+                  onChange={(v) =>
+                    setCustomerForm({ ...customerForm, next_reward_threshold: Number(v) })
+                  }
+                />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  onClick={saveCustomer}
+                  disabled={saving}
+                  className="flex-1 rounded-full font-bold"
+                >
+                  Simpan Customer
+                </Button>
+                {customerForm.id > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 })
+                    }
+                    className="rounded-full font-bold"
+                  >
+                    Batal
+                  </Button>
+                )}
+              </div>
+            </Panel>
+            <Panel title="Daftar Customer">
+              <div className="mb-4 flex gap-2">
+                <input
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="Cari nama, nomor, email, atau outlet..."
+                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                />
+                <Button onClick={searchCustomers} variant="outline">
+                  Cari
+                </Button>
+              </div>
+              <div className="overflow-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="p-2">Nama</th>
+                      <th className="p-2">Kontak</th>
+                      <th className="p-2">Outlet</th>
+                      <th className="p-2">Poin</th>
+                      <th className="p-2">Status</th>
+                      <th className="p-2">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map((customer) => (
+                      <tr key={customer.id} className="border-t border-border">
+                        <td className="p-2 font-bold">{customer.name}</td>
+                        <td className="p-2">
+                          {customer.phone_number ?? "-"}
+                          <br />
+                          <span className="text-xs text-muted-foreground">
+                            {customer.user.email ?? "-"}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          {customer.owner_location?.name ?? "-"}
+                          <br />
+                          <span className="text-xs text-muted-foreground">
+                            {customer.owner_location?.city ?? customer.city ?? "-"}
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          {numberFormat(customer.customer_point?.available_point ?? 0)}
+                        </td>
+                        <td className="p-2 capitalize">{customer.status ?? "-"}</td>
+                        <td className="p-2">
+                          <div className="flex items-center gap-3">
+                            <button
+                              className="font-bold text-primary"
+                              onClick={() =>
+                                setCustomerForm({
+                                  id: customer.id,
+                                  name: customer.name,
+                                  email: customer.user.email ?? "",
+                                  phone_number: customer.phone_number ?? "",
+                                  phone_number_country_code: customer.phone_number_country_code,
+                                  address: customer.address ?? "",
+                                  province: customer.province ?? "",
+                                  city: customer.city ?? "",
+                                  country: customer.country ?? "Indonesia",
+                                  postal_code: customer.postal_code ?? "",
+                                  dob: customer.dob ? customer.dob.slice(0, 10) : "",
+                                  gender: customer.gender ?? "unknown",
+                                  status: customer.status ?? "active",
+                                  balance: Number(customer.balance ?? 0),
+                                  brand_id: customer.brand_id,
+                                  owner_location_id: customer.owner_location_id ?? 0,
+                                  total_point: customer.customer_point?.total_point ?? 0,
+                                  available_point: customer.customer_point?.available_point ?? 0,
+                                  next_reward_threshold:
+                                    customer.customer_point?.next_reward_threshold ?? 2000,
+                                })
+                              }
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
+                              disabled={saving}
+                              onClick={() => deleteCustomer(customer.id)}
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p className="font-semibold text-muted-foreground">
+                  Total {numberFormat(customerTotal)} customer · Halaman {customerPage} dari{" "}
+                  {customerTotalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving || customerPage <= 1}
+                    onClick={() => loadCustomersPage(customerPage - 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saving || customerPage >= customerTotalPages}
+                    onClick={() => loadCustomersPage(customerPage + 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
               </div>
             </Panel>
           </section>
@@ -860,7 +1271,7 @@ function Select({
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 font-medium"
       >
-        {options.map((option) => (
+        {(options ?? []).map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -870,13 +1281,13 @@ function Select({
   );
 }
 
-function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
+function DataTable({ headers, rows }: { headers: string[]; rows?: string[][] }) {
   return (
     <div className="overflow-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-muted-foreground">
-            {headers.map((header) => (
+            {(headers ?? []).map((header) => (
               <th key={header} className="p-2">
                 {header}
               </th>
@@ -884,9 +1295,9 @@ function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
+          {(rows ?? []).map((row, index) => (
             <tr key={index} className="border-t border-border">
-              {row.map((cell, cellIndex) => (
+              {(row ?? []).map((cell, cellIndex) => (
                 <td key={cellIndex} className="p-2 font-medium">
                   {cell}
                 </td>
