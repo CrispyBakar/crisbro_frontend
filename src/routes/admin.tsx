@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
@@ -17,6 +18,7 @@ import {
   type Reward,
 } from "@/lib/admin";
 import { BarChart3, Gift, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -497,16 +499,14 @@ function AdminPage() {
               <Metric title="Poin Tersedia" value={numberFormat(summary.total_points_available)} />
               <Metric title="Total Redeem" value={numberFormat(summary.redemption_count)} />
             </div>
-            <Panel title="Reward paling sering ditukar">
-              <DataTable
-                headers={["Reward", "Jumlah", "Poin"]}
-                rows={(summary.top_rewards ?? []).map((reward) => [
-                  reward.reward_name,
-                  numberFormat(reward.redemption_count),
-                  numberFormat(reward.points_spent),
-                ])}
-              />
-            </Panel>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Panel title="Reward paling sering ditukar">
+                <TopRewardsChart rewards={summary.top_rewards ?? []} />
+              </Panel>
+              <Panel title="5 outlet paling sering redeem">
+                <TopRedeemOutletsChart outlets={summary.top_redeem_outlets ?? []} />
+              </Panel>
+            </div>
             <Panel title="Aktivasi akun per outlet">
               <DataTable
                 headers={["Outlet", "Kota", "Jumlah Aktivasi"]}
@@ -1198,6 +1198,250 @@ function Metric({ title, value }: { title: string; value: string }) {
     <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
       <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
       <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  );
+}
+
+function TopRewardsChart({
+  rewards,
+}: {
+  rewards: LoyaltySummary["top_rewards"];
+}) {
+  const colors = ["#E11D48", "#F97316", "#EAB308", "#22C55E", "#0EA5E9"];
+  const chartData = rewards.map((reward, index) => ({
+    rank: index + 1,
+    name: reward.reward_name,
+    shortName:
+      reward.reward_name.length > 24 ? `${reward.reward_name.slice(0, 24)}...` : reward.reward_name,
+    redemptions: reward.redemption_count,
+    points: reward.points_spent,
+    fill: colors[index % colors.length],
+  }));
+  const totalRedemptions = chartData.reduce((sum, reward) => sum + reward.redemptions, 0);
+
+  if (chartData.length === 0) {
+    return <p className="text-sm font-semibold text-muted-foreground">Belum ada data redemption.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold text-muted-foreground">
+        Total {numberFormat(totalRedemptions)} redeem dari 5 reward teratas
+      </p>
+      <ChartContainer
+        config={{
+          redemptions: {
+            label: "Jumlah Redeem",
+            color: colors[0],
+          },
+        }}
+        className="min-h-[230px] w-full"
+      >
+        <BarChart
+          data={chartData}
+          layout="vertical"
+          margin={{ top: 4, right: 42, left: 0, bottom: 4 }}
+          barCategoryGap={10}
+        >
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tickFormatter={(value) => numberFormat(Number(value))}
+          />
+          <YAxis
+            dataKey="shortName"
+            type="category"
+            width={138}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tick={({ x, y, payload }) => {
+              const item = chartData.find((reward) => reward.shortName === payload.value);
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text
+                    x={0}
+                    y={0}
+                    dy={4}
+                    textAnchor="end"
+                    className="fill-foreground text-[11px] font-bold"
+                  >
+                    {item ? `#${item.rank} ${payload.value}` : payload.value}
+                  </text>
+                </g>
+              );
+            }}
+          />
+          <ChartTooltip
+            cursor={{ fill: "hsl(var(--muted))" }}
+            content={
+              <ChartTooltipContent
+                hideLabel={false}
+                labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
+                formatter={(value, name, item) => (
+                  <div className="grid min-w-[190px] gap-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        {name === "redemptions" ? "Jumlah Redeem" : name}
+                      </span>
+                      <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
+                    </div>
+                    {item.payload?.points !== undefined && (
+                      <div className="flex items-center justify-between gap-4 text-xs">
+                        <span className="text-muted-foreground">Poin Terpakai</span>
+                        <span className="font-mono font-semibold">
+                          {numberFormat(Number(item.payload.points))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              />
+            }
+          />
+          <Bar dataKey="redemptions" radius={[0, 7, 7, 0]} barSize={22}>
+            {chartData.map((entry) => (
+              <Cell key={entry.name} fill={entry.fill} />
+            ))}
+            <LabelList
+              dataKey="redemptions"
+              position="right"
+              offset={10}
+              className="fill-foreground text-xs font-black"
+              formatter={(value: number) => numberFormat(value)}
+            />
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+    </div>
+  );
+}
+
+function TopRedeemOutletsChart({
+  outlets,
+}: {
+  outlets: NonNullable<LoyaltySummary["top_redeem_outlets"]>;
+}) {
+  const colors = ["#0EA5E9", "#22C55E", "#F97316", "#E11D48", "#8B5CF6"];
+  const chartData = outlets.map((outlet, index) => ({
+    rank: index + 1,
+    name: outlet.outlet_name,
+    shortName:
+      outlet.outlet_name.length > 22 ? `${outlet.outlet_name.slice(0, 22)}...` : outlet.outlet_name,
+    redemptions: outlet.redemption_count,
+    points: outlet.points_spent,
+    city: outlet.city,
+    fill: colors[index % colors.length],
+  }));
+  const totalRedemptions = chartData.reduce((sum, outlet) => sum + outlet.redemptions, 0);
+
+  if (chartData.length === 0) {
+    return <p className="text-sm font-semibold text-muted-foreground">Belum ada data redeem outlet.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold text-muted-foreground">
+        Total {numberFormat(totalRedemptions)} redeem dari 5 outlet teratas
+      </p>
+      <ChartContainer
+        config={{
+          redemptions: {
+            label: "Jumlah Redeem",
+            color: colors[0],
+          },
+        }}
+        className="min-h-[230px] w-full"
+      >
+        <BarChart
+          data={chartData}
+          layout="vertical"
+          margin={{ top: 4, right: 42, left: 0, bottom: 4 }}
+          barCategoryGap={10}
+        >
+          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+          <XAxis
+            type="number"
+            allowDecimals={false}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tickFormatter={(value) => numberFormat(Number(value))}
+          />
+          <YAxis
+            dataKey="shortName"
+            type="category"
+            width={138}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tick={({ x, y, payload }) => {
+              const item = chartData.find((outlet) => outlet.shortName === payload.value);
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text
+                    x={0}
+                    y={0}
+                    dy={4}
+                    textAnchor="end"
+                    className="fill-foreground text-[11px] font-bold"
+                  >
+                    {item ? `#${item.rank} ${payload.value}` : payload.value}
+                  </text>
+                </g>
+              );
+            }}
+          />
+          <ChartTooltip
+            cursor={{ fill: "hsl(var(--muted))" }}
+            content={
+              <ChartTooltipContent
+                hideLabel={false}
+                labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
+                formatter={(value, name, item) => (
+                  <div className="grid min-w-[190px] gap-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">
+                        {name === "redemptions" ? "Jumlah Redeem" : name}
+                      </span>
+                      <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
+                    </div>
+                    {item.payload?.city && (
+                      <div className="text-xs font-semibold text-muted-foreground">
+                        {item.payload.city}
+                      </div>
+                    )}
+                    {item.payload?.points !== undefined && (
+                      <div className="flex items-center justify-between gap-4 text-xs">
+                        <span className="text-muted-foreground">Poin Terpakai</span>
+                        <span className="font-mono font-semibold">
+                          {numberFormat(Number(item.payload.points))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              />
+            }
+          />
+          <Bar dataKey="redemptions" radius={[0, 7, 7, 0]} barSize={22}>
+            {chartData.map((entry) => (
+              <Cell key={entry.name} fill={entry.fill} />
+            ))}
+            <LabelList
+              dataKey="redemptions"
+              position="right"
+              offset={10}
+              className="fill-foreground text-xs font-black"
+              formatter={(value: number) => numberFormat(value)}
+            />
+          </Bar>
+        </BarChart>
+      </ChartContainer>
     </div>
   );
 }

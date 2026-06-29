@@ -38,6 +38,19 @@ export type LoyaltySummary = {
     redemption_count: number;
     points_spent: number;
   }>;
+  activation_by_outlet?: Array<{
+    outlet_id: number;
+    outlet_name: string;
+    city: string | null;
+    activated_count: number;
+  }>;
+  top_redeem_outlets?: Array<{
+    outlet_id: number;
+    outlet_name: string;
+    city: string | null;
+    redemption_count: number;
+    points_spent: number;
+  }>;
 };
 
 export type Reward = {
