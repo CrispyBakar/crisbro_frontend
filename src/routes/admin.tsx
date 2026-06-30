@@ -10,6 +10,7 @@ import {
   type AdminCustomer,
   type AdminLocation,
   type AdminUser,
+  type CatalogMenuCategory,
   type CatalogMenuItem,
   type LoyaltySummary,
   type RedeemCategory,
@@ -125,6 +126,7 @@ function AdminPage() {
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
   const [categories, setCategories] = useState<RedeemCategory[]>([]);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<CatalogMenuCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
   const [reportRedemptionTo, setReportRedemptionTo] = useState("");
@@ -152,6 +154,10 @@ function AdminPage() {
   const currentUser = useMemo(() => getUser(), []);
   const canAccess = currentUser?.role === "admin" || currentUser?.role === "staff";
   const canManageUsers = currentUser?.role === "admin";
+  const selectedCatalogItem = useMemo(
+    () => catalogItems.find((item) => item.id === redeemForm.menu_item_id) ?? null,
+    [catalogItems, redeemForm.menu_item_id],
+  );
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -247,11 +253,9 @@ function AdminPage() {
   const searchCatalog = useCallback(async () => {
     setError("");
     try {
-      const items = await adminApi.menuItems(catalogSearch);
-      setCatalogItems(items);
-      if (items[0]) {
-        setRedeemForm((form) => ({ ...form, menu_item_id: items[0].id }));
-      }
+      const catalog = await adminApi.menuItems(catalogSearch);
+      setCatalogCategories(catalog.categories ?? []);
+      setCatalogItems(catalog.items ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari menu");
     }
@@ -266,8 +270,8 @@ function AdminPage() {
   }, [canAccess, loadAll, navigate]);
 
   useEffect(() => {
-    if (tab === "redeem" && catalogItems.length === 0) searchCatalog();
-  }, [catalogItems.length, searchCatalog, tab]);
+    if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
+  }, [catalogCategories.length, searchCatalog, tab]);
 
   async function saveUser() {
     setSaving(true);
@@ -987,14 +991,12 @@ function AdminPage() {
                     Cari
                   </Button>
                 </div>
-                <Select
-                  label="Menu"
-                  value={String(redeemForm.menu_item_id)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, menu_item_id: Number(v) })}
-                  options={catalogItems.map((item) => ({
-                    value: String(item.id),
-                    label: `${item.name} — ${item.category?.name ?? "Tanpa kategori"}`,
-                  }))}
+                <CategoryMenuPicker
+                  categories={catalogCategories}
+                  items={catalogItems}
+                  selectedItem={selectedCatalogItem}
+                  selectedItemId={redeemForm.menu_item_id}
+                  onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
                 />
                 <Select
                   label="Kategori Redeem"
@@ -1490,6 +1492,151 @@ function RedemptionHistoryChart({
         />
       </LineChart>
     </ChartContainer>
+  );
+}
+
+function CategoryMenuPicker({
+  categories,
+  items,
+  selectedItem,
+  selectedItemId,
+  onSelect,
+}: {
+  categories: CatalogMenuCategory[];
+  items: CatalogMenuItem[];
+  selectedItem: CatalogMenuItem | null;
+  selectedItemId: number;
+  onSelect: (item: CatalogMenuItem) => void;
+}) {
+  const groups = useMemo(() => {
+    const groupMap = new Map<
+      string,
+      { id: string; name: string; isActive: boolean; items: CatalogMenuItem[] }
+    >();
+
+    for (const category of categories) {
+      groupMap.set(String(category.id), {
+        id: String(category.id),
+        name: category.name,
+        isActive: category.is_active,
+        items: [],
+      });
+    }
+
+    for (const item of items) {
+      const categoryId = item.category?.id ?? 0;
+      const categoryName = item.category?.name ?? "Tanpa kategori";
+      const categoryIsActive = item.category?.is_active ?? true;
+      const id = String(categoryId);
+
+      if (!groupMap.has(id)) {
+        groupMap.set(id, {
+          id,
+          name: categoryName,
+          isActive: categoryIsActive,
+          items: [],
+        });
+      }
+
+      groupMap.get(id)?.items.push(item);
+    }
+
+    return Array.from(groupMap.values()).sort((a, b) => {
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [categories, items]);
+
+  const [activeGroupId, setActiveGroupId] = useState("");
+
+  useEffect(() => {
+    if (groups.length === 0) {
+      setActiveGroupId("");
+      return;
+    }
+
+    const selectedGroup = groups.find((group) =>
+      group.items.some((item) => item.id === selectedItemId),
+    );
+    const nextGroupId = selectedGroup?.id ?? groups[0].id;
+
+    setActiveGroupId((current) =>
+      current && groups.some((group) => group.id === current) ? current : nextGroupId,
+    );
+  }, [groups, selectedItemId]);
+
+  const activeGroup = groups.find((group) => group.id === activeGroupId) ?? groups[0];
+
+  return (
+    <div className="mb-3">
+      <p className="mb-1 text-sm font-bold">Menu</p>
+      <div className="rounded-xl border border-border bg-background">
+        <div className="border-b border-border px-3 py-2 text-sm font-semibold text-muted-foreground">
+          {selectedItem
+            ? `${selectedItem.name} - ${selectedItem.category?.name ?? "Tanpa kategori"}`
+            : "Pilih menu dari kategori"}
+        </div>
+        {groups.length === 0 ? (
+          <p className="p-3 text-sm font-semibold text-muted-foreground">
+            Tidak ada menu ditemukan.
+          </p>
+        ) : (
+          <div className="grid min-h-[220px] md:grid-cols-[220px_1fr]">
+            <div className="border-b border-border md:border-b-0 md:border-r">
+              {groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onMouseEnter={() => setActiveGroupId(group.id)}
+                  onFocus={() => setActiveGroupId(group.id)}
+                  onClick={() => setActiveGroupId(group.id)}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-bold ${
+                    activeGroup?.id === group.id
+                      ? "bg-secondary text-secondary-foreground"
+                      : "hover:bg-secondary/70"
+                  }`}
+                >
+                  <span>
+                    {group.name}
+                    {!group.isActive && (
+                      <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase text-muted-foreground">
+                        Nonaktif
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{group.items.length}</span>
+                </button>
+              ))}
+            </div>
+            <div className="max-h-[320px] overflow-auto p-2">
+              {(activeGroup?.items ?? []).length === 0 ? (
+                <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
+                  Belum ada menu aktif di kategori ini.
+                </p>
+              ) : (
+                (activeGroup?.items ?? []).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onSelect(item)}
+                    className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm ${
+                      selectedItemId === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary"
+                    }`}
+                  >
+                    <span className="block font-bold">{item.name}</span>
+                    <span className="text-xs opacity-80">
+                      {currencyFormat(toNumber(item.price))}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

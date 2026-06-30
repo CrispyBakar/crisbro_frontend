@@ -90,7 +90,18 @@ export type CatalogMenuItem = {
   price: string | number;
   image_url: string | null;
   is_active: boolean;
-  category?: { id: number; name: string };
+  category?: { id: number; name: string; is_active?: boolean };
+};
+
+export type CatalogMenuCategory = {
+  id: number;
+  name: string;
+  is_active: boolean;
+};
+
+export type CatalogMenuResponse = {
+  categories: CatalogMenuCategory[];
+  items: CatalogMenuItem[];
 };
 
 export type RedeemCategory = {
@@ -248,8 +259,8 @@ export const adminApi = {
   updateReward: (id: number, payload: Partial<Reward>) =>
     adminRequest<Reward>(`/rewards/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   menuItems: (search = "") =>
-    adminRequest<CatalogMenuItem[]>(
-      `/catalog/menu-items?limit=100${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+    adminRequest<CatalogMenuResponse>(
+      `/catalog/menu-items?limit=1000${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     ),
   redeemCategories: () => adminRequest<RedeemCategory[]>("/redeem-menu/categories"),
   createRedeemCategory: (payload: Partial<RedeemCategory>) =>
