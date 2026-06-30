@@ -13,7 +13,6 @@ import {
   type CatalogMenuCategory,
   type CatalogMenuItem,
   type LoyaltySummary,
-  type RedeemCategory,
   type RedeemItem,
 } from "@/lib/admin";
 import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users } from "lucide-react";
@@ -74,7 +73,6 @@ const emptyCustomerForm = {
 type RedeemFormState = {
   id: number;
   menu_item_id: number;
-  category_id: number;
   points_required: number;
   estimated_cost: string | number;
   sort_order: number;
@@ -123,7 +121,6 @@ function AdminPage() {
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
-  const [categories, setCategories] = useState<RedeemCategory[]>([]);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
   const [catalogCategories, setCatalogCategories] = useState<CatalogMenuCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
@@ -132,13 +129,13 @@ function AdminPage() {
   const [redeemForm, setRedeemForm] = useState<RedeemFormState>({
     id: 0,
     menu_item_id: 0,
-    category_id: 0,
     points_required: 0,
     estimated_cost: "",
     sort_order: 0,
     is_active: true,
   });
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [appliedCatalogSearch, setAppliedCatalogSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -155,16 +152,14 @@ function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, categoryData, redeemData] = await Promise.all([
+      const [summaryData, redeemData] = await Promise.all([
         adminApi.summary({
           redemption_from: reportRedemptionFrom,
           redemption_to: reportRedemptionTo,
         }),
-        adminApi.redeemCategories(),
         adminApi.redeemItems(),
       ]);
       setSummary(summaryData);
-      setCategories(categoryData);
       setRedeemItems(redeemData);
 
       if (canManageUsers) {
@@ -185,10 +180,6 @@ function AdminPage() {
       if (!customerForm.brand_id && brandData[0]) {
         setCustomerForm((form) => ({ ...form, brand_id: brandData[0].id }));
       }
-
-      if (!redeemForm.category_id && categoryData[0]) {
-        setRedeemForm((form) => ({ ...form, category_id: categoryData[0].id }));
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat data admin");
     } finally {
@@ -200,7 +191,6 @@ function AdminPage() {
     customerLimit,
     customerPage,
     customerSearch,
-    redeemForm.category_id,
     reportRedemptionFrom,
     reportRedemptionTo,
     userSearch,
@@ -245,13 +235,28 @@ function AdminPage() {
   const searchCatalog = useCallback(async () => {
     setError("");
     try {
-      const catalog = await adminApi.menuItems(catalogSearch);
+      const search = catalogSearch.trim();
+      const catalog = await adminApi.menuItems(search);
       setCatalogCategories(catalog.categories ?? []);
       setCatalogItems(catalog.items ?? []);
+      setAppliedCatalogSearch(search);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari menu");
     }
   }, [catalogSearch]);
+
+  async function resetCatalogSearch() {
+    setError("");
+    setCatalogSearch("");
+    try {
+      const catalog = await adminApi.menuItems("");
+      setCatalogCategories(catalog.categories ?? []);
+      setCatalogItems(catalog.items ?? []);
+      setAppliedCatalogSearch("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat menu");
+    }
+  }
 
   useEffect(() => {
     if (!canAccess) {
@@ -384,7 +389,6 @@ function AdminPage() {
     try {
       const payload = {
         menu_item_id: Number(redeemForm.menu_item_id),
-        category_id: Number(redeemForm.category_id),
         points_required: Number(redeemForm.points_required),
         estimated_cost: redeemForm.estimated_cost === "" ? null : Number(redeemForm.estimated_cost),
         sort_order: Number(redeemForm.sort_order),
@@ -398,7 +402,6 @@ function AdminPage() {
       setRedeemForm({
         id: 0,
         menu_item_id: 0,
-        category_id: categories[0]?.id ?? 0,
         points_required: 0,
         estimated_cost: "",
         sort_order: 0,
@@ -424,7 +427,6 @@ function AdminPage() {
         setRedeemForm({
           id: 0,
           menu_item_id: 0,
-          category_id: categories[0]?.id ?? 0,
           points_required: 0,
           estimated_cost: "",
           sort_order: 0,
@@ -952,28 +954,28 @@ function AdminPage() {
                   <input
                     value={catalogSearch}
                     onChange={(e) => setCatalogSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") searchCatalog();
+                    }}
                     placeholder="Cari menu..."
                     className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
                   />
                   <Button onClick={searchCatalog} variant="outline">
                     Cari
                   </Button>
+                  {appliedCatalogSearch && (
+                    <Button onClick={resetCatalogSearch} variant="outline">
+                      Reset
+                    </Button>
+                  )}
                 </div>
                 <CategoryMenuPicker
                   categories={catalogCategories}
                   items={catalogItems}
+                  searchQuery={appliedCatalogSearch}
                   selectedItem={selectedCatalogItem}
                   selectedItemId={redeemForm.menu_item_id}
                   onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
-                />
-                <Select
-                  label="Kategori Redeem"
-                  value={String(redeemForm.category_id)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, category_id: Number(v) })}
-                  options={categories.map((category) => ({
-                    value: String(category.id),
-                    label: category.name,
-                  }))}
                 />
                 <FormInput
                   label="Poin Redeem"
@@ -1008,11 +1010,10 @@ function AdminPage() {
             </Panel>
             <Panel title="Menu Redeem Aktif dan Draft">
               <div className="overflow-x-auto">
-                <table className="min-w-[920px] text-sm">
+                <table className="min-w-[820px] text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Menu</th>
-                      <th className="p-2">Kategori</th>
                       <th className="p-2">Harga Jual</th>
                       <th className="p-2">Poin</th>
                       <th className="p-2">Nilai/Poin</th>
@@ -1025,7 +1026,6 @@ function AdminPage() {
                     {redeemItems.map((item) => (
                       <tr key={item.id} className="border-t border-border">
                         <td className="p-2 font-bold">{item.menu_item.name}</td>
-                        <td className="p-2">{item.category.name}</td>
                         <td className="p-2">{currencyFormat(toNumber(item.menu_item.price))}</td>
                         <td className="p-2">{numberFormat(item.points_required)}</td>
                         <td className="p-2">
@@ -1047,7 +1047,6 @@ function AdminPage() {
                               setRedeemForm({
                                 id: item.id,
                                 menu_item_id: item.menu_item_id,
-                                category_id: item.category_id,
                                 points_required: item.points_required,
                                 estimated_cost: item.estimated_cost ?? "",
                                 sort_order: item.sort_order,
@@ -1468,29 +1467,34 @@ function RedemptionHistoryChart({
 function CategoryMenuPicker({
   categories,
   items,
+  searchQuery,
   selectedItem,
   selectedItemId,
   onSelect,
 }: {
   categories: CatalogMenuCategory[];
   items: CatalogMenuItem[];
+  searchQuery: string;
   selectedItem: CatalogMenuItem | null;
   selectedItemId: number;
   onSelect: (item: CatalogMenuItem) => void;
 }) {
+  const isSearching = searchQuery.trim().length > 0;
   const groups = useMemo(() => {
     const groupMap = new Map<
       string,
       { id: string; name: string; isActive: boolean; items: CatalogMenuItem[] }
     >();
 
-    for (const category of categories) {
-      groupMap.set(String(category.id), {
-        id: String(category.id),
-        name: category.name,
-        isActive: category.is_active,
-        items: [],
-      });
+    if (!isSearching) {
+      for (const category of categories) {
+        groupMap.set(String(category.id), {
+          id: String(category.id),
+          name: category.name,
+          isActive: category.is_active,
+          items: [],
+        });
+      }
     }
 
     for (const item of items) {
@@ -1515,7 +1519,7 @@ function CategoryMenuPicker({
       if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-  }, [categories, items]);
+  }, [categories, isSearching, items]);
 
   const [activeGroupId, setActiveGroupId] = useState("");
 
@@ -1546,9 +1550,17 @@ function CategoryMenuPicker({
             ? `${selectedItem.name} - ${selectedItem.category?.name ?? "Tanpa kategori"}`
             : "Pilih menu dari kategori"}
         </div>
+        {isSearching && (
+          <div className="border-b border-border bg-secondary/40 px-3 py-2 text-xs font-bold text-muted-foreground">
+            Hasil pencarian "{searchQuery}" - {numberFormat(items.length)} menu di{" "}
+            {numberFormat(groups.length)} kategori
+          </div>
+        )}
         {groups.length === 0 ? (
           <p className="p-3 text-sm font-semibold text-muted-foreground">
-            Tidak ada menu ditemukan.
+            {isSearching
+              ? `Tidak ada menu ditemukan untuk "${searchQuery}".`
+              : "Tidak ada menu ditemukan."}
           </p>
         ) : (
           <div className="grid min-h-[220px] md:grid-cols-[220px_1fr]">

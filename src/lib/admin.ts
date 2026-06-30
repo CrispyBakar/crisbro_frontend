@@ -262,7 +262,6 @@ export const adminApi = {
     adminRequest<CatalogMenuResponse>(
       `/catalog/menu-items?limit=1000${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     ),
-  redeemCategories: () => adminRequest<RedeemCategory[]>("/redeem-menu/categories"),
   redeemItems: () => adminRequest<RedeemItem[]>("/redeem-menu/items"),
   createRedeemItem: (payload: Partial<RedeemItem>) =>
     adminRequest<RedeemItem>("/redeem-menu/items", {
