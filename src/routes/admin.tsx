@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { getUser } from "@/lib/auth";
@@ -14,9 +14,8 @@ import {
   type LoyaltySummary,
   type RedeemCategory,
   type RedeemItem,
-  type Redemption,
 } from "@/lib/admin";
-import { BarChart3, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
+import { BarChart3, ListChecks, RefreshCw, Trash2, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -39,7 +38,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "report" | "users" | "customers" | "redeem" | "redemptions";
+type Tab = "report" | "users" | "customers" | "redeem";
 
 const emptyUserForm = {
   id: 0,
@@ -69,6 +68,17 @@ const emptyCustomerForm = {
   total_point: 0,
   available_point: 0,
   next_reward_threshold: 2000,
+};
+
+type RedeemFormState = {
+  id: number;
+  menu_item_id: number;
+  category_id: number;
+  points_required: number;
+  estimated_cost: string | number;
+  badge: string;
+  sort_order: number;
+  is_active: boolean;
 };
 
 function numberFormat(value: number) {
@@ -116,8 +126,6 @@ function AdminPage() {
   const [categories, setCategories] = useState<RedeemCategory[]>([]);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
-  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
-  const [redemptionStatus, setRedemptionStatus] = useState("");
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
   const [reportRedemptionTo, setReportRedemptionTo] = useState("");
   const [categoryForm, setCategoryForm] = useState({
@@ -126,7 +134,7 @@ function AdminPage() {
     sort_order: 0,
     is_active: true,
   });
-  const [redeemForm, setRedeemForm] = useState({
+  const [redeemForm, setRedeemForm] = useState<RedeemFormState>({
     id: 0,
     menu_item_id: 0,
     category_id: 0,
@@ -145,25 +153,21 @@ function AdminPage() {
   const canAccess = currentUser?.role === "admin" || currentUser?.role === "staff";
   const canManageUsers = currentUser?.role === "admin";
 
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, categoryData, redeemData, redemptionData] = await Promise.all(
-        [
-          adminApi.summary({
-            redemption_from: reportRedemptionFrom,
-            redemption_to: reportRedemptionTo,
-          }),
-          adminApi.redeemCategories(),
-          adminApi.redeemItems(),
-          adminApi.redemptions(redemptionStatus),
-        ],
-      );
+      const [summaryData, categoryData, redeemData] = await Promise.all([
+        adminApi.summary({
+          redemption_from: reportRedemptionFrom,
+          redemption_to: reportRedemptionTo,
+        }),
+        adminApi.redeemCategories(),
+        adminApi.redeemItems(),
+      ]);
       setSummary(summaryData);
       setCategories(categoryData);
       setRedeemItems(redeemData);
-      setRedemptions(redemptionData);
 
       if (canManageUsers) {
         setUsers(await adminApi.users(userSearch));
@@ -192,7 +196,17 @@ function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [
+    canManageUsers,
+    customerForm.brand_id,
+    customerLimit,
+    customerPage,
+    customerSearch,
+    redeemForm.category_id,
+    reportRedemptionFrom,
+    reportRedemptionTo,
+    userSearch,
+  ]);
 
   async function searchUsers() {
     setError("");
@@ -230,7 +244,7 @@ function AdminPage() {
     }
   }
 
-  async function searchCatalog() {
+  const searchCatalog = useCallback(async () => {
     setError("");
     try {
       const items = await adminApi.menuItems(catalogSearch);
@@ -241,7 +255,7 @@ function AdminPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari menu");
     }
-  }
+  }, [catalogSearch]);
 
   useEffect(() => {
     if (!canAccess) {
@@ -249,11 +263,11 @@ function AdminPage() {
       return;
     }
     loadAll();
-  }, [canAccess, navigate, redemptionStatus]);
+  }, [canAccess, loadAll, navigate]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogItems.length === 0) searchCatalog();
-  }, [tab]);
+  }, [catalogItems.length, searchCatalog, tab]);
 
   async function saveUser() {
     setSaving(true);
@@ -398,8 +412,7 @@ function AdminPage() {
         menu_item_id: Number(redeemForm.menu_item_id),
         category_id: Number(redeemForm.category_id),
         points_required: Number(redeemForm.points_required),
-        estimated_cost:
-          redeemForm.estimated_cost === "" ? null : Number(redeemForm.estimated_cost),
+        estimated_cost: redeemForm.estimated_cost === "" ? null : Number(redeemForm.estimated_cost),
         badge: redeemForm.badge,
         sort_order: Number(redeemForm.sort_order),
         is_active: redeemForm.is_active,
@@ -422,18 +435,6 @@ function AdminPage() {
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan menu redeem");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function updateRedemption(id: number, status: string) {
-    setSaving(true);
-    try {
-      await adminApi.updateRedemptionStatus(id, status);
-      await loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal update redemption");
     } finally {
       setSaving(false);
     }
@@ -480,12 +481,6 @@ function AdminPage() {
             onClick={() => setTab("redeem")}
             icon={<ListChecks className="h-4 w-4" />}
             label="Menu Redeem"
-          />
-          <TabButton
-            active={tab === "redemptions"}
-            onClick={() => setTab("redemptions")}
-            icon={<TicketCheck className="h-4 w-4" />}
-            label="Redemptions"
           />
         </div>
 
@@ -543,7 +538,14 @@ function AdminPage() {
               <RedemptionHistoryChart data={summary.redemption_trend ?? []} />
               <div className="mt-5">
                 <DataTable
-                  headers={["Tanggal", "Reward/Menu", "Outlet", "Poin", "Harga Jual", "Estimasi Cost"]}
+                  headers={[
+                    "Tanggal",
+                    "Reward/Menu",
+                    "Outlet",
+                    "Poin",
+                    "Harga Jual",
+                    "Estimasi Cost",
+                  ]}
                   rows={(summary.redemption_history ?? []).map((item) => [
                     dateFormat(item.redeemed_at),
                     item.reward_name,
@@ -1099,71 +1101,6 @@ function AdminPage() {
               </div>
             </Panel>
           </section>
-        )}
-
-        {!loading && tab === "redemptions" && (
-          <Panel title="Operasional Redemption">
-            <div className="mb-4 flex flex-wrap gap-2">
-              <Select
-                label="Status"
-                value={redemptionStatus}
-                onChange={setRedemptionStatus}
-                options={[
-                  { value: "", label: "Semua" },
-                  { value: "pending", label: "Pending" },
-                  { value: "claimed", label: "Claimed" },
-                  { value: "expired", label: "Expired" },
-                ]}
-              />
-            </div>
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-muted-foreground">
-                    <th className="p-2">Kode</th>
-                    <th className="p-2">Customer</th>
-                    <th className="p-2">Reward</th>
-                    <th className="p-2">Poin</th>
-                    <th className="p-2">Status</th>
-                    <th className="p-2">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {redemptions.map((item) => (
-                    <tr key={item.id} className="border-t border-border">
-                      <td className="p-2 font-mono font-bold">{item.redemption_code ?? "-"}</td>
-                      <td className="p-2">
-                        {item.customer.name}
-                        <br />
-                        <span className="text-xs text-muted-foreground">
-                          {item.customer.phone_number ?? item.customer.user?.phone_number ?? "-"}
-                        </span>
-                      </td>
-                      <td className="p-2">{item.reward.name}</td>
-                      <td className="p-2">{numberFormat(item.points_spent)}</td>
-                      <td className="p-2">{item.status}</td>
-                      <td className="p-2 space-x-2">
-                        <button
-                          disabled={saving}
-                          className="font-bold text-primary"
-                          onClick={() => updateRedemption(item.id, "claimed")}
-                        >
-                          Claim
-                        </button>
-                        <button
-                          disabled={saving}
-                          className="font-bold text-destructive"
-                          onClick={() => updateRedemption(item.id, "expired")}
-                        >
-                          Expire
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
         )}
       </section>
     </main>
