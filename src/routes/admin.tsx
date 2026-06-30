@@ -924,7 +924,7 @@ function AdminPage() {
         )}
 
         {!loading && tab === "redeem" && (
-          <section className="space-y-5">
+          <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
             <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
                 <div className="mb-3 flex gap-2">
                   <input
@@ -990,8 +990,8 @@ function AdminPage() {
                 </Button>
             </Panel>
             <Panel title="Menu Redeem Aktif dan Draft">
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="min-w-[920px] text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Menu</th>
