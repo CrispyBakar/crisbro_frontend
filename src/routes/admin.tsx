@@ -515,6 +515,7 @@ function AdminPage() {
                   outlet.city ?? "-",
                   numberFormat(outlet.activated_count),
                 ])}
+                emptyMessage="Belum ada data aktivasi akun per outlet."
               />
             </Panel>
           </section>
@@ -1525,7 +1526,17 @@ function Select({
   );
 }
 
-function DataTable({ headers, rows }: { headers: string[]; rows?: string[][] }) {
+function DataTable({
+  headers,
+  rows,
+  emptyMessage = "Belum ada data.",
+}: {
+  headers: string[];
+  rows?: string[][];
+  emptyMessage?: string;
+}) {
+  const hasRows = (rows ?? []).length > 0;
+
   return (
     <div className="overflow-auto">
       <table className="w-full text-sm">
@@ -1539,15 +1550,23 @@ function DataTable({ headers, rows }: { headers: string[]; rows?: string[][] }) 
           </tr>
         </thead>
         <tbody>
-          {(rows ?? []).map((row, index) => (
-            <tr key={index} className="border-t border-border">
-              {(row ?? []).map((cell, cellIndex) => (
-                <td key={cellIndex} className="p-2 font-medium">
-                  {cell}
-                </td>
-              ))}
+          {hasRows ? (
+            (rows ?? []).map((row, index) => (
+              <tr key={index} className="border-t border-border">
+                {(row ?? []).map((cell, cellIndex) => (
+                  <td key={cellIndex} className="p-2 font-medium">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : (
+            <tr className="border-t border-border">
+              <td className="p-2 font-medium text-muted-foreground" colSpan={headers.length}>
+                {emptyMessage}
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
     </div>
