@@ -15,9 +15,8 @@ import {
   type RedeemCategory,
   type RedeemItem,
   type Redemption,
-  type Reward,
 } from "@/lib/admin";
-import { BarChart3, Gift, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
+import { BarChart3, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -40,17 +39,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-type Tab = "report" | "users" | "customers" | "rewards" | "redeem" | "redemptions";
-
-const emptyReward = {
-  id: 0,
-  brand_id: 1,
-  name: "",
-  description: "",
-  points_required: 0,
-  image_url: "",
-  is_active: true,
-};
+type Tab = "report" | "users" | "customers" | "redeem" | "redemptions";
 
 const emptyUserForm = {
   id: 0,
@@ -124,8 +113,6 @@ function AdminPage() {
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [rewardForm, setRewardForm] = useState(emptyReward);
   const [categories, setCategories] = useState<RedeemCategory[]>([]);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
@@ -162,20 +149,18 @@ function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, rewardData, categoryData, redeemData, redemptionData] = await Promise.all(
+      const [summaryData, categoryData, redeemData, redemptionData] = await Promise.all(
         [
           adminApi.summary({
             redemption_from: reportRedemptionFrom,
             redemption_to: reportRedemptionTo,
           }),
-          adminApi.rewards(),
           adminApi.redeemCategories(),
           adminApi.redeemItems(),
           adminApi.redemptions(redemptionStatus),
         ],
       );
       setSummary(summaryData);
-      setRewards(rewardData);
       setCategories(categoryData);
       setRedeemItems(redeemData);
       setRedemptions(redemptionData);
@@ -269,31 +254,6 @@ function AdminPage() {
   useEffect(() => {
     if (tab === "redeem" && catalogItems.length === 0) searchCatalog();
   }, [tab]);
-
-  async function saveReward() {
-    setSaving(true);
-    try {
-      const payload = {
-        brand_id: Number(rewardForm.brand_id || 1),
-        name: rewardForm.name,
-        description: rewardForm.description,
-        points_required: Number(rewardForm.points_required),
-        image_url: rewardForm.image_url,
-        is_active: rewardForm.is_active,
-      };
-      if (rewardForm.id) {
-        await adminApi.updateReward(rewardForm.id, payload);
-      } else {
-        await adminApi.createReward(payload);
-      }
-      setRewardForm(emptyReward);
-      await loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan reward");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function saveUser() {
     setSaving(true);
@@ -514,12 +474,6 @@ function AdminPage() {
             onClick={() => setTab("customers")}
             icon={<Users className="h-4 w-4" />}
             label="Customers"
-          />
-          <TabButton
-            active={tab === "rewards"}
-            onClick={() => setTab("rewards")}
-            icon={<Gift className="h-4 w-4" />}
-            label="Rewards"
           />
           <TabButton
             active={tab === "redeem"}
@@ -986,83 +940,6 @@ function AdminPage() {
                     Berikutnya
                   </Button>
                 </div>
-              </div>
-            </Panel>
-          </section>
-        )}
-
-        {!loading && tab === "rewards" && (
-          <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
-            <Panel title={rewardForm.id ? "Edit Reward" : "Tambah Reward"}>
-              <FormInput
-                label="Nama"
-                value={rewardForm.name}
-                onChange={(v) => setRewardForm({ ...rewardForm, name: v })}
-              />
-              <FormInput
-                label="Poin"
-                type="number"
-                value={String(rewardForm.points_required)}
-                onChange={(v) => setRewardForm({ ...rewardForm, points_required: Number(v) })}
-              />
-              <FormInput
-                label="Deskripsi"
-                value={rewardForm.description ?? ""}
-                onChange={(v) => setRewardForm({ ...rewardForm, description: v })}
-              />
-              <FormInput
-                label="Image URL"
-                value={rewardForm.image_url ?? ""}
-                onChange={(v) => setRewardForm({ ...rewardForm, image_url: v })}
-              />
-              <Toggle
-                label="Aktif"
-                checked={rewardForm.is_active}
-                onChange={(v) => setRewardForm({ ...rewardForm, is_active: v })}
-              />
-              <Button
-                onClick={saveReward}
-                disabled={saving}
-                className="mt-3 w-full rounded-full font-bold"
-              >
-                Simpan Reward
-              </Button>
-            </Panel>
-            <Panel title="Daftar Reward">
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="p-2">Nama</th>
-                      <th className="p-2">Poin</th>
-                      <th className="p-2">Status</th>
-                      <th className="p-2">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rewards.map((reward) => (
-                      <tr key={reward.id} className="border-t border-border">
-                        <td className="p-2 font-bold">{reward.name}</td>
-                        <td className="p-2">{numberFormat(reward.points_required)}</td>
-                        <td className="p-2">{reward.is_active ? "Aktif" : "Nonaktif"}</td>
-                        <td className="p-2">
-                          <button
-                            className="font-bold text-primary"
-                            onClick={() =>
-                              setRewardForm({
-                                ...reward,
-                                description: reward.description ?? "",
-                                image_url: reward.image_url ?? "",
-                              })
-                            }
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </Panel>
           </section>
