@@ -32,6 +32,7 @@ export type LoyaltySummary = {
   points_earned: number;
   points_redeemed: number;
   redemption_count: number;
+  total_estimated_redemption_cost?: number;
   top_rewards: Array<{
     reward_id: number;
     reward_name: string;
@@ -55,12 +56,15 @@ export type LoyaltySummary = {
     date: string;
     redemption_count: number;
     points_spent: number;
+    estimated_cost: number;
   }>;
   redemption_history?: Array<{
     id: number;
     reward_id: number;
     reward_name: string;
     points_spent: number;
+    estimated_cost: number;
+    menu_price: number | null;
     outlet_id: number | null;
     outlet_name: string;
     outlet_city: string | null;
@@ -101,6 +105,7 @@ export type RedeemItem = {
   menu_item_id: number;
   category_id: number;
   points_required: number;
+  estimated_cost: string | number | null;
   is_active: boolean;
   badge: string | null;
   sort_order: number;
