@@ -1527,7 +1527,7 @@ function CategoryMenuPicker({
           </p>
         ) : (
           <div className="grid min-h-[220px] md:grid-cols-[220px_1fr]">
-            <div className="border-b border-border md:border-b-0 md:border-r">
+            <div className="max-h-[280px] overflow-auto border-b border-border md:border-b-0 md:border-r">
               {groups.map((group) => (
                 <button
                   key={group.id}
