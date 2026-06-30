@@ -18,7 +18,17 @@ import {
   type Reward,
 } from "@/lib/admin";
 import { BarChart3, Gift, ListChecks, RefreshCw, TicketCheck, Trash2, Users } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -76,6 +86,14 @@ function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
 
+function dateFormat(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function AdminPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("report");
@@ -99,6 +117,8 @@ function AdminPage() {
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [redemptionStatus, setRedemptionStatus] = useState("");
+  const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
+  const [reportRedemptionTo, setReportRedemptionTo] = useState("");
   const [categoryForm, setCategoryForm] = useState({
     id: 0,
     name: "",
@@ -129,7 +149,10 @@ function AdminPage() {
     try {
       const [summaryData, rewardData, categoryData, redeemData, redemptionData] = await Promise.all(
         [
-          adminApi.summary(),
+          adminApi.summary({
+            redemption_from: reportRedemptionFrom,
+            redemption_to: reportRedemptionTo,
+          }),
           adminApi.rewards(),
           adminApi.redeemCategories(),
           adminApi.redeemItems(),
@@ -334,7 +357,12 @@ function AdminPage() {
 
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
       await loadCustomersPage(customerForm.id ? customerPage : 1);
-      setSummary(await adminApi.summary());
+      setSummary(
+        await adminApi.summary({
+          redemption_from: reportRedemptionFrom,
+          redemption_to: reportRedemptionTo,
+        }),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan customer");
     } finally {
@@ -349,8 +377,15 @@ function AdminPage() {
     setError("");
     try {
       await adminApi.deleteCustomer(id);
-      await loadCustomersPage(customers.length === 1 && customerPage > 1 ? customerPage - 1 : customerPage);
-      setSummary(await adminApi.summary());
+      await loadCustomersPage(
+        customers.length === 1 && customerPage > 1 ? customerPage - 1 : customerPage,
+      );
+      setSummary(
+        await adminApi.summary({
+          redemption_from: reportRedemptionFrom,
+          redemption_to: reportRedemptionTo,
+        }),
+      );
       if (customerForm.id === id) setCustomerForm(emptyCustomerForm);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus customer");
@@ -507,6 +542,44 @@ function AdminPage() {
                 <TopRedeemOutletsChart outlets={summary.top_redeem_outlets ?? []} />
               </Panel>
             </div>
+            <Panel title="Riwayat semua reward yang ditukar">
+              <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <FormInput
+                  label="Dari tanggal"
+                  type="date"
+                  value={reportRedemptionFrom}
+                  onChange={setReportRedemptionFrom}
+                />
+                <FormInput
+                  label="Hingga tanggal"
+                  type="date"
+                  value={reportRedemptionTo}
+                  onChange={setReportRedemptionTo}
+                />
+                <Button
+                  onClick={loadAll}
+                  disabled={loading}
+                  className="mb-3 rounded-full font-bold"
+                >
+                  Terapkan Filter
+                </Button>
+              </div>
+              <RedemptionHistoryChart data={summary.redemption_trend ?? []} />
+              <div className="mt-5">
+                <DataTable
+                  headers={["Tanggal", "Reward/Menu", "Outlet", "Poin"]}
+                  rows={(summary.redemption_history ?? []).map((item) => [
+                    dateFormat(item.redeemed_at),
+                    item.reward_name,
+                    item.outlet_city
+                      ? `${item.outlet_name} (${item.outlet_city})`
+                      : item.outlet_name,
+                    numberFormat(item.points_spent),
+                  ])}
+                  emptyMessage="Belum ada riwayat reward yang ditukar pada rentang tanggal ini."
+                />
+              </div>
+            </Panel>
             <Panel title="Aktivasi akun per outlet">
               <DataTable
                 headers={["Outlet", "Kota", "Jumlah Aktivasi"]}
@@ -659,10 +732,12 @@ function AdminPage() {
                   label="Brand"
                   value={String(customerForm.brand_id)}
                   onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
-                  options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map((brand) => ({
-                    value: String(brand.id),
-                    label: brand.name,
-                  }))}
+                  options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
+                    (brand) => ({
+                      value: String(brand.id),
+                      label: brand.name,
+                    }),
+                  )}
                 />
                 <Select
                   label="Outlet"
@@ -1203,11 +1278,7 @@ function Metric({ title, value }: { title: string; value: string }) {
   );
 }
 
-function TopRewardsChart({
-  rewards,
-}: {
-  rewards: LoyaltySummary["top_rewards"];
-}) {
+function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }) {
   const colors = ["#E11D48", "#F97316", "#EAB308", "#22C55E", "#0EA5E9"];
   const chartData = rewards.map((reward, index) => ({
     rank: index + 1,
@@ -1221,7 +1292,9 @@ function TopRewardsChart({
   const totalRedemptions = chartData.reduce((sum, reward) => sum + reward.redemptions, 0);
 
   if (chartData.length === 0) {
-    return <p className="text-sm font-semibold text-muted-foreground">Belum ada data redemption.</p>;
+    return (
+      <p className="text-sm font-semibold text-muted-foreground">Belum ada data redemption.</p>
+    );
   }
 
   return (
@@ -1341,7 +1414,9 @@ function TopRedeemOutletsChart({
   const totalRedemptions = chartData.reduce((sum, outlet) => sum + outlet.redemptions, 0);
 
   if (chartData.length === 0) {
-    return <p className="text-sm font-semibold text-muted-foreground">Belum ada data redeem outlet.</p>;
+    return (
+      <p className="text-sm font-semibold text-muted-foreground">Belum ada data redeem outlet.</p>
+    );
   }
 
   return (
@@ -1444,6 +1519,97 @@ function TopRedeemOutletsChart({
         </BarChart>
       </ChartContainer>
     </div>
+  );
+}
+
+function RedemptionHistoryChart({
+  data,
+}: {
+  data: NonNullable<LoyaltySummary["redemption_trend"]>;
+}) {
+  const chartData = data.map((item) => ({
+    ...item,
+    label: dateFormat(item.date),
+  }));
+
+  if (chartData.length === 0) {
+    return (
+      <p className="text-sm font-semibold text-muted-foreground">
+        Belum ada data reward yang ditukar pada rentang tanggal ini.
+      </p>
+    );
+  }
+
+  return (
+    <ChartContainer
+      config={{
+        redemption_count: {
+          label: "Jumlah Redeem",
+          color: "#E11D48",
+        },
+        points_spent: {
+          label: "Poin Ditukar",
+          color: "#0EA5E9",
+        },
+      }}
+      className="min-h-[260px] w-full"
+    >
+      <LineChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 8 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} minTickGap={18} />
+        <YAxis
+          yAxisId="count"
+          allowDecimals={false}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={10}
+          tickFormatter={(value) => numberFormat(Number(value))}
+        />
+        <YAxis
+          yAxisId="points"
+          orientation="right"
+          allowDecimals={false}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={10}
+          tickFormatter={(value) => numberFormat(Number(value))}
+        />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              hideLabel={false}
+              labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ""}
+              formatter={(value, name) => (
+                <div className="flex min-w-[170px] items-center justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    {name === "redemption_count" ? "Jumlah Redeem" : "Poin Ditukar"}
+                  </span>
+                  <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
+                </div>
+              )}
+            />
+          }
+        />
+        <Line
+          yAxisId="count"
+          type="monotone"
+          dataKey="redemption_count"
+          stroke="#E11D48"
+          strokeWidth={3}
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+        <Line
+          yAxisId="points"
+          type="monotone"
+          dataKey="points_spent"
+          stroke="#0EA5E9"
+          strokeWidth={3}
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+      </LineChart>
+    </ChartContainer>
   );
 }
 

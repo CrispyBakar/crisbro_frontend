@@ -51,6 +51,21 @@ export type LoyaltySummary = {
     redemption_count: number;
     points_spent: number;
   }>;
+  redemption_trend?: Array<{
+    date: string;
+    redemption_count: number;
+    points_spent: number;
+  }>;
+  redemption_history?: Array<{
+    id: number;
+    reward_id: number;
+    reward_name: string;
+    points_spent: number;
+    outlet_id: number | null;
+    outlet_name: string;
+    outlet_city: string | null;
+    redeemed_at: string;
+  }>;
 };
 
 export type Reward = {
@@ -198,7 +213,8 @@ export const adminApi = {
     adminRequest<AdminUser>("/users", { method: "POST", body: JSON.stringify(payload) }),
   updateUser: (id: number, payload: AdminUserPayload) =>
     adminRequest<AdminUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
-  deleteUser: (id: number) => adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
+  deleteUser: (id: number) =>
+    adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
   customers: (search = "", page = 1, limit = 20) =>
     adminRequest<AdminCustomerPage>(
       `/customers?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
@@ -214,7 +230,13 @@ export const adminApi = {
     adminRequest<{ message: string }>(`/customers/${id}`, { method: "DELETE" }),
   brands: () => adminRequest<AdminBrand[]>("/brands"),
   locations: () => adminRequest<AdminLocation[]>("/locations"),
-  summary: () => adminRequest<LoyaltySummary>("/loyalty-summary"),
+  summary: (filters: { redemption_from?: string; redemption_to?: string } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.redemption_from) params.set("redemption_from", filters.redemption_from);
+    if (filters.redemption_to) params.set("redemption_to", filters.redemption_to);
+    const query = params.toString();
+    return adminRequest<LoyaltySummary>(`/loyalty-summary${query ? `?${query}` : ""}`);
+  },
   rewards: () => adminRequest<Reward[]>("/rewards"),
   createReward: (payload: Partial<Reward>) =>
     adminRequest<Reward>("/rewards", { method: "POST", body: JSON.stringify(payload) }),
