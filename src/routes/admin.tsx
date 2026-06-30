@@ -130,12 +130,6 @@ function AdminPage() {
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
   const [reportRedemptionTo, setReportRedemptionTo] = useState("");
-  const [categoryForm, setCategoryForm] = useState({
-    id: 0,
-    name: "",
-    sort_order: 0,
-    is_active: true,
-  });
   const [redeemForm, setRedeemForm] = useState<RedeemFormState>({
     id: 0,
     menu_item_id: 0,
@@ -382,28 +376,6 @@ function AdminPage() {
       if (customerForm.id === id) setCustomerForm(emptyCustomerForm);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus customer");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveCategory() {
-    setSaving(true);
-    try {
-      const payload = {
-        name: categoryForm.name,
-        sort_order: Number(categoryForm.sort_order),
-        is_active: categoryForm.is_active,
-      };
-      if (categoryForm.id) {
-        await adminApi.updateRedeemCategory(categoryForm.id, payload);
-      } else {
-        await adminApi.createRedeemCategory(payload);
-      }
-      setCategoryForm({ id: 0, name: "", sort_order: 0, is_active: true });
-      await loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan kategori");
     } finally {
       setSaving(false);
     }
@@ -953,33 +925,7 @@ function AdminPage() {
 
         {!loading && tab === "redeem" && (
           <section className="space-y-5">
-            <div className="grid gap-5 lg:grid-cols-2">
-              <Panel title={categoryForm.id ? "Edit Kategori Redeem" : "Tambah Kategori Redeem"}>
-                <FormInput
-                  label="Nama Kategori"
-                  value={categoryForm.name}
-                  onChange={(v) => setCategoryForm({ ...categoryForm, name: v })}
-                />
-                <FormInput
-                  label="Urutan"
-                  type="number"
-                  value={String(categoryForm.sort_order)}
-                  onChange={(v) => setCategoryForm({ ...categoryForm, sort_order: Number(v) })}
-                />
-                <Toggle
-                  label="Aktif"
-                  checked={categoryForm.is_active}
-                  onChange={(v) => setCategoryForm({ ...categoryForm, is_active: v })}
-                />
-                <Button
-                  onClick={saveCategory}
-                  disabled={saving}
-                  className="mt-3 w-full rounded-full font-bold"
-                >
-                  Simpan Kategori
-                </Button>
-              </Panel>
-              <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
+            <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
                 <div className="mb-3 flex gap-2">
                   <input
                     value={catalogSearch}
@@ -1042,8 +988,7 @@ function AdminPage() {
                 >
                   Simpan Item
                 </Button>
-              </Panel>
-            </div>
+            </Panel>
             <Panel title="Menu Redeem Aktif dan Draft">
               <div className="overflow-auto">
                 <table className="w-full text-sm">

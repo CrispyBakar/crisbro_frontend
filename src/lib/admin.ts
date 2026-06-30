@@ -263,16 +263,6 @@ export const adminApi = {
       `/catalog/menu-items?limit=1000${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     ),
   redeemCategories: () => adminRequest<RedeemCategory[]>("/redeem-menu/categories"),
-  createRedeemCategory: (payload: Partial<RedeemCategory>) =>
-    adminRequest<RedeemCategory>("/redeem-menu/categories", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  updateRedeemCategory: (id: number, payload: Partial<RedeemCategory>) =>
-    adminRequest<RedeemCategory>(`/redeem-menu/categories/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    }),
   redeemItems: () => adminRequest<RedeemItem[]>("/redeem-menu/items"),
   createRedeemItem: (payload: Partial<RedeemItem>) =>
     adminRequest<RedeemItem>("/redeem-menu/items", {
