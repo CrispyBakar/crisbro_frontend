@@ -77,7 +77,6 @@ type RedeemFormState = {
   category_id: number;
   points_required: number;
   estimated_cost: string | number;
-  badge: string;
   sort_order: number;
   is_active: boolean;
 };
@@ -136,7 +135,6 @@ function AdminPage() {
     category_id: 0,
     points_required: 0,
     estimated_cost: "",
-    badge: "",
     sort_order: 0,
     is_active: true,
   });
@@ -389,7 +387,6 @@ function AdminPage() {
         category_id: Number(redeemForm.category_id),
         points_required: Number(redeemForm.points_required),
         estimated_cost: redeemForm.estimated_cost === "" ? null : Number(redeemForm.estimated_cost),
-        badge: redeemForm.badge,
         sort_order: Number(redeemForm.sort_order),
         is_active: redeemForm.is_active,
       };
@@ -404,7 +401,6 @@ function AdminPage() {
         category_id: categories[0]?.id ?? 0,
         points_required: 0,
         estimated_cost: "",
-        badge: "",
         sort_order: 0,
         is_active: true,
       });
@@ -966,11 +962,6 @@ function AdminPage() {
                   onChange={(v) => setRedeemForm({ ...redeemForm, estimated_cost: v })}
                 />
                 <FormInput
-                  label="Badge"
-                  value={redeemForm.badge}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, badge: v })}
-                />
-                <FormInput
                   label="Urutan"
                   type="number"
                   value={String(redeemForm.sort_order)}
@@ -1032,7 +1023,6 @@ function AdminPage() {
                                 category_id: item.category_id,
                                 points_required: item.points_required,
                                 estimated_cost: item.estimated_cost ?? "",
-                                badge: item.badge ?? "",
                                 sort_order: item.sort_order,
                                 is_active: item.is_active,
                               })
