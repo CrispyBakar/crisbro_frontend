@@ -16,7 +16,7 @@ import {
   type RedeemCategory,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, ListChecks, RefreshCw, Trash2, Users } from "lucide-react";
+import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -412,6 +412,32 @@ function AdminPage() {
     }
   }
 
+  async function deleteRedeemItem(item: RedeemItem) {
+    if (!window.confirm(`Hapus item redeem "${item.menu_item.name}"?`)) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      await adminApi.deleteRedeemItem(item.id);
+      setRedeemItems(await adminApi.redeemItems());
+      if (redeemForm.id === item.id) {
+        setRedeemForm({
+          id: 0,
+          menu_item_id: 0,
+          category_id: categories[0]?.id ?? 0,
+          points_required: 0,
+          estimated_cost: "",
+          sort_order: 0,
+          is_active: true,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menghapus item redeem");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (!canAccess) return null;
 
   return (
@@ -627,7 +653,7 @@ function AdminPage() {
                         <td className="p-2">
                           <div className="flex items-center gap-3">
                             <button
-                              className="font-bold text-primary"
+                              className="inline-flex items-center gap-1 font-bold text-primary"
                               onClick={() =>
                                 setUserForm({
                                   id: user.id,
@@ -638,7 +664,7 @@ function AdminPage() {
                                 })
                               }
                             >
-                              Edit
+                              <Pencil className="h-4 w-4" /> Edit
                             </button>
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
@@ -847,7 +873,7 @@ function AdminPage() {
                         <td className="p-2">
                           <div className="flex items-center gap-3">
                             <button
-                              className="font-bold text-primary"
+                              className="inline-flex items-center gap-1 font-bold text-primary"
                               onClick={() =>
                                 setCustomerForm({
                                   id: customer.id,
@@ -873,7 +899,7 @@ function AdminPage() {
                                 })
                               }
                             >
-                              Edit
+                              <Pencil className="h-4 w-4" /> Edit
                             </button>
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
@@ -1014,8 +1040,9 @@ function AdminPage() {
                         </td>
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
                         <td className="p-2">
+                          <div className="flex flex-wrap gap-2">
                           <button
-                            className="font-bold text-primary"
+                            className="inline-flex items-center gap-1 font-bold text-primary"
                             onClick={() =>
                               setRedeemForm({
                                 id: item.id,
@@ -1028,8 +1055,16 @@ function AdminPage() {
                               })
                             }
                           >
-                            Edit
+                            <Pencil className="h-4 w-4" /> Edit
                           </button>
+                          <button
+                            className="inline-flex items-center gap-1 font-bold text-destructive"
+                            disabled={saving}
+                            onClick={() => deleteRedeemItem(item)}
+                          >
+                            <Trash2 className="h-4 w-4" /> Hapus
+                          </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

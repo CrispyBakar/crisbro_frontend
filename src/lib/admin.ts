@@ -274,6 +274,8 @@ export const adminApi = {
       method: "PUT",
       body: JSON.stringify(payload),
     }),
+  deleteRedeemItem: (id: number) =>
+    adminRequest<{ message: string }>(`/redeem-menu/items/${id}`, { method: "DELETE" }),
   redemptions: (status = "") =>
     adminRequest<Redemption[]>(`/redemptions${status ? `?status=${status}` : ""}`),
   updateRedemptionStatus: (id: number, status: string) =>
