@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { getUser } from "@/lib/auth";
@@ -139,6 +139,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
 
   const currentUser = useMemo(() => getUser(), []);
   const canAccess = currentUser?.role === "admin" || currentUser?.role === "staff";
@@ -148,24 +149,41 @@ function AdminPage() {
     [catalogItems, redeemForm.menu_item_id],
   );
 
-  const loadAll = useCallback(async () => {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, redeemData] = await Promise.all([
-        adminApi.summary({
-          redemption_from: reportRedemptionFrom,
-          redemption_to: reportRedemptionTo,
-        }),
-        adminApi.redeemItems(),
-      ]);
+      const summaryData = await adminApi.summary({
+        redemption_from: reportRedemptionFrom,
+        redemption_to: reportRedemptionTo,
+      });
       setSummary(summaryData);
-      setRedeemItems(redeemData);
+      loadedTabs.current.report = true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat laporan admin");
+    } finally {
+      setLoading(false);
+    }
+  }, [reportRedemptionFrom, reportRedemptionTo]);
 
-      if (canManageUsers) {
-        setUsers(await adminApi.users(userSearch));
-      }
+  const loadUsers = useCallback(async () => {
+    if (!canManageUsers) return;
+    setLoading(true);
+    setError("");
+    try {
+      setUsers(await adminApi.users(userSearch));
+      loadedTabs.current.users = true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat user admin");
+    } finally {
+      setLoading(false);
+    }
+  }, [canManageUsers, userSearch]);
 
+  const loadCustomers = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
       const [customerData, brandData, locationData] = await Promise.all([
         adminApi.customers(customerSearch, customerPage, customerLimit),
         adminApi.brands(),
@@ -180,21 +198,42 @@ function AdminPage() {
       if (!customerForm.brand_id && brandData[0]) {
         setCustomerForm((form) => ({ ...form, brand_id: brandData[0].id }));
       }
+      loadedTabs.current.customers = true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data admin");
+      setError(err instanceof Error ? err.message : "Gagal memuat customer admin");
     } finally {
       setLoading(false);
     }
-  }, [
-    canManageUsers,
-    customerForm.brand_id,
-    customerLimit,
-    customerPage,
-    customerSearch,
-    reportRedemptionFrom,
-    reportRedemptionTo,
-    userSearch,
-  ]);
+  }, [customerForm.brand_id, customerLimit, customerPage, customerSearch]);
+
+  const loadRedeem = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setRedeemItems(await adminApi.redeemItems());
+      loadedTabs.current.redeem = true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat menu redeem");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const refreshCurrentTab = useCallback(async () => {
+    if (tab === "report") {
+      await loadReport();
+      return;
+    }
+    if (tab === "users") {
+      await loadUsers();
+      return;
+    }
+    if (tab === "customers") {
+      await loadCustomers();
+      return;
+    }
+    await loadRedeem();
+  }, [loadCustomers, loadRedeem, loadReport, loadUsers, tab]);
 
   async function searchUsers() {
     setError("");
@@ -263,8 +302,14 @@ function AdminPage() {
       navigate({ to: "/login" });
       return;
     }
-    loadAll();
-  }, [canAccess, loadAll, navigate]);
+    if (loadedTabs.current[tab]) {
+      setLoading(false);
+      return;
+    }
+    refreshCurrentTab();
+    // Run only when access or the active tab changes. Filter/search inputs fetch via their buttons.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canAccess, navigate, tab]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
@@ -407,7 +452,13 @@ function AdminPage() {
         sort_order: 0,
         is_active: true,
       });
-      await loadAll();
+      await loadRedeem();
+      setSummary(
+        await adminApi.summary({
+          redemption_from: reportRedemptionFrom,
+          redemption_to: reportRedemptionTo,
+        }),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan menu redeem");
     } finally {
@@ -450,7 +501,7 @@ function AdminPage() {
             <p className="text-sm font-bold text-muted-foreground">Admin Console</p>
             <h1 className="text-3xl font-black tracking-tight">Program Loyalty</h1>
           </div>
-          <Button onClick={loadAll} disabled={loading} className="rounded-full font-bold">
+          <Button onClick={refreshCurrentTab} disabled={loading} className="rounded-full font-bold">
             <RefreshCw className="h-4 w-4" /> Refresh
           </Button>
         </div>
@@ -528,7 +579,7 @@ function AdminPage() {
                   onChange={setReportRedemptionTo}
                 />
                 <Button
-                  onClick={loadAll}
+                  onClick={loadReport}
                   disabled={loading}
                   className="mb-3 rounded-full font-bold"
                 >
@@ -950,63 +1001,63 @@ function AdminPage() {
         {!loading && tab === "redeem" && (
           <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
             <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
-                <div className="mb-3 flex gap-2">
-                  <input
-                    value={catalogSearch}
-                    onChange={(e) => setCatalogSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") searchCatalog();
-                    }}
-                    placeholder="Cari menu..."
-                    className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                  />
-                  <Button onClick={searchCatalog} variant="outline">
-                    Cari
-                  </Button>
-                  {appliedCatalogSearch && (
-                    <Button onClick={resetCatalogSearch} variant="outline">
-                      Reset
-                    </Button>
-                  )}
-                </div>
-                <CategoryMenuPicker
-                  categories={catalogCategories}
-                  items={catalogItems}
-                  searchQuery={appliedCatalogSearch}
-                  selectedItem={selectedCatalogItem}
-                  selectedItemId={redeemForm.menu_item_id}
-                  onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
+              <div className="mb-3 flex gap-2">
+                <input
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") searchCatalog();
+                  }}
+                  placeholder="Cari menu..."
+                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
                 />
-                <FormInput
-                  label="Poin Redeem"
-                  type="number"
-                  value={String(redeemForm.points_required)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
-                />
-                <FormInput
-                  label="Estimasi Cost/HPP"
-                  type="number"
-                  value={String(redeemForm.estimated_cost)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, estimated_cost: v })}
-                />
-                <FormInput
-                  label="Urutan"
-                  type="number"
-                  value={String(redeemForm.sort_order)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
-                />
-                <Toggle
-                  label="Aktif"
-                  checked={redeemForm.is_active}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
-                />
-                <Button
-                  onClick={saveRedeemItem}
-                  disabled={saving}
-                  className="mt-3 w-full rounded-full font-bold"
-                >
-                  Simpan Item
+                <Button onClick={searchCatalog} variant="outline">
+                  Cari
                 </Button>
+                {appliedCatalogSearch && (
+                  <Button onClick={resetCatalogSearch} variant="outline">
+                    Reset
+                  </Button>
+                )}
+              </div>
+              <CategoryMenuPicker
+                categories={catalogCategories}
+                items={catalogItems}
+                searchQuery={appliedCatalogSearch}
+                selectedItem={selectedCatalogItem}
+                selectedItemId={redeemForm.menu_item_id}
+                onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
+              />
+              <FormInput
+                label="Poin Redeem"
+                type="number"
+                value={String(redeemForm.points_required)}
+                onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
+              />
+              <FormInput
+                label="Estimasi Cost/HPP"
+                type="number"
+                value={String(redeemForm.estimated_cost)}
+                onChange={(v) => setRedeemForm({ ...redeemForm, estimated_cost: v })}
+              />
+              <FormInput
+                label="Urutan"
+                type="number"
+                value={String(redeemForm.sort_order)}
+                onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
+              />
+              <Toggle
+                label="Aktif"
+                checked={redeemForm.is_active}
+                onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
+              />
+              <Button
+                onClick={saveRedeemItem}
+                disabled={saving}
+                className="mt-3 w-full rounded-full font-bold"
+              >
+                Simpan Item
+              </Button>
             </Panel>
             <Panel title="Menu Redeem Aktif dan Draft">
               <div className="overflow-x-auto">
@@ -1041,28 +1092,28 @@ function AdminPage() {
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
-                          <button
-                            className="inline-flex items-center gap-1 font-bold text-primary"
-                            onClick={() =>
-                              setRedeemForm({
-                                id: item.id,
-                                menu_item_id: item.menu_item_id,
-                                points_required: item.points_required,
-                                estimated_cost: item.estimated_cost ?? "",
-                                sort_order: item.sort_order,
-                                is_active: item.is_active,
-                              })
-                            }
-                          >
-                            <Pencil className="h-4 w-4" /> Edit
-                          </button>
-                          <button
-                            className="inline-flex items-center gap-1 font-bold text-destructive"
-                            disabled={saving}
-                            onClick={() => deleteRedeemItem(item)}
-                          >
-                            <Trash2 className="h-4 w-4" /> Hapus
-                          </button>
+                            <button
+                              className="inline-flex items-center gap-1 font-bold text-primary"
+                              onClick={() =>
+                                setRedeemForm({
+                                  id: item.id,
+                                  menu_item_id: item.menu_item_id,
+                                  points_required: item.points_required,
+                                  estimated_cost: item.estimated_cost ?? "",
+                                  sort_order: item.sort_order,
+                                  is_active: item.is_active,
+                                })
+                              }
+                            >
+                              <Pencil className="h-4 w-4" /> Edit
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 font-bold text-destructive"
+                              disabled={saving}
+                              onClick={() => deleteRedeemItem(item)}
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </button>
                           </div>
                         </td>
                       </tr>
