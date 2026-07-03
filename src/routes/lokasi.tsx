@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { apiUrl } from "@/lib/api";
 import { MapPin, Phone, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -21,15 +22,13 @@ type Location = {
   hours?: string | null; // belum ada di schema, bisa ditambah nanti
 };
 
-const API_BASE = "/api";
-
 function LokasiPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE}/locations`)
+    fetch(apiUrl("/locations"))
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);

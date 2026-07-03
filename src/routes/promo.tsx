@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { apiUrl } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { Tag, MapPin, Calendar, Smartphone } from "lucide-react";
 
@@ -29,8 +30,6 @@ type Promo = {
   template: string | null;
 };
 
-const API_BASE = "/api";
-
 const statusLabel: Record<string, { label: string; color: string }> = {
   active: { label: "Aktif", color: "bg-green-100 text-green-700" },
   completed: { label: "Selesai", color: "bg-gray-100 text-gray-500" },
@@ -44,7 +43,7 @@ function PromoPage() {
   const [activeFilter, setActiveFilter] = useState<"semua" | "active" | "completed">("semua");
 
   useEffect(() => {
-    fetch(`${API_BASE}/promos`)
+    fetch(apiUrl("/promos"))
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

@@ -1,4 +1,5 @@
-const API_BASE = "/api";
+import { apiUrl } from "./api";
+
 const TOKEN_KEY = "crisbar_token";
 const USER_KEY = "crisbar_user";
 
@@ -52,7 +53,7 @@ export async function apiProfile() {
   const token = getToken();
   if (!token) throw new Error("Token tidak ditemukan");
 
-  const res = await fetch(`${API_BASE}/profile`, {
+  const res = await fetch(apiUrl("/profile"), {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
@@ -65,7 +66,7 @@ export async function apiProfile() {
 }
 
 export async function apiLogin(phone_number: string, password: string) {
-  const res = await fetch(`${API_BASE}/login`, {
+  const res = await fetch(apiUrl("/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone_number, password }),
@@ -76,7 +77,7 @@ export async function apiLogin(phone_number: string, password: string) {
 }
 
 export async function apiRegister(name: string, phone_number: string, password: string) {
-  const res = await fetch(`${API_BASE}/register`, {
+  const res = await fetch(apiUrl("/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, phone_number, password }),

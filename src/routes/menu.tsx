@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { apiUrl } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/menu")({
@@ -15,8 +16,6 @@ export const Route = createFileRoute("/menu")({
   }),
   component: MenuPage,
 });
-
-const API_BASE = "/api";
 
 type MenuItem = {
   id: number;
@@ -37,7 +36,7 @@ function MenuPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE}/catalog/redeem-menu`)
+    fetch(apiUrl("/catalog/redeem-menu"))
       .then(async (r) => {
         const data = await r.json();
 

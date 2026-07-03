@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { apiUrl } from "@/lib/api";
 import { Search, ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/katalog")({
@@ -29,7 +30,6 @@ type Category = {
   total_products: number;
 };
 
-const API_BASE = "/api";
 const VISIBLE_LIMIT = 8;
 // Maksimal jumlah card/menu yang ditampilkan per halaman grid.
 const PAGE_SIZE = 9;
@@ -47,8 +47,8 @@ function KatalogPage() {
   useEffect(() => {
     // Fetch categories dan products secara paralel
     Promise.all([
-      fetch(`${API_BASE}/catalog/products/categories`).then((r) => r.json()),
-      fetch(`${API_BASE}/catalog/products`).then((r) => r.json()),
+      fetch(apiUrl("/catalog/products/categories")).then((r) => r.json()),
+      fetch(apiUrl("/catalog/products")).then((r) => r.json()),
     ])
       .then(([cats, prods]) => {
         setCategories(cats);
