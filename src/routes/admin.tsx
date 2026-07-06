@@ -74,7 +74,6 @@ type RedeemFormState = {
   id: number;
   menu_item_id: number;
   points_required: number;
-  estimated_cost: string | number;
   sort_order: number;
   is_active: boolean;
 };
@@ -130,7 +129,6 @@ function AdminPage() {
     id: 0,
     menu_item_id: 0,
     points_required: 0,
-    estimated_cost: "",
     sort_order: 0,
     is_active: true,
   });
@@ -435,7 +433,6 @@ function AdminPage() {
       const payload = {
         menu_item_id: Number(redeemForm.menu_item_id),
         points_required: Number(redeemForm.points_required),
-        estimated_cost: redeemForm.estimated_cost === "" ? null : Number(redeemForm.estimated_cost),
         sort_order: Number(redeemForm.sort_order),
         is_active: redeemForm.is_active,
       };
@@ -448,7 +445,6 @@ function AdminPage() {
         id: 0,
         menu_item_id: 0,
         points_required: 0,
-        estimated_cost: "",
         sort_order: 0,
         is_active: true,
       });
@@ -479,7 +475,6 @@ function AdminPage() {
           id: 0,
           menu_item_id: 0,
           points_required: 0,
-          estimated_cost: "",
           sort_order: 0,
           is_active: true,
         });
@@ -551,10 +546,6 @@ function AdminPage() {
               <Metric title="Poin Ditukar" value={numberFormat(summary.points_redeemed)} />
               <Metric title="Poin Tersedia" value={numberFormat(summary.total_points_available)} />
               <Metric title="Total Redeem" value={numberFormat(summary.redemption_count)} />
-              <Metric
-                title="Estimasi Cost Redeem"
-                value={currencyFormat(summary.total_estimated_redemption_cost ?? 0)}
-              />
             </div>
             <div className="grid gap-5 lg:grid-cols-2">
               <Panel title="Reward paling sering ditukar">
@@ -595,7 +586,6 @@ function AdminPage() {
                     "Outlet",
                     "Poin",
                     "Harga Jual",
-                    "Estimasi Cost",
                   ]}
                   rows={(summary.redemption_history ?? []).map((item) => [
                     dateFormat(item.redeemed_at),
@@ -605,7 +595,6 @@ function AdminPage() {
                       : item.outlet_name,
                     numberFormat(item.points_spent),
                     item.menu_price !== null ? currencyFormat(item.menu_price) : "-",
-                    currencyFormat(item.estimated_cost),
                   ])}
                   emptyMessage="Belum ada riwayat reward yang ditukar pada rentang tanggal ini."
                 />
@@ -1035,12 +1024,6 @@ function AdminPage() {
                 onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
               />
               <FormInput
-                label="Estimasi Cost/HPP"
-                type="number"
-                value={String(redeemForm.estimated_cost)}
-                onChange={(v) => setRedeemForm({ ...redeemForm, estimated_cost: v })}
-              />
-              <FormInput
                 label="Urutan"
                 type="number"
                 value={String(redeemForm.sort_order)}
@@ -1067,8 +1050,6 @@ function AdminPage() {
                       <th className="p-2">Menu</th>
                       <th className="p-2">Harga Jual</th>
                       <th className="p-2">Poin</th>
-                      <th className="p-2">Nilai/Poin</th>
-                      <th className="p-2">Estimasi Cost</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Aksi</th>
                     </tr>
@@ -1079,16 +1060,6 @@ function AdminPage() {
                         <td className="p-2 font-bold">{item.menu_item.name}</td>
                         <td className="p-2">{currencyFormat(toNumber(item.menu_item.price))}</td>
                         <td className="p-2">{numberFormat(item.points_required)}</td>
-                        <td className="p-2">
-                          {item.points_required > 0
-                            ? currencyFormat(toNumber(item.menu_item.price) / item.points_required)
-                            : "-"}
-                        </td>
-                        <td className="p-2">
-                          {item.estimated_cost !== null
-                            ? currencyFormat(toNumber(item.estimated_cost))
-                            : "-"}
-                        </td>
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
@@ -1099,7 +1070,6 @@ function AdminPage() {
                                   id: item.id,
                                   menu_item_id: item.menu_item_id,
                                   points_required: item.points_required,
-                                  estimated_cost: item.estimated_cost ?? "",
                                   sort_order: item.sort_order,
                                   is_active: item.is_active,
                                 })
@@ -1432,10 +1402,6 @@ function RedemptionHistoryChart({
           label: "Poin Ditukar",
           color: "#0EA5E9",
         },
-        estimated_cost: {
-          label: "Estimasi Cost",
-          color: "#22C55E",
-        },
       }}
       className="min-h-[260px] w-full"
     >
@@ -1469,14 +1435,10 @@ function RedemptionHistoryChart({
                   <span className="text-muted-foreground">
                     {name === "redemption_count"
                       ? "Jumlah Redeem"
-                      : name === "points_spent"
-                        ? "Poin Ditukar"
-                        : "Estimasi Cost"}
+                      : "Poin Ditukar"}
                   </span>
                   <span className="font-mono font-bold">
-                    {name === "estimated_cost"
-                      ? currencyFormat(Number(value))
-                      : numberFormat(Number(value))}
+                    {numberFormat(Number(value))}
                   </span>
                 </div>
               )}
@@ -1497,15 +1459,6 @@ function RedemptionHistoryChart({
           type="monotone"
           dataKey="points_spent"
           stroke="#0EA5E9"
-          strokeWidth={3}
-          dot={{ r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-        <Line
-          yAxisId="points"
-          type="monotone"
-          dataKey="estimated_cost"
-          stroke="#22C55E"
           strokeWidth={3}
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
