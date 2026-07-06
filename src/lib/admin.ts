@@ -114,6 +114,9 @@ export type RedeemItem = {
   menu_item_id: number;
   category_id: number;
   points_required: number;
+  pb1_rate: number;
+  pb1_amount: number;
+  price_with_pb1: number;
   is_active: boolean;
   badge: string | null;
   sort_order: number;

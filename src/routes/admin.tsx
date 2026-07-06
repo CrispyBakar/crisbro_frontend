@@ -1048,7 +1048,7 @@ function AdminPage() {
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Menu</th>
-                      <th className="p-2">Harga Jual</th>
+                      <th className="p-2">Nilai Jual & PB1</th>
                       <th className="p-2">Poin</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Aksi</th>
@@ -1058,7 +1058,20 @@ function AdminPage() {
                     {redeemItems.map((item) => (
                       <tr key={item.id} className="border-t border-border">
                         <td className="p-2 font-bold">{item.menu_item.name}</td>
-                        <td className="p-2">{currencyFormat(toNumber(item.menu_item.price))}</td>
+                        <td className="p-2">
+                          <div className="space-y-0.5">
+                            <p className="font-semibold">
+                              {currencyFormat(toNumber(item.menu_item.price))}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              PB1 {numberFormat(item.pb1_rate * 100)}%:{" "}
+                              {currencyFormat(item.pb1_amount)}
+                            </p>
+                            <p className="text-xs font-bold text-primary">
+                              Total {currencyFormat(item.price_with_pb1)}
+                            </p>
+                          </div>
+                        </td>
                         <td className="p-2">{numberFormat(item.points_required)}</td>
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
                         <td className="p-2">
