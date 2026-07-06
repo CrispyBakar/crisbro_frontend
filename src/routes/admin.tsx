@@ -66,6 +66,7 @@ const emptyCustomerForm = {
   balance: 0,
   brand_id: 1,
   owner_location_id: 0,
+  location_ids: [] as number[],
   total_point: 0,
   available_point: 0,
   next_reward_threshold: 2000,
@@ -398,6 +399,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         owner_location_id: customerForm.owner_location_id
           ? Number(customerForm.owner_location_id)
           : null,
+        location_ids: customerForm.owner_location_id
+          ? Array.from(new Set([...customerForm.location_ids, Number(customerForm.owner_location_id)]))
+          : customerForm.location_ids,
         total_point: Number(customerForm.total_point),
         available_point: Number(customerForm.available_point),
         next_reward_threshold: Number(customerForm.next_reward_threshold),
@@ -756,121 +760,149 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "customers" && (
           <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
             <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
-              <div className="grid gap-3 md:grid-cols-2">
+              <CustomerFormGroup title="Identitas">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormInput
+                    label="Nama"
+                    value={customerForm.name}
+                    onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
+                  />
+                  <FormInput
+                    label="Nomor Telepon"
+                    value={customerForm.phone_number}
+                    onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
+                  />
+                  <FormInput
+                    label="Email"
+                    type="email"
+                    value={customerForm.email}
+                    onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
+                  />
+                  <Select
+                    label="Gender"
+                    value={customerForm.gender}
+                    onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
+                    options={[
+                      { value: "unknown", label: "Unknown" },
+                      { value: "male", label: "Male" },
+                      { value: "female", label: "Female" },
+                    ]}
+                  />
+                  <FormInput
+                    label="Tanggal Lahir"
+                    type="date"
+                    value={customerForm.dob}
+                    onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
+                  />
+                </div>
+              </CustomerFormGroup>
+
+              <CustomerFormGroup title="Lokasi">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Select
+                    label="Brand"
+                    value={String(customerForm.brand_id)}
+                    onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
+                    options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
+                      (brand) => ({
+                        value: String(brand.id),
+                        label: brand.name,
+                      }),
+                    )}
+                  />
+                  <Select
+                    label="Owner Outlet"
+                    value={String(customerForm.owner_location_id)}
+                    onChange={(v) => {
+                      const ownerId = Number(v);
+                      setCustomerForm({
+                        ...customerForm,
+                        owner_location_id: ownerId,
+                        location_ids:
+                          ownerId > 0
+                            ? Array.from(new Set([...customerForm.location_ids, ownerId]))
+                            : customerForm.location_ids,
+                      });
+                    }}
+                    options={[
+                      { value: "0", label: "Tanpa outlet" },
+                      ...(locations ?? []).map((location) => ({
+                        value: String(location.id),
+                        label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
+                      })),
+                    ]}
+                  />
+                </div>
                 <FormInput
-                  label="Nama"
-                  value={customerForm.name}
-                  onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
+                  label="Alamat"
+                  value={customerForm.address}
+                  onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
                 />
-                <FormInput
-                  label="Nomor Telepon"
-                  value={customerForm.phone_number}
-                  onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
-                />
-              </div>
-              <FormInput
-                label="Email"
-                type="email"
-                value={customerForm.email}
-                onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
-              />
-              <div className="grid gap-3 md:grid-cols-2">
-                <Select
-                  label="Brand"
-                  value={String(customerForm.brand_id)}
-                  onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
-                  options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
-                    (brand) => ({
-                      value: String(brand.id),
-                      label: brand.name,
-                    }),
-                  )}
-                />
-                <Select
-                  label="Outlet"
-                  value={String(customerForm.owner_location_id)}
-                  onChange={(v) =>
-                    setCustomerForm({ ...customerForm, owner_location_id: Number(v) })
-                  }
-                  options={[
-                    { value: "0", label: "Tanpa outlet" },
-                    ...(locations ?? []).map((location) => ({
-                      value: String(location.id),
-                      label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
-                    })),
-                  ]}
-                />
-              </div>
-              <FormInput
-                label="Alamat"
-                value={customerForm.address}
-                onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
-              />
-              <div className="grid gap-3 md:grid-cols-2">
-                <FormInput
-                  label="Kota"
-                  value={customerForm.city}
-                  onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
-                />
-                <FormInput
-                  label="Provinsi"
-                  value={customerForm.province}
-                  onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
-                />
-                <FormInput
-                  label="Tanggal Lahir"
-                  type="date"
-                  value={customerForm.dob}
-                  onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
-                />
-                <Select
-                  label="Gender"
-                  value={customerForm.gender}
-                  onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
-                  options={[
-                    { value: "unknown", label: "Unknown" },
-                    { value: "male", label: "Male" },
-                    { value: "female", label: "Female" },
-                  ]}
-                />
-                <Select
-                  label="Status"
-                  value={customerForm.status}
-                  onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
-                  options={[
-                    { value: "active", label: "Active" },
-                    { value: "inactive", label: "Inactive" },
-                  ]}
-                />
-                <FormInput
-                  label="Saldo"
-                  type="number"
-                  value={String(customerForm.balance)}
-                  onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
-                />
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <FormInput
-                  label="Total Poin"
-                  type="number"
-                  value={String(customerForm.total_point)}
-                  onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
-                />
-                <FormInput
-                  label="Poin Tersedia"
-                  type="number"
-                  value={String(customerForm.available_point)}
-                  onChange={(v) => setCustomerForm({ ...customerForm, available_point: Number(v) })}
-                />
-                <FormInput
-                  label="Target Reward"
-                  type="number"
-                  value={String(customerForm.next_reward_threshold)}
-                  onChange={(v) =>
-                    setCustomerForm({ ...customerForm, next_reward_threshold: Number(v) })
-                  }
-                />
-              </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <FormInput
+                    label="Kota"
+                    value={customerForm.city}
+                    onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
+                  />
+                  <FormInput
+                    label="Provinsi"
+                    value={customerForm.province}
+                    onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
+                  />
+                  <FormInput
+                    label="Negara"
+                    value={customerForm.country}
+                    onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
+                  />
+                  <FormInput
+                    label="Kode Pos"
+                    value={customerForm.postal_code}
+                    onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
+                  />
+                </div>
+              </CustomerFormGroup>
+
+              <CustomerFormGroup title="Loyalty">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Select
+                    label="Status"
+                    value={customerForm.status}
+                    onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
+                    options={[
+                      { value: "active", label: "Active" },
+                      { value: "inactive", label: "Inactive" },
+                    ]}
+                  />
+                  <FormInput
+                    label="Saldo"
+                    type="number"
+                    value={String(customerForm.balance)}
+                    onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
+                  />
+                  <FormInput
+                    label="Total Poin"
+                    type="number"
+                    value={String(customerForm.total_point)}
+                    onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
+                  />
+                  <FormInput
+                    label="Poin Tersedia"
+                    type="number"
+                    value={String(customerForm.available_point)}
+                    onChange={(v) =>
+                      setCustomerForm({ ...customerForm, available_point: Number(v) })
+                    }
+                  />
+                  <FormInput
+                    label="Target Reward"
+                    type="number"
+                    value={String(customerForm.next_reward_threshold)}
+                    onChange={(v) =>
+                      setCustomerForm({ ...customerForm, next_reward_threshold: Number(v) })
+                    }
+                  />
+                </div>
+              </CustomerFormGroup>
               <div className="mt-3 flex gap-2">
                 <Button
                   onClick={saveCustomer}
@@ -961,6 +993,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                                   balance: Number(customer.balance ?? 0),
                                   brand_id: customer.brand_id,
                                   owner_location_id: customer.owner_location_id ?? 0,
+                                  location_ids:
+                                    customer.customer_locations?.map(
+                                      (location) => location.location_id,
+                                    ) ??
+                                    (customer.owner_location_id ? [customer.owner_location_id] : []),
                                   total_point: customer.customer_point?.total_point ?? 0,
                                   available_point: customer.customer_point?.available_point ?? 0,
                                   next_reward_threshold:
@@ -1672,6 +1709,23 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="mb-4 text-lg font-black">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function CustomerFormGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <fieldset className="mb-5 border-t border-border pt-4 first:border-t-0 first:pt-0">
+      <legend className="mb-3 text-sm font-black uppercase text-muted-foreground">
+        {title}
+      </legend>
+      {children}
+    </fieldset>
   );
 }
 

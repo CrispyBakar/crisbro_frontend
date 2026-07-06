@@ -183,6 +183,10 @@ export type AdminCustomer = {
   balance: string | number;
   brand_id: number;
   owner_location_id: number | null;
+  customer_locations?: Array<{
+    location_id: number;
+    location?: AdminLocation;
+  }>;
   user: { id: number; email: string | null; phone_number: string | null; role: string };
   brand: AdminBrand;
   owner_location: AdminLocation | null;
@@ -209,6 +213,7 @@ export type AdminCustomerPayload = {
   balance?: number;
   brand_id?: number;
   owner_location_id?: number | null;
+  location_ids?: number[];
   total_point?: number;
   available_point?: number;
   next_reward_threshold?: number;
