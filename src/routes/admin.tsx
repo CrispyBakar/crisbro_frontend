@@ -35,10 +35,11 @@ export const Route = createFileRoute("/admin")({
       { name: "description", content: "Kelola program loyalty Crisbar." },
     ],
   }),
-  component: AdminPage,
+  component: () => <AdminPage mode="admin" />,
 });
 
 type Tab = "report" | "users" | "customers" | "redeem";
+type ConsoleMode = "admin" | "marketing";
 
 const emptyUserForm = {
   id: 0,
@@ -104,7 +105,7 @@ function dateFormat(value: string) {
   }).format(new Date(value));
 }
 
-function AdminPage() {
+export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -140,8 +141,15 @@ function AdminPage() {
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
 
   const currentUser = useMemo(() => getUser(), []);
-  const canAccess = currentUser?.role === "admin" || currentUser?.role === "staff";
+  const canAccess =
+    mode === "marketing"
+      ? currentUser?.role === "admin" ||
+        currentUser?.role === "staff" ||
+        currentUser?.role === "marketing"
+      : currentUser?.role === "admin" || currentUser?.role === "staff";
   const canManageUsers = currentUser?.role === "admin";
+  const canViewCustomers = mode === "admin";
+  const isMarketingConsole = mode === "marketing";
   const selectedCatalogItem = useMemo(
     () => catalogItems.find((item) => item.id === redeemForm.menu_item_id) ?? null,
     [catalogItems, redeemForm.menu_item_id],
@@ -223,15 +231,24 @@ function AdminPage() {
       return;
     }
     if (tab === "users") {
-      await loadUsers();
+      if (canManageUsers && !isMarketingConsole) await loadUsers();
       return;
     }
     if (tab === "customers") {
-      await loadCustomers();
+      if (canViewCustomers) await loadCustomers();
       return;
     }
     await loadRedeem();
-  }, [loadCustomers, loadRedeem, loadReport, loadUsers, tab]);
+  }, [
+    canManageUsers,
+    canViewCustomers,
+    isMarketingConsole,
+    loadCustomers,
+    loadRedeem,
+    loadReport,
+    loadUsers,
+    tab,
+  ]);
 
   async function searchUsers() {
     setError("");
@@ -300,6 +317,10 @@ function AdminPage() {
       navigate({ to: "/login" });
       return;
     }
+    if (isMarketingConsole && tab !== "report" && tab !== "redeem") {
+      setTab("report");
+      return;
+    }
     if (loadedTabs.current[tab]) {
       setLoading(false);
       return;
@@ -307,7 +328,7 @@ function AdminPage() {
     refreshCurrentTab();
     // Run only when access or the active tab changes. Filter/search inputs fetch via their buttons.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccess, navigate, tab]);
+  }, [canAccess, isMarketingConsole, navigate, tab]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
@@ -493,8 +514,12 @@ function AdminPage() {
       <section className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-bold text-muted-foreground">Admin Console</p>
-            <h1 className="text-3xl font-black tracking-tight">Program Loyalty</h1>
+            <p className="text-sm font-bold text-muted-foreground">
+              {isMarketingConsole ? "Marketing Console" : "Admin Console"}
+            </p>
+            <h1 className="text-3xl font-black tracking-tight">
+              {isMarketingConsole ? "Laporan & Menu Redeem" : "Program Loyalty"}
+            </h1>
           </div>
           <Button onClick={refreshCurrentTab} disabled={loading} className="rounded-full font-bold">
             <RefreshCw className="h-4 w-4" /> Refresh
@@ -508,7 +533,7 @@ function AdminPage() {
             icon={<BarChart3 className="h-4 w-4" />}
             label="Laporan"
           />
-          {canManageUsers && (
+          {canManageUsers && !isMarketingConsole && (
             <TabButton
               active={tab === "users"}
               onClick={() => setTab("users")}
@@ -516,12 +541,14 @@ function AdminPage() {
               label="User Admin"
             />
           )}
-          <TabButton
-            active={tab === "customers"}
-            onClick={() => setTab("customers")}
-            icon={<Users className="h-4 w-4" />}
-            label="Customers"
-          />
+          {canViewCustomers && (
+            <TabButton
+              active={tab === "customers"}
+              onClick={() => setTab("customers")}
+              icon={<Users className="h-4 w-4" />}
+              label="Customers"
+            />
+          )}
           <TabButton
             active={tab === "redeem"}
             onClick={() => setTab("redeem")}

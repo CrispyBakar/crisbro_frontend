@@ -50,7 +50,14 @@ function LoginPage() {
     try {
       const { token, user } = await apiLogin(normalized, password);
       saveAuth(token, user);
-      navigate({ to: "/dashboard" });
+      navigate({
+        to:
+          user.role === "admin" || user.role === "staff"
+            ? "/admin"
+            : user.role === "marketing"
+              ? "/marketing"
+              : "/dashboard",
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login gagal, coba lagi.");
     } finally {

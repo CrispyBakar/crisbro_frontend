@@ -42,10 +42,12 @@ export function Navbar() {
     navigate({ to: "/" });
   };
 
-  const customerName = user?.customer?.name ?? "";
+  const customerName = user?.customer?.name ?? (user?.role === "marketing" ? "Marketing" : "");
   const initial = customerName.charAt(0).toUpperCase() || "?";
   const phoneNumber = user?.phone_number ?? "-";
   const isAdmin = user?.role === "admin" || user?.role === "staff";
+  const isMarketing = user?.role === "marketing";
+  const dashboardPath = isMarketing ? "/marketing" : "/dashboard";
 
   const linkClass =
     "px-4 py-2 rounded-full text-sm font-semibold text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-all";
@@ -95,6 +97,11 @@ export function Navbar() {
               Admin
             </Link>
           )}
+          {isMarketing && (
+            <Link to="/marketing" className={linkClass} activeProps={{ className: activeClass }}>
+              Marketing
+            </Link>
+          )}
         </div>
 
         {/* Desktop CTA — kondisional */}
@@ -134,12 +141,12 @@ export function Navbar() {
                   {/* Menu aksi */}
                   <div className="p-2">
                     <Link
-                      to="/dashboard"
+                      to={dashboardPath}
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4 text-primary" />
-                      Dashboard
+                      {isMarketing ? "Marketing" : "Dashboard"}
                     </Link>
                     {isAdmin && (
                       <Link
@@ -278,6 +285,19 @@ export function Navbar() {
                 Admin
               </Link>
             )}
+            {isMarketing && (
+              <Link
+                to="/marketing"
+                onClick={close}
+                className="px-4 py-3 rounded-xl text-base font-semibold text-foreground hover:bg-background/60 transition-colors"
+                activeProps={{
+                  className:
+                    "px-4 py-3 rounded-xl text-base font-semibold text-primary bg-background",
+                }}
+              >
+                Marketing
+              </Link>
+            )}
           </div>
 
           {/* Mobile CTA — kondisional */}
@@ -293,11 +313,12 @@ export function Navbar() {
                 </div>
               </div>
               <Link
-                to="/dashboard"
+                to={dashboardPath}
                 onClick={close}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
               >
-                <LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard
+                <LayoutDashboard className="h-4 w-4 text-primary" />{" "}
+                {isMarketing ? "Marketing" : "Dashboard"}
               </Link>
               {isAdmin && (
                 <Link

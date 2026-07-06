@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PromoRouteImport } from './routes/promo'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as LokasiRouteImport } from './routes/lokasi'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KatalogRouteImport } from './routes/katalog'
@@ -33,6 +34,11 @@ const PromoRoute = PromoRouteImport.update({
 const MenuRoute = MenuRouteImport.update({
   id: '/menu',
   path: '/menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LokasiRoute = LokasiRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/katalog': typeof KatalogRoute
   '/login': typeof LoginRoute
   '/lokasi': typeof LokasiRoute
+  '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/katalog': typeof KatalogRoute
   '/login': typeof LoginRoute
   '/lokasi': typeof LokasiRoute
+  '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/katalog': typeof KatalogRoute
   '/login': typeof LoginRoute
   '/lokasi': typeof LokasiRoute
+  '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/katalog'
     | '/login'
     | '/lokasi'
+    | '/marketing'
     | '/menu'
     | '/promo'
     | '/register'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/katalog'
     | '/login'
     | '/lokasi'
+    | '/marketing'
     | '/menu'
     | '/promo'
     | '/register'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/katalog'
     | '/login'
     | '/lokasi'
+    | '/marketing'
     | '/menu'
     | '/promo'
     | '/register'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   KatalogRoute: typeof KatalogRoute
   LoginRoute: typeof LoginRoute
   LokasiRoute: typeof LokasiRoute
+  MarketingRoute: typeof MarketingRoute
   MenuRoute: typeof MenuRoute
   PromoRoute: typeof PromoRoute
   RegisterRoute: typeof RegisterRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/menu'
       fullPath: '/menu'
       preLoaderRoute: typeof MenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lokasi': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   KatalogRoute: KatalogRoute,
   LoginRoute: LoginRoute,
   LokasiRoute: LokasiRoute,
+  MarketingRoute: MarketingRoute,
   MenuRoute: MenuRoute,
   PromoRoute: PromoRoute,
   RegisterRoute: RegisterRoute,
