@@ -199,10 +199,10 @@ export function Navbar() {
       {/* Mobile menu panel */}
       <div
         className={`md:hidden mx-auto max-w-6xl overflow-hidden transition-all duration-300 ease-out ${
-          open ? "max-h-96 opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
+          open ? "max-h-[calc(100vh-5.5rem)] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
         }`}
       >
-        <div className="rounded-2xl bg-[#FDEC80] border border-border shadow-(--shadow-soft) p-4">
+        <div className="rounded-2xl bg-[#FDEC80] border border-border shadow-(--shadow-soft) p-4 max-h-[calc(100vh-5.5rem)] overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-foreground/80 px-2">Menu</span>
             <button
