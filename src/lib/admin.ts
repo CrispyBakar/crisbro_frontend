@@ -250,10 +250,13 @@ export const adminApi = {
     adminRequest<{ message: string }>(`/customers/${id}`, { method: "DELETE" }),
   brands: () => adminRequest<AdminBrand[]>("/brands"),
   locations: () => adminRequest<AdminLocation[]>("/locations"),
-  summary: (filters: { redemption_from?: string; redemption_to?: string } = {}) => {
+  summary: (
+    filters: { redemption_from?: string; redemption_to?: string; outlet_id?: number } = {},
+  ) => {
     const params = new URLSearchParams();
     if (filters.redemption_from) params.set("redemption_from", filters.redemption_from);
     if (filters.redemption_to) params.set("redemption_to", filters.redemption_to);
+    if (filters.outlet_id) params.set("outlet_id", String(filters.outlet_id));
     const query = params.toString();
     return adminRequest<LoyaltySummary>(`/loyalty-summary${query ? `?${query}` : ""}`);
   },

@@ -127,6 +127,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
   const [reportRedemptionTo, setReportRedemptionTo] = useState("");
+  const [reportOutletId, setReportOutletId] = useState("0");
   const [redeemForm, setRedeemForm] = useState<RedeemFormState>({
     id: 0,
     menu_item_id: 0,
@@ -155,23 +156,32 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     () => catalogItems.find((item) => item.id === redeemForm.menu_item_id) ?? null,
     [catalogItems, redeemForm.menu_item_id],
   );
+  const reportFilters = useMemo(
+    () => ({
+      redemption_from: reportRedemptionFrom,
+      redemption_to: reportRedemptionTo,
+      outlet_id: reportOutletId !== "0" ? Number(reportOutletId) : undefined,
+    }),
+    [reportOutletId, reportRedemptionFrom, reportRedemptionTo],
+  );
 
   const loadReport = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const summaryData = await adminApi.summary({
-        redemption_from: reportRedemptionFrom,
-        redemption_to: reportRedemptionTo,
-      });
+      const [summaryData, locationData] = await Promise.all([
+        adminApi.summary(reportFilters),
+        locations.length === 0 ? adminApi.locations() : Promise.resolve(locations),
+      ]);
       setSummary(summaryData);
+      setLocations(locationData);
       loadedTabs.current.report = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat laporan admin");
     } finally {
       setLoading(false);
     }
-  }, [reportRedemptionFrom, reportRedemptionTo]);
+  }, [locations, reportFilters]);
 
   const loadUsers = useCallback(async () => {
     if (!canManageUsers) return;
@@ -414,12 +424,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
       await loadCustomersPage(customerForm.id ? customerPage : 1);
-      setSummary(
-        await adminApi.summary({
-          redemption_from: reportRedemptionFrom,
-          redemption_to: reportRedemptionTo,
-        }),
-      );
+      setSummary(await adminApi.summary(reportFilters));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan customer");
     } finally {
@@ -437,12 +442,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       await loadCustomersPage(
         customers.length === 1 && customerPage > 1 ? customerPage - 1 : customerPage,
       );
-      setSummary(
-        await adminApi.summary({
-          redemption_from: reportRedemptionFrom,
-          redemption_to: reportRedemptionTo,
-        }),
-      );
+      setSummary(await adminApi.summary(reportFilters));
       if (customerForm.id === id) setCustomerForm(emptyCustomerForm);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menghapus customer");
@@ -473,12 +473,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         is_active: true,
       });
       await loadRedeem();
-      setSummary(
-        await adminApi.summary({
-          redemption_from: reportRedemptionFrom,
-          redemption_to: reportRedemptionTo,
-        }),
-      );
+      setSummary(await adminApi.summary(reportFilters));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan menu redeem");
     } finally {
@@ -586,7 +581,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               </Panel>
             </div>
             <Panel title="Riwayat semua reward yang ditukar">
-              <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_1.2fr_auto] md:items-end">
                 <FormInput
                   label="Dari tanggal"
                   type="date"
@@ -598,6 +593,18 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   type="date"
                   value={reportRedemptionTo}
                   onChange={setReportRedemptionTo}
+                />
+                <Select
+                  label="Outlet"
+                  value={reportOutletId}
+                  onChange={setReportOutletId}
+                  options={[
+                    { value: "0", label: "Semua outlet" },
+                    ...(locations ?? []).map((location) => ({
+                      value: String(location.id),
+                      label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
+                    })),
+                  ]}
                 />
                 <Button
                   onClick={loadReport}
