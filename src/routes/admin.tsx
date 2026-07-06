@@ -1112,7 +1112,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   <tbody>
                     {redeemItems.map((item) => (
                       <tr key={item.id} className="border-t border-border">
-                        <td className="p-2 font-bold">{item.menu_item.name}</td>
+                        <td className="p-2 font-bold">
+                          {item.menu_item.name}
+                          {!item.menu_item.is_active && (
+                            <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase text-muted-foreground">
+                              Menu Nonaktif
+                            </span>
+                          )}
+                        </td>
                         <td className="p-2">
                           <div className="space-y-0.5">
                             <p className="font-semibold">
@@ -1665,7 +1672,7 @@ function CategoryMenuPicker({
             <div className="max-h-[320px] overflow-auto p-2">
               {(activeGroup?.items ?? []).length === 0 ? (
                 <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
-                  Belum ada menu aktif di kategori ini.
+                  Belum ada menu di kategori ini.
                 </p>
               ) : (
                 (activeGroup?.items ?? []).map((item) => (
@@ -1679,7 +1686,20 @@ function CategoryMenuPicker({
                         : "hover:bg-secondary"
                     }`}
                   >
-                    <span className="block font-bold">{item.name}</span>
+                    <span className="block font-bold">
+                      {item.name}
+                      {!item.is_active && (
+                        <span
+                          className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                            selectedItemId === item.id
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          Menu Nonaktif
+                        </span>
+                      )}
+                    </span>
                     <span className="text-xs opacity-80">
                       {currencyFormat(toNumber(item.price))}
                     </span>
