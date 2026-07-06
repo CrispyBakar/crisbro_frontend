@@ -404,7 +404,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           : customerForm.location_ids,
         total_point: Number(customerForm.total_point),
         available_point: Number(customerForm.available_point),
-        next_reward_threshold: Number(customerForm.next_reward_threshold),
       };
 
       if (customerForm.id) {
@@ -891,14 +890,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     value={String(customerForm.available_point)}
                     onChange={(v) =>
                       setCustomerForm({ ...customerForm, available_point: Number(v) })
-                    }
-                  />
-                  <FormInput
-                    label="Target Reward"
-                    type="number"
-                    value={String(customerForm.next_reward_threshold)}
-                    onChange={(v) =>
-                      setCustomerForm({ ...customerForm, next_reward_threshold: Number(v) })
                     }
                   />
                 </div>

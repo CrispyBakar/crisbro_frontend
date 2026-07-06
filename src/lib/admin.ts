@@ -216,7 +216,6 @@ export type AdminCustomerPayload = {
   location_ids?: number[];
   total_point?: number;
   available_point?: number;
-  next_reward_threshold?: number;
 };
 
 export type AdminCustomerPage = {
