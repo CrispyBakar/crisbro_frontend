@@ -18,7 +18,7 @@ type Promo = {
   id: number;
   name: string;
   status: string;
-  start_date: string;
+  start_date: string | null;
   end_date: string | null;
   channel: string | null;
   // Dikirim langsung dari backend supaya logic "khusus online" konsisten
@@ -103,7 +103,7 @@ function isPromo(item: unknown): item is Promo {
     Number.isFinite(promo.id) &&
     typeof promo.name === "string" &&
     typeof promo.status === "string" &&
-    typeof promo.start_date === "string" &&
+    (promo.start_date === null || typeof promo.start_date === "string") &&
     (promo.end_date === null || typeof promo.end_date === "string") &&
     (promo.channel === null || typeof promo.channel === "string") &&
     typeof promo.is_online_only === "boolean" &&
@@ -257,7 +257,7 @@ function PromoPage() {
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       <Calendar className="h-4 w-4 text-primary" />
-                      {promo.start_date}
+                      {promo.start_date ?? "Tanggal mulai belum tersedia"}
                       {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
                     </span>
                     {promo.channel && (
