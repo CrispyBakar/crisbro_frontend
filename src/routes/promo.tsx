@@ -47,6 +47,78 @@ const statusLabel: Record<string, { label: string; color: string }> = {
   inactive: { label: "Tidak Aktif", color: "bg-red-100 text-red-500" },
 };
 
+async function readPromoResponse(response: Response): Promise<PromoResponse> {
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Data promo tidak valid");
+  }
+
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : data && typeof data === "object" && "message" in data && typeof data.message === "string"
+          ? data.message
+          : `Gagal memuat promo (HTTP ${response.status})`;
+    throw new Error(message);
+  }
+
+  if (!isPromoResponse(data)) {
+    throw new Error("Format data promo tidak valid");
+  }
+
+  return data;
+}
+
+function isPromoResponse(data: unknown): data is PromoResponse {
+  if (!data || typeof data !== "object") return false;
+
+  const response = data as Partial<PromoResponse>;
+  return (
+    Array.isArray(response.items) &&
+    response.items.every(isPromo) &&
+    Number.isInteger(response.page) &&
+    response.page >= 1 &&
+    Number.isInteger(response.limit) &&
+    response.limit >= 1 &&
+    Number.isInteger(response.total) &&
+    response.total >= 0 &&
+    Number.isInteger(response.total_pages) &&
+    response.total_pages >= 1
+  );
+}
+
+function isPromo(item: unknown): item is Promo {
+  if (!item || typeof item !== "object") return false;
+
+  const promo = item as Partial<Promo>;
+  return (
+    Number.isFinite(promo.id) &&
+    typeof promo.name === "string" &&
+    typeof promo.status === "string" &&
+    typeof promo.start_date === "string" &&
+    (promo.end_date === null || typeof promo.end_date === "string") &&
+    (promo.channel === null || typeof promo.channel === "string") &&
+    typeof promo.is_online_only === "boolean" &&
+    Array.isArray(promo.locations) &&
+    promo.locations.every(isPromoLocation) &&
+    typeof promo.is_all_outlets === "boolean" &&
+    (promo.discount_amount === null || Number.isFinite(promo.discount_amount)) &&
+    typeof promo.discount_is_percentage === "boolean" &&
+    (promo.template === null || typeof promo.template === "string")
+  );
+}
+
+function isPromoLocation(item: unknown): item is Promo["locations"][number] {
+  if (!item || typeof item !== "object") return false;
+
+  const location = item as Partial<Promo["locations"][number]>;
+  return Number.isFinite(location.id) && typeof location.name === "string";
+}
+
 function PromoPage() {
   const [promos, setPromos] = useState<Promo[]>([]);
   const [page, setPage] = useState(1);
@@ -73,17 +145,13 @@ function PromoPage() {
     setError("");
 
     fetch(apiUrl(`/promos?${params.toString()}`), { signal: controller.signal })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        return data;
-      })
-      .then((data: PromoResponse) => {
+      .then(readPromoResponse)
+      .then((data) => {
         if (ignore) return;
-        setPromos(data.items ?? []);
-        setPage(data.page ?? page);
-        setTotalPages(data.total_pages ?? 1);
-        setTotalPromos(data.total ?? 0);
+        setPromos(data.items);
+        setPage(data.page);
+        setTotalPages(data.total_pages);
+        setTotalPromos(data.total);
       })
       .catch((err) => {
         if (!ignore && err.name !== "AbortError") setError(err.message);
@@ -152,79 +220,79 @@ function PromoPage() {
         {!loading && !error && promos.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2">
             {promos.map((promo) => {
-          const st = statusLabel[promo.status] ?? {
-            label: promo.status,
-            color: "bg-gray-100 text-gray-500",
-          };
-          return (
-            <article
-              key={promo.id}
-              className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
-            >
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div className="h-12 w-12 rounded-2xl bg-secondary grid place-items-center shrink-0">
-                  <Tag className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${st.color}`}>
-                    {st.label}
-                  </span>
-                </div>
-              </div>
-
-              <h3 className="text-xl font-extrabold mb-2">{promo.name}</h3>
-
-              {promo.discount_amount !== null && (
-                <p className="text-2xl font-black text-primary mb-3">
-                  {promo.discount_is_percentage
-                    ? `Diskon ${promo.discount_amount}%`
-                    : `Hemat Rp ${promo.discount_amount.toLocaleString("id-ID")}`}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  {promo.start_date}
-                  {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
-                </span>
-                {promo.channel && (
-                  <span className="inline-flex items-center gap-1.5 capitalize">
-                    📱 {promo.channel}
-                  </span>
-                )}
-              </div>
-
-              {promo.is_all_outlets ? (
-                <div className="mt-3">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-full">
-                    <MapPin className="h-3 w-3" /> Berlaku di semua outlet
-                  </span>
-                </div>
-              ) : (
-                promo.locations.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {promo.locations.map((loc) => (
-                      <span
-                        key={loc.id}
-                        className="inline-flex items-center gap-1 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full"
-                      >
-                        <MapPin className="h-3 w-3" /> {loc.name}
+              const st = statusLabel[promo.status] ?? {
+                label: promo.status,
+                color: "bg-gray-100 text-gray-500",
+              };
+              return (
+                <article
+                  key={promo.id}
+                  className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="h-12 w-12 rounded-2xl bg-secondary grid place-items-center shrink-0">
+                      <Tag className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${st.color}`}>
+                        {st.label}
                       </span>
-                    ))}
+                    </div>
                   </div>
-                )
-              )}
 
-              {/* Penanda Online Baru - Ditaruh sebagai Footer */}
-              {promo.is_online_only && (
-                <div className="mt-4 pt-3 border-t border-dashed border-border text-xs text-muted-foreground/80 flex items-center gap-1.5">
-                  <Smartphone className="h-3 w-3" />
-                  <span>Hanya berlaku untuk pemesanan online</span>
-                </div>
-              )}
-            </article>
-          );
+                  <h3 className="text-xl font-extrabold mb-2">{promo.name}</h3>
+
+                  {promo.discount_amount !== null && (
+                    <p className="text-2xl font-black text-primary mb-3">
+                      {promo.discount_is_percentage
+                        ? `Diskon ${promo.discount_amount}%`
+                        : `Hemat Rp ${promo.discount_amount.toLocaleString("id-ID")}`}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      {promo.start_date}
+                      {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
+                    </span>
+                    {promo.channel && (
+                      <span className="inline-flex items-center gap-1.5 capitalize">
+                        📱 {promo.channel}
+                      </span>
+                    )}
+                  </div>
+
+                  {promo.is_all_outlets ? (
+                    <div className="mt-3">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-full">
+                        <MapPin className="h-3 w-3" /> Berlaku di semua outlet
+                      </span>
+                    </div>
+                  ) : (
+                    promo.locations.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {promo.locations.map((loc) => (
+                          <span
+                            key={loc.id}
+                            className="inline-flex items-center gap-1 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full"
+                          >
+                            <MapPin className="h-3 w-3" /> {loc.name}
+                          </span>
+                        ))}
+                      </div>
+                    )
+                  )}
+
+                  {/* Penanda Online Baru - Ditaruh sebagai Footer */}
+                  {promo.is_online_only && (
+                    <div className="mt-4 pt-3 border-t border-dashed border-border text-xs text-muted-foreground/80 flex items-center gap-1.5">
+                      <Smartphone className="h-3 w-3" />
+                      <span>Hanya berlaku untuk pemesanan online</span>
+                    </div>
+                  )}
+                </article>
+              );
             })}
           </div>
         )}
