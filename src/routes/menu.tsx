@@ -30,6 +30,24 @@ type MenuItem = {
   sort_order: number;
 };
 
+function isMenuItem(item: unknown): item is MenuItem {
+  if (!item || typeof item !== "object") return false;
+
+  const menuItem = item as Partial<MenuItem>;
+  return (
+    Number.isFinite(menuItem.id) &&
+    typeof menuItem.sku === "string" &&
+    typeof menuItem.name === "string" &&
+    (menuItem.description === null || typeof menuItem.description === "string") &&
+    Number.isFinite(menuItem.points_required) &&
+    menuItem.points_required >= 0 &&
+    (menuItem.image_url === null || typeof menuItem.image_url === "string") &&
+    (menuItem.category === null || typeof menuItem.category === "string") &&
+    (menuItem.category_id === null || Number.isFinite(menuItem.category_id)) &&
+    Number.isFinite(menuItem.sort_order)
+  );
+}
+
 function MenuPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -49,7 +67,11 @@ function MenuPage() {
           throw new Error("Format data menu redeem tidak valid");
         }
 
-        return data as MenuItem[];
+        if (!data.every(isMenuItem)) {
+          throw new Error("Data menu redeem tidak valid");
+        }
+
+        return data;
       })
       .then((data) => {
         setItems(data);
