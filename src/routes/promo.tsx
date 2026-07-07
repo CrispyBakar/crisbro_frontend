@@ -80,15 +80,19 @@ function isPromoResponse(data: unknown): data is PromoResponse {
   return (
     Array.isArray(response.items) &&
     response.items.every(isPromo) &&
-    Number.isInteger(response.page) &&
-    response.page >= 1 &&
-    Number.isInteger(response.limit) &&
-    response.limit >= 1 &&
-    Number.isInteger(response.total) &&
-    response.total >= 0 &&
-    Number.isInteger(response.total_pages) &&
-    response.total_pages >= 1
+    isPositiveInteger(response.page) &&
+    isPositiveInteger(response.limit) &&
+    isNonNegativeInteger(response.total) &&
+    isPositiveInteger(response.total_pages)
   );
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && value >= 1;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isInteger(value) && value >= 0;
 }
 
 function isPromo(item: unknown): item is Promo {
@@ -320,7 +324,7 @@ function PromoSkeleton() {
       {Array.from({ length: promoLimit }).map((_, index) => (
         <div
           key={index}
-          className="min-h-[220px] rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+          className="min-h-55 rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
         >
           <div className="mb-5 flex items-start justify-between">
             <Skeleton className="h-12 w-12 rounded-2xl" />
