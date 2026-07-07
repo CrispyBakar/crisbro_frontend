@@ -35,6 +35,67 @@ const VISIBLE_LIMIT = 8;
 // Maksimal jumlah card/menu yang ditampilkan per halaman grid.
 const PAGE_SIZE = 9;
 
+async function fetchJsonArray<T>(
+  url: string,
+  label: string,
+  isValidItem: (item: unknown) => item is T,
+): Promise<T[]> {
+  const response = await fetch(url);
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(`${label} mengembalikan data yang tidak valid`);
+  }
+
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : data && typeof data === "object" && "message" in data && typeof data.message === "string"
+          ? data.message
+          : `Gagal memuat ${label.toLowerCase()} (HTTP ${response.status})`;
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(data)) {
+    throw new Error(`${label} mengembalikan format data yang tidak sesuai`);
+  }
+
+  if (!data.every(isValidItem)) {
+    throw new Error(`${label} berisi data yang tidak sesuai`);
+  }
+
+  return data;
+}
+
+function isProduct(item: unknown): item is Product {
+  if (!item || typeof item !== "object") return false;
+
+  const product = item as Partial<Product>;
+  return (
+    Number.isFinite(product.id) &&
+    typeof product.name === "string" &&
+    (product.description === null || typeof product.description === "string") &&
+    Number.isFinite(product.sell_price) &&
+    (product.image_url === null || typeof product.image_url === "string") &&
+    typeof product.category === "string" &&
+    (product.category_id === null || Number.isFinite(product.category_id))
+  );
+}
+
+function isCategory(item: unknown): item is Category {
+  if (!item || typeof item !== "object") return false;
+
+  const category = item as Partial<Category>;
+  return (
+    Number.isFinite(category.id) &&
+    typeof category.name === "string" &&
+    Number.isFinite(category.total_products)
+  );
+}
+
 function KatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,8 +109,8 @@ function KatalogPage() {
   useEffect(() => {
     // Fetch categories dan products secara paralel
     Promise.all([
-      fetch(apiUrl("/catalog/products/categories")).then((r) => r.json()),
-      fetch(apiUrl("/catalog/products")).then((r) => r.json()),
+      fetchJsonArray(apiUrl("/catalog/products/categories"), "Kategori katalog", isCategory),
+      fetchJsonArray(apiUrl("/catalog/products"), "Produk katalog", isProduct),
     ])
       .then(([cats, prods]) => {
         setCategories(cats);
