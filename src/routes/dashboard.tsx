@@ -32,6 +32,7 @@ function DashboardPage() {
       navigate({ to: "/login" });
       return;
     }
+    setUser(cachedUser);
 
     async function refreshProfile({ silent = false } = {}) {
       if (silent) {
