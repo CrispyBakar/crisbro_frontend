@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ArrowLeft, Camera } from "lucide-react";
 import { getUser, type AuthUser } from "@/lib/auth";
 
@@ -43,7 +44,13 @@ function EstimasiPage() {
     setState(JSON.parse(raw));
   }, [navigate]);
 
-  if (!user || !state) return null;
+  if (!user || !state) {
+    return (
+      <main className="px-4 mt-10 pb-16">
+        <EstimasiSkeleton />
+      </main>
+    );
+  }
 
   const pointsAfter = state.pointsBefore - state.totalPoints;
   const customerName = user.customer?.name ?? "Sahabat Crispy";
@@ -193,5 +200,57 @@ function EstimasiPage() {
         </Button>
       </section>
     </main>
+  );
+}
+
+function EstimasiSkeleton() {
+  return (
+    <>
+      <div className="mx-auto max-w-md mb-6 flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <section className="mx-auto max-w-md">
+        <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-(--shadow-soft)">
+          <div className="px-6 py-5">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-11 w-11 rounded-2xl" />
+              <div>
+                <Skeleton className="mb-2 h-5 w-36" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          </div>
+          <div className="px-6 pt-5 pb-4">
+            <Skeleton className="mx-auto mb-5 h-8 w-56" />
+            <div className="mb-5 flex items-center gap-3">
+              <Skeleton className="h-11 w-11 rounded-full" />
+              <div>
+                <Skeleton className="mb-2 h-5 w-36" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+            </div>
+            <div className="my-4 border-t-2 border-dashed border-border" />
+            <Skeleton className="mb-3 h-4 w-28" />
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3"
+                >
+                  <Skeleton className="h-14 w-14 rounded-xl" />
+                  <div className="flex-1">
+                    <Skeleton className="mb-2 h-5 w-32" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-5 w-12" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="mt-5 h-28 w-full rounded-2xl" />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

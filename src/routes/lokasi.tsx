@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, Phone, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -50,7 +51,7 @@ function LokasiPage() {
         </p>
       </section>
 
-      {loading && <p className="text-center text-muted-foreground mt-10">Memuat lokasi...</p>}
+      {loading && <LocationSkeleton />}
 
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
@@ -92,5 +93,32 @@ function LokasiPage() {
         ))}
       </section>
     </main>
+  );
+}
+
+function LocationSkeleton() {
+  return (
+    <section className="mx-auto max-w-6xl grid gap-6 md:grid-cols-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+        >
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-14 w-14 shrink-0 rounded-2xl" />
+            <div className="min-w-0 flex-1">
+              <Skeleton className="mb-3 h-4 w-24" />
+              <Skeleton className="mb-4 h-7 w-3/4" />
+              <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-4 h-4 w-5/6" />
+              <div className="flex flex-wrap gap-4">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }

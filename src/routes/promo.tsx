@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef, useState } from "react";
 import { Tag, MapPin, Calendar, Smartphone, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -146,25 +147,7 @@ function PromoPage() {
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
       <section ref={promoListRef} className="mx-auto max-w-6xl scroll-mt-24">
-        {loading && (
-          <div className="grid gap-6 md:grid-cols-2">
-            {Array.from({ length: promoLimit }).map((_, index) => (
-              <div
-                key={index}
-                className="min-h-[220px] rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
-              >
-                <div className="mb-5 flex items-start justify-between">
-                  <div className="h-12 w-12 animate-pulse rounded-2xl bg-secondary" />
-                  <div className="h-7 w-20 animate-pulse rounded-full bg-secondary" />
-                </div>
-                <div className="mb-3 h-6 w-3/4 animate-pulse rounded bg-secondary" />
-                <div className="mb-5 h-8 w-1/2 animate-pulse rounded bg-secondary" />
-                <div className="h-4 w-full animate-pulse rounded bg-secondary" />
-                <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-secondary" />
-              </div>
-            ))}
-          </div>
-        )}
+        {loading && <PromoSkeleton />}
 
         {!loading && !error && promos.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2">
@@ -260,6 +243,28 @@ function PromoPage() {
         />
       )}
     </main>
+  );
+}
+
+function PromoSkeleton() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      {Array.from({ length: promoLimit }).map((_, index) => (
+        <div
+          key={index}
+          className="min-h-[220px] rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+        >
+          <div className="mb-5 flex items-start justify-between">
+            <Skeleton className="h-12 w-12 rounded-2xl" />
+            <Skeleton className="h-7 w-20 rounded-full" />
+          </div>
+          <Skeleton className="mb-3 h-6 w-3/4" />
+          <Skeleton className="mb-5 h-8 w-1/2" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="mt-3 h-4 w-2/3" />
+        </div>
+      ))}
+    </div>
   );
 }
 

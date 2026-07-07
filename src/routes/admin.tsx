@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
@@ -560,7 +561,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             {error}
           </div>
         )}
-        {loading && <p className="text-muted-foreground font-semibold">Memuat data admin...</p>}
+        {loading && <AdminPageSkeleton tab={tab} />}
 
         {!loading && tab === "report" && summary && (
           <section className="space-y-6">
@@ -1208,6 +1209,85 @@ function Metric({ title, value }: { title: string; value: string }) {
       <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
       <p className="mt-2 text-3xl font-black">{value}</p>
     </div>
+  );
+}
+
+function AdminPageSkeleton({ tab }: { tab: Tab }) {
+  if (tab === "report") {
+    return (
+      <section className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)"
+            >
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-3 h-9 w-28" />
+            </div>
+          ))}
+        </div>
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)"
+            >
+              <Skeleton className="mb-5 h-6 w-56" />
+              <Skeleton className="mb-4 h-4 w-64 max-w-full" />
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((__, rowIndex) => (
+                  <div key={rowIndex} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-5 flex-1 rounded-full" />
+                    <Skeleton className="h-4 w-8" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
+          <Skeleton className="mb-5 h-6 w-64" />
+          <div className="grid gap-3 md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-10 w-full rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="mt-5 h-48 w-full" />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="grid gap-5 lg:grid-cols-[minmax(280px,420px)_1fr]">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
+        <Skeleton className="mb-5 h-6 w-44" />
+        <div className="space-y-4">
+          {Array.from({ length: tab === "redeem" ? 5 : 6 }).map((_, index) => (
+            <div key={index}>
+              <Skeleton className="mb-2 h-3 w-24" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
+        <Skeleton className="mb-5 h-6 w-52" />
+        <Skeleton className="mb-4 h-10 w-full rounded-xl" />
+        <div className="space-y-3">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="grid gap-3 md:grid-cols-[1.2fr_1fr_0.8fr_0.7fr]">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

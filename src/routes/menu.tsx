@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 
@@ -102,7 +103,7 @@ function MenuPage() {
         </p>
       </section>
 
-      {loading && <p className="text-center text-muted-foreground mt-10">Memuat menu...</p>}
+      {loading && <MenuSkeleton />}
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
       {/* Grid Menu */}
@@ -164,5 +165,29 @@ function MenuPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function MenuSkeleton() {
+  return (
+    <section className="mx-auto max-w-6xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-(--shadow-soft)"
+        >
+          <Skeleton className="aspect-4/3 w-full rounded-none" />
+          <div className="flex flex-1 flex-col p-6">
+            <Skeleton className="mb-3 h-6 w-3/4" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="mb-5 h-4 w-2/3" />
+            <div className="mt-auto flex items-center justify-between gap-3">
+              <Skeleton className="h-8 w-28" />
+              <Skeleton className="h-10 w-20 rounded-full" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }

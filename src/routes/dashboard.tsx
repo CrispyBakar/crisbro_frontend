@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, LogOut, Gift } from "lucide-react";
 import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
 
@@ -88,9 +89,7 @@ function DashboardPage() {
   if (loading) {
     return (
       <main className="px-4 mt-10">
-        <section className="mx-auto max-w-3xl">
-          <p className="text-center text-muted-foreground font-semibold">Memuat dashboard...</p>
-        </section>
+        <DashboardSkeleton />
       </main>
     );
   }
@@ -247,5 +246,40 @@ function DashboardPage() {
         </section>
       </section>
     </main>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <section className="mx-auto max-w-3xl">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Skeleton className="mb-3 h-4 w-40" />
+          <Skeleton className="h-10 w-64" />
+        </div>
+        <Skeleton className="h-10 w-28 rounded-full" />
+      </div>
+
+      <div className="rounded-[2rem] border border-border bg-card p-6 shadow-(--shadow-soft)">
+        <div className="mb-6 flex items-center gap-4">
+          <Skeleton className="h-14 w-14 rounded-2xl" />
+          <div className="flex-1">
+            <Skeleton className="mb-3 h-5 w-44" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <Skeleton className="mb-4 h-14 w-52" />
+        <Skeleton className="mb-6 h-4 w-full rounded-full" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-28 rounded-3xl" />
+        <Skeleton className="h-28 rounded-3xl" />
+      </div>
+    </section>
   );
 }

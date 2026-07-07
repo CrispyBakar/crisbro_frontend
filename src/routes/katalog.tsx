@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
 import { Search, ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -256,7 +257,7 @@ function KatalogPage() {
         </div>
       )}
 
-      {loading && <p className="text-center text-muted-foreground mt-10">Memuat produk...</p>}
+      {loading && <KatalogSkeleton />}
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
       <section
@@ -370,5 +371,43 @@ function KatalogPage() {
         </p>
       )}
     </main>
+  );
+}
+
+function KatalogSkeleton() {
+  return (
+    <>
+      <section className="mx-auto max-w-6xl mb-8 space-y-4">
+        <Skeleton className="h-12 w-full rounded-full" />
+        <div className="rounded-3xl border border-border bg-card p-4 shadow-(--shadow-soft)">
+          <div className="mb-3 flex items-center justify-between">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <Skeleton key={index} className="h-8 w-24 rounded-full" />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+          <div
+            key={index}
+            className="overflow-hidden rounded-3xl border border-border bg-card shadow-(--shadow-soft)"
+          >
+            <Skeleton className="aspect-4/3 w-full rounded-none" />
+            <div className="p-6">
+              <Skeleton className="mb-3 h-6 w-3/4" />
+              <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-5 h-4 w-2/3" />
+              <Skeleton className="h-8 w-32" />
+            </div>
+          </div>
+        ))}
+      </section>
+    </>
   );
 }
