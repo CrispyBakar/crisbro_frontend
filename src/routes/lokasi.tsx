@@ -23,6 +23,46 @@ type Location = {
   hours?: string | null; // belum ada di schema, bisa ditambah nanti
 };
 
+async function readLocationsResponse(response: Response): Promise<Location[]> {
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Data lokasi tidak valid");
+  }
+
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : data && typeof data === "object" && "message" in data && typeof data.message === "string"
+          ? data.message
+          : `Gagal memuat lokasi (HTTP ${response.status})`;
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(data) || !data.every(isLocation)) {
+    throw new Error("Format data lokasi tidak valid");
+  }
+
+  return data;
+}
+
+function isLocation(item: unknown): item is Location {
+  if (!item || typeof item !== "object") return false;
+
+  const location = item as Partial<Location>;
+  return (
+    Number.isFinite(location.id) &&
+    typeof location.name === "string" &&
+    (location.address === null || typeof location.address === "string") &&
+    (location.city === null || typeof location.city === "string") &&
+    (location.phone === undefined || location.phone === null || typeof location.phone === "string") &&
+    (location.hours === undefined || location.hours === null || typeof location.hours === "string")
+  );
+}
+
 function LokasiPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,12 +70,8 @@ function LokasiPage() {
 
   useEffect(() => {
     fetch(apiUrl("/locations"))
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
-        return data;
-      })
-      .then((data: Location[]) => setLocations(data))
+      .then(readLocationsResponse)
+      .then((data) => setLocations(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
