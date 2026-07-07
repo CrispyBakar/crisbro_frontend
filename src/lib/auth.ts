@@ -27,7 +27,7 @@ export type AuthUser = {
       available_point: number;
       next_reward_threshold: number;
     };
-  };
+  } | null;
 };
 
 export function saveAuth(token: string, user: AuthUser) {
@@ -97,7 +97,7 @@ function isAuthUser(value: unknown): value is AuthUser {
     (value.email === undefined || typeof value.email === "string") &&
     (value.phone_number === undefined || typeof value.phone_number === "string") &&
     typeof value.role === "string" &&
-    (customer === undefined || isAuthCustomer(customer))
+    (customer === undefined || customer === null || isAuthCustomer(customer))
   );
 }
 
