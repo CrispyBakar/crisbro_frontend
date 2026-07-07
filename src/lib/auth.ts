@@ -7,6 +7,12 @@ type RegisterError = Error & {
   whatsappUrl?: string;
 };
 
+type ApiErrorBody = {
+  message?: unknown;
+  error?: unknown;
+  whatsappUrl?: unknown;
+};
+
 export type AuthUser = {
   id: number;
   email?: string;
@@ -49,6 +55,87 @@ export function logout() {
   window.dispatchEvent(new Event("auth-change"));
 }
 
+async function readJsonResponse(res: Response, fallbackMessage: string): Promise<unknown> {
+  let data: unknown;
+
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(fallbackMessage);
+  }
+
+  if (!res.ok) {
+    const body = isRecord(data) ? (data as ApiErrorBody) : {};
+    const message =
+      typeof body.message === "string"
+        ? body.message
+        : typeof body.error === "string"
+          ? body.error
+          : fallbackMessage;
+    const error = new Error(message) as RegisterError;
+
+    if (typeof body.whatsappUrl === "string") {
+      error.whatsappUrl = body.whatsappUrl;
+    }
+
+    throw error;
+  }
+
+  return data;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isAuthUser(value: unknown): value is AuthUser {
+  if (!isRecord(value)) return false;
+
+  const customer = value.customer;
+  return (
+    Number.isFinite(value.id) &&
+    (value.email === undefined || typeof value.email === "string") &&
+    (value.phone_number === undefined || typeof value.phone_number === "string") &&
+    typeof value.role === "string" &&
+    (customer === undefined || isAuthCustomer(customer))
+  );
+}
+
+function isAuthCustomer(value: unknown): value is AuthUser["customer"] {
+  if (!isRecord(value)) return false;
+
+  const customerPoint = value.customer_point;
+  return (
+    Number.isFinite(value.id) &&
+    typeof value.name === "string" &&
+    Number.isFinite(value.balance) &&
+    (customerPoint === undefined || isCustomerPoint(customerPoint))
+  );
+}
+
+function isCustomerPoint(value: unknown): value is NonNullable<AuthUser["customer"]>["customer_point"] {
+  if (!isRecord(value)) return false;
+
+  return (
+    Number.isFinite(value.total_point) &&
+    Number.isFinite(value.available_point) &&
+    Number.isFinite(value.next_reward_threshold)
+  );
+}
+
+function isLoginResponse(
+  value: unknown,
+): value is { token: string; expiresIn: string; user: AuthUser } {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.token === "string" &&
+    value.token.length > 0 &&
+    typeof value.expiresIn === "string" &&
+    isAuthUser(value.user)
+  );
+}
+
 export async function apiProfile() {
   const token = getToken();
   if (!token) throw new Error("Token tidak ditemukan");
@@ -56,13 +143,16 @@ export async function apiProfile() {
   const res = await fetch(apiUrl("/profile"), {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Gagal mengambil profil");
+  const data = await readJsonResponse(res, "Gagal mengambil profil");
+
+  if (!isAuthUser(data)) {
+    throw new Error("Format data profil tidak valid");
+  }
 
   localStorage.setItem(USER_KEY, JSON.stringify(data));
   window.dispatchEvent(new Event("auth-change"));
 
-  return data as AuthUser;
+  return data;
 }
 
 export async function apiLogin(phone_number: string, password: string) {
@@ -71,9 +161,13 @@ export async function apiLogin(phone_number: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone_number, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Login gagal");
-  return data as { token: string; expiresIn: string; user: AuthUser };
+  const data = await readJsonResponse(res, "Login gagal");
+
+  if (!isLoginResponse(data)) {
+    throw new Error("Format data login tidak valid");
+  }
+
+  return data;
 }
 
 export async function apiRegister(name: string, phone_number: string, password: string) {
@@ -82,11 +176,11 @@ export async function apiRegister(name: string, phone_number: string, password: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, phone_number, password }),
   });
-  const data = await res.json();
-  if (!res.ok) {
-    const error = new Error(data.message || "Registrasi gagal") as RegisterError;
-    error.whatsappUrl = data.whatsappUrl;
-    throw error;
+  const data = await readJsonResponse(res, "Registrasi gagal");
+
+  if (!isAuthUser(data)) {
+    throw new Error("Format data registrasi tidak valid");
   }
+
   return data;
 }
