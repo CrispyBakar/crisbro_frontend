@@ -572,7 +572,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <Metric title="Poin Tersedia" value={numberFormat(summary.total_points_available)} />
               <Metric title="Total Redeem" value={numberFormat(summary.redemption_count)} />
             </div>
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid min-w-0 gap-5 lg:grid-cols-2">
               <Panel title="Reward paling sering ditukar">
                 <TopRewardsChart rewards={summary.top_rewards ?? []} />
               </Panel>
@@ -1212,12 +1212,16 @@ function Metric({ title, value }: { title: string; value: string }) {
 }
 
 function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }) {
+  const isCompact = useMediaQuery("(max-width: 640px)");
   const colors = ["#E11D48", "#F97316", "#EAB308", "#22C55E", "#0EA5E9"];
+  const labelLimit = isCompact ? 14 : 24;
   const chartData = rewards.map((reward, index) => ({
     rank: index + 1,
     name: reward.reward_name,
     shortName:
-      reward.reward_name.length > 24 ? `${reward.reward_name.slice(0, 24)}...` : reward.reward_name,
+      reward.reward_name.length > labelLimit
+        ? `${reward.reward_name.slice(0, labelLimit)}...`
+        : reward.reward_name,
     redemptions: reward.redemption_count,
     points: reward.points_spent,
     fill: colors[index % colors.length],
@@ -1231,7 +1235,7 @@ function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }
   }
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden">
       <p className="text-sm font-semibold text-muted-foreground">
         Total {numberFormat(totalRedemptions)} redeem dari 5 reward teratas
       </p>
@@ -1242,12 +1246,12 @@ function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }
             color: colors[0],
           },
         }}
-        className="min-h-[230px] w-full"
+        className="h-[260px] min-h-[230px] w-full min-w-0 max-w-full overflow-hidden"
       >
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={{ top: 4, right: 42, left: 0, bottom: 4 }}
+          margin={{ top: 4, right: isCompact ? 18 : 42, left: 0, bottom: 4 }}
           barCategoryGap={10}
         >
           <CartesianGrid horizontal={false} strokeDasharray="3 3" />
@@ -1262,10 +1266,10 @@ function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }
           <YAxis
             dataKey="shortName"
             type="category"
-            width={138}
+            width={isCompact ? 88 : 138}
             tickLine={false}
             axisLine={false}
-            tickMargin={10}
+            tickMargin={isCompact ? 6 : 10}
             tick={({ x, y, payload }) => {
               const item = chartData.find((reward) => reward.shortName === payload.value);
               return (
@@ -1275,7 +1279,7 @@ function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }
                     y={0}
                     dy={4}
                     textAnchor="end"
-                    className="fill-foreground text-[11px] font-bold"
+                    className="fill-foreground text-[10px] font-bold sm:text-[11px]"
                   >
                     {item ? `#${item.rank} ${payload.value}` : payload.value}
                   </text>
@@ -1317,8 +1321,8 @@ function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }
             <LabelList
               dataKey="redemptions"
               position="right"
-              offset={10}
-              className="fill-foreground text-xs font-black"
+              offset={isCompact ? 4 : 10}
+              className="fill-foreground text-[10px] font-black sm:text-xs"
               formatter={(value: number) => numberFormat(value)}
             />
           </Bar>
@@ -1333,12 +1337,16 @@ function TopRedeemOutletsChart({
 }: {
   outlets: NonNullable<LoyaltySummary["top_redeem_outlets"]>;
 }) {
+  const isCompact = useMediaQuery("(max-width: 640px)");
   const colors = ["#0EA5E9", "#22C55E", "#F97316", "#E11D48", "#8B5CF6"];
+  const labelLimit = isCompact ? 14 : 22;
   const chartData = outlets.map((outlet, index) => ({
     rank: index + 1,
     name: outlet.outlet_name,
     shortName:
-      outlet.outlet_name.length > 22 ? `${outlet.outlet_name.slice(0, 22)}...` : outlet.outlet_name,
+      outlet.outlet_name.length > labelLimit
+        ? `${outlet.outlet_name.slice(0, labelLimit)}...`
+        : outlet.outlet_name,
     redemptions: outlet.redemption_count,
     points: outlet.points_spent,
     city: outlet.city,
@@ -1353,7 +1361,7 @@ function TopRedeemOutletsChart({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden">
       <p className="text-sm font-semibold text-muted-foreground">
         Total {numberFormat(totalRedemptions)} redeem dari 5 outlet teratas
       </p>
@@ -1364,12 +1372,12 @@ function TopRedeemOutletsChart({
             color: colors[0],
           },
         }}
-        className="min-h-[230px] w-full"
+        className="h-[260px] min-h-[230px] w-full min-w-0 max-w-full overflow-hidden"
       >
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={{ top: 4, right: 42, left: 0, bottom: 4 }}
+          margin={{ top: 4, right: isCompact ? 18 : 42, left: 0, bottom: 4 }}
           barCategoryGap={10}
         >
           <CartesianGrid horizontal={false} strokeDasharray="3 3" />
@@ -1384,10 +1392,10 @@ function TopRedeemOutletsChart({
           <YAxis
             dataKey="shortName"
             type="category"
-            width={138}
+            width={isCompact ? 88 : 138}
             tickLine={false}
             axisLine={false}
-            tickMargin={10}
+            tickMargin={isCompact ? 6 : 10}
             tick={({ x, y, payload }) => {
               const item = chartData.find((outlet) => outlet.shortName === payload.value);
               return (
@@ -1397,7 +1405,7 @@ function TopRedeemOutletsChart({
                     y={0}
                     dy={4}
                     textAnchor="end"
-                    className="fill-foreground text-[11px] font-bold"
+                    className="fill-foreground text-[10px] font-bold sm:text-[11px]"
                   >
                     {item ? `#${item.rank} ${payload.value}` : payload.value}
                   </text>
@@ -1444,8 +1452,8 @@ function TopRedeemOutletsChart({
             <LabelList
               dataKey="redemptions"
               position="right"
-              offset={10}
-              className="fill-foreground text-xs font-black"
+              offset={isCompact ? 4 : 10}
+              className="fill-foreground text-[10px] font-black sm:text-xs"
               formatter={(value: number) => numberFormat(value)}
             />
           </Bar>
@@ -1548,6 +1556,24 @@ function RedemptionHistoryChart({
       </LineChart>
     </ChartContainer>
   );
+}
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia(query);
+    const updateMatch = () => setMatches(mediaQuery.matches);
+
+    updateMatch();
+    mediaQuery.addEventListener("change", updateMatch);
+
+    return () => mediaQuery.removeEventListener("change", updateMatch);
+  }, [query]);
+
+  return matches;
 }
 
 function CategoryMenuPicker({
@@ -1723,7 +1749,7 @@ function CategoryMenuPicker({
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
       <h2 className="mb-4 text-lg font-black">{title}</h2>
       {children}
     </section>
