@@ -12,6 +12,45 @@ export type EstimasiState = {
   pointsBefore: number;
 };
 
+function parseEstimasiState(raw: string): EstimasiState | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<EstimasiState>;
+    const items = parsed.items;
+
+    if (!Array.isArray(items) || items.length === 0) return null;
+    if (!Number.isFinite(parsed.totalPoints) || Number(parsed.totalPoints) < 0) return null;
+    if (!Number.isFinite(parsed.pointsBefore) || Number(parsed.pointsBefore) < 0) return null;
+
+    const validItems = items.every((item) => {
+      return (
+        item &&
+        typeof item.name === "string" &&
+        item.name.trim().length > 0 &&
+        typeof item.image === "string" &&
+        Number.isFinite(item.price) &&
+        Number(item.price) >= 0 &&
+        Number.isInteger(item.quantity) &&
+        item.quantity > 0
+      );
+    });
+
+    if (!validItems) return null;
+
+    return {
+      items: items.map((item) => ({
+        name: item.name.trim(),
+        image: item.image,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+      })),
+      totalPoints: Number(parsed.totalPoints),
+      pointsBefore: Number(parsed.pointsBefore),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createFileRoute("/estimasi")({
   head: () => ({
     meta: [
@@ -41,7 +80,13 @@ function EstimasiPage() {
       navigate({ to: "/menu" });
       return;
     }
-    setState(JSON.parse(raw));
+    const parsedState = parseEstimasiState(raw);
+    if (!parsedState) {
+      sessionStorage.removeItem("crisbar_estimasi");
+      navigate({ to: "/menu" });
+      return;
+    }
+    setState(parsedState);
   }, [navigate]);
 
   if (!user || !state) {
