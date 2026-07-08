@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
-import { getUser } from "@/lib/auth";
+import { getToken, getUser, saveAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/menu")({
   head: () => ({
@@ -30,6 +30,14 @@ type MenuItem = {
   sort_order: number;
 };
 
+type RedeemResponse = {
+  redemption_id: number;
+  redemption_code: string;
+  points_spent: number;
+  available_point: number;
+  message?: string;
+};
+
 function isMenuItem(item: unknown): item is MenuItem {
   if (!item || typeof item !== "object") return false;
 
@@ -53,6 +61,7 @@ function MenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [redeemingId, setRedeemingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(apiUrl("/catalog/redeem-menu"))
@@ -80,9 +89,11 @@ function MenuPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleTukar = (item: MenuItem) => {
+  const handleTukar = async (item: MenuItem) => {
     const user = getUser();
-    if (!user) {
+    const token = getToken();
+
+    if (!user || !token) {
       navigate({ to: "/login" });
       return;
     }
@@ -94,21 +105,63 @@ function MenuPage() {
       return;
     }
 
-    const estimasiData = {
-      items: [
-        {
-          name: item.name,
-          image: item.image_url ?? "",
-          price: item.points_required,
-          quantity: 1,
-        },
-      ],
-      totalPoints: item.points_required,
-      pointsBefore: availablePoint,
-    };
-    sessionStorage.setItem("crisbar_estimasi", JSON.stringify(estimasiData));
+    setRedeemingId(item.id);
+    setError("");
 
-    navigate({ to: "/estimasi" });
+    try {
+      const response = await fetch(apiUrl(`/redeem/menu/${item.id}`), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.message || data?.error || "Gagal menukarkan menu");
+      }
+
+      if (!isRedeemResponse(data)) {
+        throw new Error("Format data redeem tidak valid");
+      }
+
+      if (user.customer?.customer_point) {
+        saveAuth(token, {
+          ...user,
+          customer: {
+            ...user.customer,
+            customer_point: {
+              ...user.customer.customer_point,
+              available_point: data.available_point,
+            },
+          },
+        });
+      }
+
+      const estimasiData = {
+        redemptionId: data.redemption_id,
+        redemptionCode: data.redemption_code,
+        items: [
+          {
+            name: item.name,
+            image: item.image_url ?? "",
+            price: data.points_spent,
+            quantity: 1,
+          },
+        ],
+        totalPoints: data.points_spent,
+        pointsBefore: availablePoint,
+        pointsAfter: data.available_point,
+      };
+      sessionStorage.setItem("crisbar_estimasi", JSON.stringify(estimasiData));
+
+      navigate({ to: "/estimasi" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menukarkan menu");
+    } finally {
+      setRedeemingId(null);
+    }
   };
 
   return (
@@ -168,9 +221,10 @@ function MenuPage() {
                 </span>
                 <button
                   onClick={() => handleTukar(item)}
-                  className="rounded-full bg-primary text-primary-foreground font-bold px-5 py-2 shadow-(--shadow-pop) hover:bg-primary/90 transition-colors"
+                  disabled={redeemingId === item.id}
+                  className="rounded-full bg-primary text-primary-foreground font-bold px-5 py-2 shadow-(--shadow-pop) hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  Tukar
+                  {redeemingId === item.id ? "Menukar..." : "Tukar"}
                 </button>
               </div>
             </div>
@@ -187,6 +241,19 @@ function MenuPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function isRedeemResponse(value: unknown): value is RedeemResponse {
+  if (!value || typeof value !== "object") return false;
+
+  const response = value as Partial<RedeemResponse>;
+  return (
+    Number.isFinite(response.redemption_id) &&
+    typeof response.redemption_code === "string" &&
+    response.redemption_code.length > 0 &&
+    Number.isFinite(response.points_spent) &&
+    Number.isFinite(response.available_point)
   );
 }
 

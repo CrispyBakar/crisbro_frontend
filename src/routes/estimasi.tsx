@@ -7,9 +7,12 @@ import { getUser, type AuthUser } from "@/lib/auth";
 
 // State yang dikirim dari cart saat checkout berhasil
 export type EstimasiState = {
+  redemptionId: number;
+  redemptionCode: string;
   items: { name: string; image: string; price: number; quantity: number }[];
   totalPoints: number;
   pointsBefore: number;
+  pointsAfter: number;
 };
 
 function parseEstimasiState(raw: string): EstimasiState | null {
@@ -17,9 +20,14 @@ function parseEstimasiState(raw: string): EstimasiState | null {
     const parsed = JSON.parse(raw) as Partial<EstimasiState>;
     const items = parsed.items;
 
+    if (!Number.isFinite(parsed.redemptionId) || Number(parsed.redemptionId) <= 0) return null;
+    if (typeof parsed.redemptionCode !== "string" || parsed.redemptionCode.trim().length === 0) {
+      return null;
+    }
     if (!Array.isArray(items) || items.length === 0) return null;
     if (!Number.isFinite(parsed.totalPoints) || Number(parsed.totalPoints) < 0) return null;
     if (!Number.isFinite(parsed.pointsBefore) || Number(parsed.pointsBefore) < 0) return null;
+    if (!Number.isFinite(parsed.pointsAfter) || Number(parsed.pointsAfter) < 0) return null;
 
     const validItems = items.every((item) => {
       return (
@@ -37,6 +45,8 @@ function parseEstimasiState(raw: string): EstimasiState | null {
     if (!validItems) return null;
 
     return {
+      redemptionId: Number(parsed.redemptionId),
+      redemptionCode: parsed.redemptionCode.trim(),
       items: items.map((item) => ({
         name: item.name.trim(),
         image: item.image,
@@ -45,6 +55,7 @@ function parseEstimasiState(raw: string): EstimasiState | null {
       })),
       totalPoints: Number(parsed.totalPoints),
       pointsBefore: Number(parsed.pointsBefore),
+      pointsAfter: Number(parsed.pointsAfter),
     };
   } catch {
     return null;
@@ -97,7 +108,7 @@ function EstimasiPage() {
     );
   }
 
-  const pointsAfter = state.pointsBefore - state.totalPoints;
+  const pointsAfter = state.pointsAfter;
   const customerName = user.customer?.name ?? "Sahabat Crispy";
   const phoneNumber = user.phone_number ?? "-";
   const initials = customerName
@@ -141,9 +152,17 @@ function EstimasiPage() {
 
           {/* Body */}
           <div className="px-6 pt-5 pb-4">
-            <h1 className="text-2xl font-black text-center tracking-tight mb-5">
-              Estimasi Penukaran
-            </h1>
+            <h1 className="text-2xl font-black text-center tracking-tight mb-5">Bukti Penukaran</h1>
+
+            <div className="mb-5 rounded-2xl border-2 border-dashed border-primary bg-primary/10 p-4 text-center">
+              <p className="text-xs font-black uppercase tracking-wide text-primary">Kode Redeem</p>
+              <p className="mt-1 font-mono text-3xl font-black tracking-[0.2em] text-primary">
+                {state.redemptionCode}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                ID Penukaran #{state.redemptionId}
+              </p>
+            </div>
 
             {/* Info member */}
             <div className="flex items-center gap-3 mb-5">

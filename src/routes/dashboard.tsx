@@ -2,8 +2,9 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, LogOut, Gift } from "lucide-react";
-import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
+import { ArrowDownLeft, ArrowUpRight, Sparkles, LogOut, Gift } from "lucide-react";
+import { apiUrl } from "@/lib/api";
+import { apiProfile, getToken, getUser, logout, type AuthUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -17,9 +18,71 @@ export const Route = createFileRoute("/dashboard")({
 
 const REWARD_THRESHOLD = 2000;
 
+type PointHistoryItem = {
+  id: number;
+  points_change: number;
+  type: string;
+  description: string | null;
+  created_at: string;
+  redemption: {
+    id: number;
+    status: string;
+    reward: {
+      name: string;
+      image_url: string | null;
+    };
+  } | null;
+};
+
+type PointHistoryResponse = {
+  total: number;
+  items: PointHistoryItem[];
+};
+
+function isPointHistoryItem(value: unknown): value is PointHistoryItem {
+  if (!value || typeof value !== "object") return false;
+
+  const item = value as Partial<PointHistoryItem>;
+  return (
+    Number.isFinite(item.id) &&
+    Number.isFinite(item.points_change) &&
+    typeof item.type === "string" &&
+    (item.description === null ||
+      item.description === undefined ||
+      typeof item.description === "string") &&
+    typeof item.created_at === "string"
+  );
+}
+
+function isPointHistoryResponse(value: unknown): value is PointHistoryResponse {
+  if (!value || typeof value !== "object") return false;
+
+  const response = value as Partial<PointHistoryResponse>;
+  return (
+    Number.isFinite(response.total) &&
+    Array.isArray(response.items) &&
+    response.items.every(isPointHistoryItem)
+  );
+}
+
+function formatHistoryDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [pointHistory, setPointHistory] = useState<PointHistoryItem[]>([]);
+  const [pointHistoryTotal, setPointHistoryTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -42,11 +105,16 @@ function DashboardPage() {
       }
 
       try {
-        const freshUser = await apiProfile();
+        const [freshUser, freshPointHistory] = await Promise.all([
+          apiProfile(),
+          fetchPointHistory(),
+        ]);
 
         if (cancelled) return;
 
         setUser(freshUser);
+        setPointHistory(freshPointHistory.items);
+        setPointHistoryTotal(freshPointHistory.total);
         setError("");
       } catch (err: unknown) {
         if (cancelled) return;
@@ -236,18 +304,100 @@ function DashboardPage() {
           </Button>
         </div>
 
-        {/* Info kosong untuk riwayat poin */}
         <section className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-extrabold">Riwayat Poin</h2>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">
+              {pointHistoryTotal.toLocaleString("id-ID")} transaksi
+            </span>
           </div>
-          <div className="rounded-3xl bg-card border border-border shadow-(--shadow-soft) p-8 text-center text-muted-foreground">
-            <p className="font-semibold">Belum ada riwayat transaksi poin.</p>
-          </div>
+          {pointHistory.length === 0 ? (
+            <div className="rounded-3xl bg-card border border-border shadow-(--shadow-soft) p-8 text-center text-muted-foreground">
+              <p className="font-semibold">Belum ada riwayat transaksi poin.</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft)">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-140 border-collapse text-left">
+                  <thead className="bg-secondary text-secondary-foreground">
+                    <tr>
+                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
+                        Tanggal
+                      </th>
+                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
+                        Nama Reward
+                      </th>
+                      <th className="px-5 py-4 text-right text-xs font-black uppercase tracking-wide">
+                        Poin
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pointHistory.map((history) => {
+                      const isRedeem = history.points_change < 0;
+                      const rewardName =
+                        history.redemption?.reward.name ??
+                        history.description ??
+                        (isRedeem ? "Penukaran reward" : "Penambahan poin");
+                      const formattedPoint = `${history.points_change > 0 ? "+" : ""}${history.points_change.toLocaleString("id-ID")}`;
+                      const PointIcon = isRedeem ? ArrowDownLeft : ArrowUpRight;
+
+                      return (
+                        <tr key={history.id} className="border-b border-border last:border-b-0">
+                          <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-muted-foreground">
+                            {formatHistoryDate(history.created_at)}
+                          </td>
+                          <td className="px-5 py-4">
+                            <p className="font-extrabold text-foreground">{rewardName}</p>
+                          </td>
+                          <td className="px-5 py-4 text-right">
+                            <span
+                              className={`inline-flex items-center justify-end gap-2 rounded-full px-3 py-1 text-sm font-black ${
+                                isRedeem
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-primary/10 text-primary"
+                              }`}
+                            >
+                              <PointIcon className="h-4 w-4" />
+                              {formattedPoint}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </section>
       </section>
     </main>
   );
+}
+
+async function fetchPointHistory() {
+  const token = getToken();
+  if (!token) throw new Error("Token tidak ditemukan");
+
+  const response = await fetch(apiUrl("/points/history"), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "message" in data && typeof data.message === "string"
+        ? data.message
+        : "Gagal mengambil riwayat poin";
+    throw new Error(message);
+  }
+
+  if (!isPointHistoryResponse(data)) {
+    throw new Error("Format riwayat poin tidak valid");
+  }
+
+  return data;
 }
 
 function DashboardSkeleton() {
