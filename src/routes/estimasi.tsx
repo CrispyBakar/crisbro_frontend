@@ -7,8 +7,6 @@ import { getUser, type AuthUser } from "@/lib/auth";
 
 // State yang dikirim dari cart saat checkout berhasil
 export type EstimasiState = {
-  redemptionId: number;
-  redemptionCode: string;
   items: { name: string; image: string; price: number; quantity: number }[];
   totalPoints: number;
   pointsBefore: number;
@@ -20,10 +18,6 @@ function parseEstimasiState(raw: string): EstimasiState | null {
     const parsed = JSON.parse(raw) as Partial<EstimasiState>;
     const items = parsed.items;
 
-    if (!Number.isFinite(parsed.redemptionId) || Number(parsed.redemptionId) <= 0) return null;
-    if (typeof parsed.redemptionCode !== "string" || parsed.redemptionCode.trim().length === 0) {
-      return null;
-    }
     if (!Array.isArray(items) || items.length === 0) return null;
     if (!Number.isFinite(parsed.totalPoints) || Number(parsed.totalPoints) < 0) return null;
     if (!Number.isFinite(parsed.pointsBefore) || Number(parsed.pointsBefore) < 0) return null;
@@ -45,8 +39,6 @@ function parseEstimasiState(raw: string): EstimasiState | null {
     if (!validItems) return null;
 
     return {
-      redemptionId: Number(parsed.redemptionId),
-      redemptionCode: parsed.redemptionCode.trim(),
       items: items.map((item) => ({
         name: item.name.trim(),
         image: item.image,
@@ -152,17 +144,12 @@ function EstimasiPage() {
 
           {/* Body */}
           <div className="px-6 pt-5 pb-4">
-            <h1 className="text-2xl font-black text-center tracking-tight mb-5">Bukti Penukaran</h1>
-
-            <div className="mb-5 rounded-2xl border-2 border-dashed border-primary bg-primary/10 p-4 text-center">
-              <p className="text-xs font-black uppercase tracking-wide text-primary">Kode Redeem</p>
-              <p className="mt-1 font-mono text-3xl font-black tracking-[0.2em] text-primary">
-                {state.redemptionCode}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                ID Penukaran #{state.redemptionId}
-              </p>
-            </div>
+            <h1 className="text-2xl font-black text-center tracking-tight mb-2">
+              Estimasi Penukaran
+            </h1>
+            <p className="mb-5 text-center text-sm font-semibold text-muted-foreground">
+              Estimasi poin jika menu ini ditukar melalui kasir.
+            </p>
 
             {/* Info member */}
             <div className="flex items-center gap-3 mb-5">
@@ -180,7 +167,7 @@ function EstimasiPage() {
 
             {/* Menu item(s) */}
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">
-              Menu ditukar
+              Menu yang dipilih
             </p>
             <div className="space-y-3 mb-5">
               {state.items.map((item) => (
@@ -252,7 +239,7 @@ function EstimasiPage() {
         {/* Screenshot hint */}
         <div className="mt-5 flex items-center justify-center gap-2 text-muted-foreground text-sm">
           <Camera className="h-4 w-4" />
-          <span>Screenshot halaman ini sebagai bukti penukaran</span>
+          <span>Screenshot halaman ini sebagai estimasi penukaran</span>
         </div>
 
         {/* Action */}
