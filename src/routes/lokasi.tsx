@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, MapPin } from "lucide-react";
+import { ArrowUp, ExternalLink, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/lokasi")({
@@ -71,6 +71,7 @@ function LokasiPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl("/locations"))
@@ -79,6 +80,26 @@ function LokasiPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const updateBackToTopVisibility = () => {
+      setShowBackToTop(window.scrollY > 600);
+    };
+
+    updateBackToTopVisibility();
+    window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateBackToTopVisibility);
+    };
+  }, []);
+
+  const scrollToPageTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <main className="px-4 mt-10">
@@ -130,6 +151,17 @@ function LokasiPage() {
           </article>
         ))}
       </section>
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToPageTop}
+          aria-label="Kembali ke atas"
+          className="fixed bottom-5 right-5 z-30 grid h-11 w-11 place-items-center rounded-full border border-primary bg-primary text-primary-foreground shadow-(--shadow-pop) transition-all hover:-translate-y-0.5 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 sm:bottom-6 sm:right-6 sm:h-12 sm:w-12"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
     </main>
   );
 }
