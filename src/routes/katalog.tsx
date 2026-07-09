@@ -167,8 +167,6 @@ function KatalogPage() {
     });
   }, [categories, filtered]);
 
-  const activeCategory = categories.find((c) => c.id === activeCategoryId);
-
   const categoryKey = (categoryId: number | null) => String(categoryId ?? "uncategorized");
 
   const scrollToCategory = (categoryId: number | null) => {
@@ -343,26 +341,6 @@ function KatalogPage() {
             </div>
           </div>
         </section>
-      )}
-
-      {/* Info pencarian/kategori aktif */}
-      {(activeCategoryId !== null || search) && !loading && !error && (
-        <div className="mx-auto max-w-6xl mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Menampilkan</span>
-          <span className="font-bold text-foreground">{filtered.length} produk</span>
-          {activeCategory && (
-            <>
-              <span>sedang melihat</span>
-              <span className="font-bold text-primary">{activeCategory.name}</span>
-            </>
-          )}
-          {search && (
-            <>
-              <span>untuk pencarian</span>
-              <span className="font-bold text-primary">"{search}"</span>
-            </>
-          )}
-        </div>
       )}
 
       {loading && <KatalogSkeleton />}
