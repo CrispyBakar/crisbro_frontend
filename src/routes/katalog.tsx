@@ -292,7 +292,7 @@ function KatalogPage() {
           </div>
 
           {/* Filter kategori */}
-          <div className="rounded-3xl bg-card/95 border border-border p-4 shadow-(--shadow-soft) backdrop-blur">
+          <div className="rounded-xl bg-card/95 border border-border p-4 shadow-(--shadow-soft) backdrop-blur">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-muted-foreground">
                 Kategori <span className="text-foreground">({categories.length})</span>
@@ -428,7 +428,7 @@ function KatalogPage() {
 
 function ProductCard({ product }: { product: Product }) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft) transition-transform hover:-translate-y-1 sm:rounded-3xl">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft) transition-transform hover:-translate-y-1">
       <div className="relative aspect-4/3 overflow-hidden bg-secondary">
         {product.image_url ? (
           <img
@@ -466,7 +466,7 @@ function KatalogSkeleton() {
     <>
       <section className="mx-auto max-w-6xl mb-8 space-y-4">
         <Skeleton className="h-12 w-full rounded-full" />
-        <div className="rounded-3xl border border-border bg-card p-4 shadow-(--shadow-soft)">
+        <div className="rounded-xl border border-border bg-card p-4 shadow-(--shadow-soft)">
           <div className="mb-3 flex items-center justify-between">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-4 w-20" />
@@ -483,7 +483,7 @@ function KatalogSkeleton() {
         {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
           <div
             key={index}
-            className="overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft) sm:rounded-3xl"
+            className="overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
           >
             <Skeleton className="aspect-4/3 w-full rounded-none" />
             <div className="p-3 sm:p-6">

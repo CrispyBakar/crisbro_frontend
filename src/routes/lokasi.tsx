@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Phone, Clock } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/lokasi")({
@@ -19,8 +19,6 @@ type Location = {
   name: string;
   address: string | null;
   city: string | null;
-  phone?: string | null; // belum ada di schema, tapi bisa ditambah nanti
-  hours?: string | null; // belum ada di schema, bisa ditambah nanti
 };
 
 async function readLocationsResponse(response: Response): Promise<Location[]> {
@@ -57,9 +55,7 @@ function isLocation(item: unknown): item is Location {
     Number.isFinite(location.id) &&
     typeof location.name === "string" &&
     (location.address === null || typeof location.address === "string") &&
-    (location.city === null || typeof location.city === "string") &&
-    (location.phone === undefined || location.phone === null || typeof location.phone === "string") &&
-    (location.hours === undefined || location.hours === null || typeof location.hours === "string")
+    (location.city === null || typeof location.city === "string")
   );
 }
 
@@ -99,10 +95,10 @@ function LokasiPage() {
         {locations.map((o) => (
           <article
             key={o.id}
-            className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
+            className="rounded-xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
           >
             <div className="flex items-start gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-secondary grid place-items-center shrink-0">
+              <div className="h-14 w-14 rounded-lg bg-secondary grid place-items-center shrink-0">
                 <MapPin className="h-7 w-7 text-primary" />
               </div>
               <div className="flex-1">
@@ -111,18 +107,6 @@ function LokasiPage() {
                 )}
                 <h3 className="text-2xl font-extrabold mb-3">{o.name}</h3>
                 {o.address && <p className="text-muted-foreground mb-3">{o.address}</p>}
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {o.phone && (
-                    <span className="inline-flex items-center gap-1.5 text-foreground/80">
-                      <Phone className="h-4 w-4 text-primary" /> {o.phone}
-                    </span>
-                  )}
-                  {o.hours && (
-                    <span className="inline-flex items-center gap-1.5 text-foreground/80">
-                      <Clock className="h-4 w-4 text-primary" /> {o.hours}
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
           </article>
@@ -138,19 +122,15 @@ function LocationSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+          className="rounded-xl border border-border bg-card p-7 shadow-(--shadow-soft)"
         >
           <div className="flex items-start gap-4">
-            <Skeleton className="h-14 w-14 shrink-0 rounded-2xl" />
+            <Skeleton className="h-14 w-14 shrink-0 rounded-lg" />
             <div className="min-w-0 flex-1">
               <Skeleton className="mb-3 h-4 w-24" />
               <Skeleton className="mb-4 h-7 w-3/4" />
               <Skeleton className="mb-2 h-4 w-full" />
               <Skeleton className="mb-4 h-4 w-5/6" />
-              <div className="flex flex-wrap gap-4">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-32" />
-              </div>
             </div>
           </div>
         </div>

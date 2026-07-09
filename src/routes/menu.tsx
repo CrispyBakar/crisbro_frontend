@@ -135,7 +135,7 @@ function MenuPage() {
         {items.map((item) => (
           <article
             key={item.id}
-            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
+            className="group rounded-xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
           >
             <div className="relative aspect-4/3 overflow-hidden bg-secondary">
               {item.image_url ? (
@@ -198,7 +198,7 @@ function MenuSkeleton() {
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-(--shadow-soft)"
+          className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
         >
           <Skeleton className="aspect-4/3 w-full rounded-none" />
           <div className="flex flex-1 flex-col p-6">

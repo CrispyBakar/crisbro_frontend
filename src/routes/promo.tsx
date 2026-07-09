@@ -231,10 +231,10 @@ function PromoPage() {
               return (
                 <article
                   key={promo.id}
-                  className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
+                  className="rounded-xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
                 >
                   <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="h-12 w-12 rounded-2xl bg-secondary grid place-items-center shrink-0">
+                    <div className="h-12 w-12 rounded-lg bg-secondary grid place-items-center shrink-0">
                       <Tag className="h-6 w-6 text-primary" />
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
@@ -324,10 +324,10 @@ function PromoSkeleton() {
       {Array.from({ length: promoLimit }).map((_, index) => (
         <div
           key={index}
-          className="min-h-55 rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+          className="min-h-55 rounded-xl border border-border bg-card p-7 shadow-(--shadow-soft)"
         >
           <div className="mb-5 flex items-start justify-between">
-            <Skeleton className="h-12 w-12 rounded-2xl" />
+            <Skeleton className="h-12 w-12 rounded-lg" />
             <Skeleton className="h-7 w-20 rounded-full" />
           </div>
           <Skeleton className="mb-3 h-6 w-3/4" />
