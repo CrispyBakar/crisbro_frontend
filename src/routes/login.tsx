@@ -138,10 +138,6 @@ function LoginPage() {
 
         <p className="text-center mt-6 text-sm text-muted-foreground">
           Belum punya akun?{" "}
-          <a href="/register" className="font-bold text-primary hover:underline">
-            Daftar sekarang
-          </a>{" "}
-          atau{" "}
           <a
             href="https://wa.me/6282121214145?text=Halo%20Minbar!%20Aku%20mau%20nambah%20poin%20Crisbro%20dong"
             className="font-bold text-primary hover:underline"

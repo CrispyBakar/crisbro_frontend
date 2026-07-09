@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
-import { Search, ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export const Route = createFileRoute("/katalog")({
   head: () => ({
@@ -31,9 +31,13 @@ type Category = {
   total_products: number;
 };
 
-const VISIBLE_LIMIT = 8;
-// Maksimal jumlah card/menu yang ditampilkan per halaman grid.
-const PAGE_SIZE = 9;
+const SKELETON_COUNT = 9;
+
+type ProductGroup = {
+  id: number | null;
+  name: string;
+  items: Product[];
+};
 
 async function fetchJsonArray<T>(
   url: string,
@@ -102,9 +106,9 @@ function KatalogPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const categoryNavRef = useRef<HTMLDivElement | null>(null);
+  const categorySectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     // Fetch categories dan products secara paralel
@@ -120,78 +124,115 @@ function KatalogPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const visibleCategories = showAllCategories ? categories : categories.slice(0, VISIBLE_LIMIT);
-
   const filtered = useMemo(() => {
     return products.filter((p) => {
-      const matchCat = activeCategoryId === null || p.category_id === activeCategoryId;
       const matchSearch =
         search === "" ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.category?.toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSearch;
+      return matchSearch;
     });
-  }, [products, activeCategoryId, search]);
+  }, [products, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const groupedProducts = useMemo<ProductGroup[]>(() => {
+    const categoryOrder = new Map(categories.map((category, index) => [category.id, index]));
+    const groups = new Map<string, ProductGroup>();
 
-  // Setiap kali filter (kategori/pencarian) berubah, kembali ke halaman 1
-  // supaya tidak terjebak di halaman yang sudah tidak ada datanya.
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategoryId, search]);
+    for (const product of filtered) {
+      const key = String(product.category_id ?? "uncategorized");
 
-  // Jaga-jaga kalau currentPage melebihi totalPages (misal data berkurang).
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: product.category_id,
+          name: product.category || "Tanpa kategori",
+          items: [],
+        });
+      }
+
+      groups.get(key)?.items.push(product);
     }
-  }, [currentPage, totalPages]);
 
-  const paginated = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filtered.slice(start, start + PAGE_SIZE);
-  }, [filtered, currentPage]);
+    return Array.from(groups.values()).sort((a, b) => {
+      const orderA = a.id === null ? Number.MAX_SAFE_INTEGER : categoryOrder.get(a.id);
+      const orderB = b.id === null ? Number.MAX_SAFE_INTEGER : categoryOrder.get(b.id);
+
+      if (orderA !== undefined && orderB !== undefined && orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      if (orderA !== undefined && orderB === undefined) return -1;
+      if (orderA === undefined && orderB !== undefined) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [categories, filtered]);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
-  const goToPage = (page: number) => {
-    const clamped = Math.min(Math.max(1, page), totalPages);
-    setCurrentPage(clamped);
-    // Scroll halus ke atas grid produk saat pindah halaman
-    document.getElementById("katalog-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const categoryKey = (categoryId: number | null) => String(categoryId ?? "uncategorized");
+
+  const scrollToCategory = (categoryId: number | null) => {
+    setActiveCategoryId(categoryId);
+    categorySectionRefs.current[categoryKey(categoryId)]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
-  // Bangun daftar nomor halaman dengan ellipsis agar tidak terlalu panjang.
-  const pageNumbers = useMemo(() => {
-    const pages: (number | "ellipsis")[] = [];
-    const maxButtons = 5;
+  const scrollToCatalogStart = () => {
+    setActiveCategoryId(null);
+    document.getElementById("katalog-content")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
-    if (totalPages <= maxButtons + 2) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-      return pages;
+  useEffect(() => {
+    if (loading || error || groupedProducts.length === 0) return;
+
+    const updateActiveCategory = () => {
+      const markerY = 180;
+      let visibleCategoryId: number | null = null;
+
+      for (const group of groupedProducts) {
+        const section = categorySectionRefs.current[categoryKey(group.id)];
+        if (!section) continue;
+
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= markerY && rect.bottom > markerY) {
+          visibleCategoryId = group.id;
+          break;
+        }
+      }
+
+      setActiveCategoryId(visibleCategoryId);
+    };
+
+    updateActiveCategory();
+    window.addEventListener("scroll", updateActiveCategory, { passive: true });
+    window.addEventListener("resize", updateActiveCategory);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveCategory);
+      window.removeEventListener("resize", updateActiveCategory);
+    };
+  }, [error, groupedProducts, loading]);
+
+  useEffect(() => {
+    const categoryNav = categoryNavRef.current;
+    const activeButton = categoryNav?.querySelector<HTMLButtonElement>(
+      `[data-category-id="${categoryKey(activeCategoryId)}"]`,
+    );
+
+    if (categoryNav && activeButton) {
+      const targetLeft =
+        activeButton.offsetLeft - categoryNav.clientWidth / 2 + activeButton.clientWidth / 2;
+
+      categoryNav.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: "smooth",
+      });
     }
-
-    pages.push(1);
-
-    let start = Math.max(2, currentPage - 1);
-    let end = Math.min(totalPages - 1, currentPage + 1);
-
-    if (currentPage <= 3) {
-      start = 2;
-      end = 4;
-    } else if (currentPage >= totalPages - 2) {
-      start = totalPages - 3;
-      end = totalPages - 1;
-    }
-
-    if (start > 2) pages.push("ellipsis");
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (end < totalPages - 1) pages.push("ellipsis");
-
-    pages.push(totalPages);
-    return pages;
-  }, [currentPage, totalPages]);
+  }, [activeCategoryId]);
 
   return (
     <main className="px-4 mt-10">
@@ -208,7 +249,7 @@ function KatalogPage() {
       </section>
 
       {!loading && !error && (
-        <section className="mx-auto max-w-6xl mb-8 space-y-4">
+        <section className="sticky top-4 z-20 mx-auto max-w-6xl mb-8 space-y-4">
           {/* Search bar */}
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -230,82 +271,67 @@ function KatalogPage() {
           </div>
 
           {/* Filter kategori */}
-          <div className="rounded-3xl bg-card border border-border p-4 shadow-(--shadow-soft)">
+          <div className="rounded-3xl bg-card/95 border border-border p-4 shadow-(--shadow-soft) backdrop-blur">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-muted-foreground">
                 Kategori <span className="text-foreground">({categories.length})</span>
               </p>
               {activeCategoryId !== null && (
                 <button
-                  onClick={() => setActiveCategoryId(null)}
+                  onClick={scrollToCatalogStart}
                   className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                 >
-                  <X className="h-3 w-3" /> Reset filter
+                  <X className="h-3 w-3" /> Ke awal
                 </button>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {/* Tombol Semua */}
-              <button
-                onClick={() => setActiveCategoryId(null)}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
-                  activeCategoryId === null
-                    ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
-                    : "bg-background border-border hover:bg-secondary"
-                }`}
-              >
-                Semua
-              </button>
-
-              {visibleCategories.map((cat) => (
+            <div ref={categoryNavRef} className="-mx-1 overflow-x-auto px-1 pb-1">
+              <div className="flex w-max min-w-full items-center gap-2">
+                {/* Tombol Semua */}
                 <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryId(activeCategoryId === cat.id ? null : cat.id)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
-                    activeCategoryId === cat.id
+                  data-category-id={categoryKey(null)}
+                  onClick={scrollToCatalogStart}
+                  className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
+                    activeCategoryId === null
                       ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
-                      : "bg-secondary border-secondary-foreground/20 hover:bg-secondary/70 text-secondary-foreground"
+                      : "bg-background border-border hover:bg-secondary"
                   }`}
                 >
-                  {cat.name}
-                  <span className={`ml-1.5 text-xs font-normal opacity-70`}>
-                    {cat.total_products}
-                  </span>
+                  Semua
                 </button>
-              ))}
 
-              {/* Tombol expand/collapse */}
-              {categories.length > VISIBLE_LIMIT && (
-                <button
-                  onClick={() => setShowAllCategories((v) => !v)}
-                  className="px-4 py-1.5 rounded-full text-sm font-bold border border-border bg-background hover:bg-secondary transition-all flex items-center gap-1"
-                >
-                  {showAllCategories ? (
-                    <>
-                      <ChevronUp className="h-3.5 w-3.5" /> Tutup
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-3.5 w-3.5" />+{categories.length - VISIBLE_LIMIT}{" "}
-                      lainnya
-                    </>
-                  )}
-                </button>
-              )}
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    data-category-id={categoryKey(cat.id)}
+                    onClick={() => scrollToCategory(cat.id)}
+                    className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-bold transition-all border ${
+                      activeCategoryId === cat.id
+                        ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
+                        : "bg-secondary border-secondary-foreground/20 hover:bg-secondary/70 text-secondary-foreground"
+                    }`}
+                  >
+                    {cat.name}
+                    <span className={`ml-1.5 text-xs font-normal opacity-70`}>
+                      {cat.total_products}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* Info filter aktif */}
+      {/* Info pencarian/kategori aktif */}
       {(activeCategoryId !== null || search) && !loading && !error && (
         <div className="mx-auto max-w-6xl mb-4 flex items-center gap-2 text-sm text-muted-foreground">
           <span>Menampilkan</span>
           <span className="font-bold text-foreground">{filtered.length} produk</span>
           {activeCategory && (
             <>
-              <span>dalam</span>
+              <span>sedang melihat</span>
               <span className="font-bold text-primary">{activeCategory.name}</span>
             </>
           )}
@@ -321,44 +347,33 @@ function KatalogPage() {
       {loading && <KatalogSkeleton />}
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
-      <section
-        id="katalog-grid"
-        className="mx-auto max-w-6xl grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {paginated.map((p) => (
-          <article
-            key={p.id}
-            className="group rounded-3xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
+      <div id="katalog-content" className="mx-auto max-w-6xl space-y-12">
+        {groupedProducts.map((group) => (
+          <section
+            key={categoryKey(group.id)}
+            ref={(element) => {
+              categorySectionRefs.current[categoryKey(group.id)] = element;
+            }}
+            className="scroll-mt-32"
           >
-            <div className="relative aspect-4/3 overflow-hidden bg-secondary">
-              {p.image_url ? (
-                <img
-                  src={p.image_url}
-                  alt={p.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              ) : (
-                <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
-              )}
-              <Badge className="absolute top-3 left-3 rounded-full bg-card text-primary font-bold shadow-(--shadow-pop) border border-border">
-                {p.category}
-              </Badge>
-            </div>
-            <div className="p-6 flex flex-col flex-1">
-              <h3 className="text-xl font-extrabold mb-1.5">{p.name}</h3>
-              {p.description && (
-                <p className="text-muted-foreground text-sm mb-4 flex-1 line-clamp-2">
-                  {p.description}
-                </p>
-              )}
-              <p className="text-2xl font-black text-primary mt-auto">
-                Rp {p.sell_price.toLocaleString("id-ID")}
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Kategori</p>
+                <h2 className="text-2xl font-black tracking-tight">{group.name}</h2>
+              </div>
+              <p className="shrink-0 text-sm font-bold text-muted-foreground">
+                {group.items.length} produk
               </p>
             </div>
-          </article>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+              {group.items.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
         ))}
-      </section>
+      </div>
 
       {!loading && !error && filtered.length === 0 && (
         <div className="text-center mt-12 space-y-2">
@@ -375,63 +390,42 @@ function KatalogPage() {
           </button>
         </div>
       )}
-
-      {/* Pagination — hanya tampil kalau total produk hasil filter > PAGE_SIZE */}
-      {!loading && !error && filtered.length > PAGE_SIZE && (
-        <nav
-          aria-label="Navigasi halaman katalog"
-          className="mx-auto max-w-6xl mt-10 flex items-center justify-center gap-2"
-        >
-          <button
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage === 1}
-            aria-label="Halaman sebelumnya"
-            className="h-10 w-10 grid place-items-center rounded-full border border-border bg-card hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          {pageNumbers.map((p, idx) =>
-            p === "ellipsis" ? (
-              <span
-                key={`ellipsis-${idx}`}
-                className="h-10 w-10 grid place-items-center text-sm text-muted-foreground"
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => goToPage(p)}
-                aria-current={p === currentPage ? "page" : undefined}
-                className={`h-10 w-10 grid place-items-center rounded-full text-sm font-bold transition-all border ${
-                  p === currentPage
-                    ? "bg-primary text-primary-foreground border-primary shadow-(--shadow-pop)"
-                    : "bg-card border-border hover:bg-secondary"
-                }`}
-              >
-                {p}
-              </button>
-            ),
-          )}
-
-          <button
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            aria-label="Halaman berikutnya"
-            className="h-10 w-10 grid place-items-center rounded-full border border-border bg-card hover:bg-secondary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-card"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </nav>
-      )}
-
-      {!loading && !error && filtered.length > PAGE_SIZE && (
-        <p className="text-center text-xs text-muted-foreground mt-3">
-          Halaman {currentPage} dari {totalPages} · {filtered.length} produk total
-        </p>
-      )}
     </main>
+  );
+}
+
+function ProductCard({ product }: { product: Product }) {
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft) transition-transform hover:-translate-y-1 sm:rounded-3xl">
+      <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+        {product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
+        )}
+        <Badge className="absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate rounded-full border border-primary/20 bg-card/95 px-2 py-0.5 text-[10px] font-bold text-primary shadow-(--shadow-pop) backdrop-blur-sm hover:bg-card hover:text-primary sm:left-3 sm:top-3 sm:px-2.5 sm:text-xs">
+          {product.category}
+        </Badge>
+      </div>
+      <div className="flex flex-1 flex-col p-3 sm:p-6">
+        <h3 className="mb-1 line-clamp-2 text-sm font-extrabold leading-tight sm:mb-1.5 sm:text-xl">
+          {product.name}
+        </h3>
+        {product.description && (
+          <p className="mb-3 line-clamp-2 flex-1 text-xs text-muted-foreground sm:mb-4 sm:text-sm">
+            {product.description}
+          </p>
+        )}
+        <p className="mt-auto text-base font-black text-primary sm:text-2xl">
+          Rp {product.sell_price.toLocaleString("id-ID")}
+        </p>
+      </div>
+    </article>
   );
 }
 
@@ -453,18 +447,18 @@ function KatalogSkeleton() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+      <section className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
+        {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
           <div
             key={index}
-            className="overflow-hidden rounded-3xl border border-border bg-card shadow-(--shadow-soft)"
+            className="overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft) sm:rounded-3xl"
           >
             <Skeleton className="aspect-4/3 w-full rounded-none" />
-            <div className="p-6">
-              <Skeleton className="mb-3 h-6 w-3/4" />
-              <Skeleton className="mb-2 h-4 w-full" />
-              <Skeleton className="mb-5 h-4 w-2/3" />
-              <Skeleton className="h-8 w-32" />
+            <div className="p-3 sm:p-6">
+              <Skeleton className="mb-3 h-4 w-3/4 sm:h-6" />
+              <Skeleton className="mb-2 h-3 w-full sm:h-4" />
+              <Skeleton className="mb-4 h-3 w-2/3 sm:mb-5 sm:h-4" />
+              <Skeleton className="h-6 w-24 sm:h-8 sm:w-32" />
             </div>
           </div>
         ))}
