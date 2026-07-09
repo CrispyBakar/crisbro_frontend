@@ -16,7 +16,7 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users } from "lucide-react";
+import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -82,6 +82,13 @@ type RedeemFormState = {
   is_active: boolean;
 };
 
+type ConfirmDialogState = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
+};
+
 function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
@@ -142,6 +149,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
 
   const currentUser = useMemo(() => getUser(), []);
@@ -378,8 +386,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function deleteUser(id: number) {
-    if (!window.confirm("Hapus user ini?")) return;
-
     setSaving(true);
     setError("");
     try {
@@ -394,6 +400,17 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function requestDeleteUser(user: AdminUser) {
+    const userLabel = user.phone_number ?? user.email ?? `User #${user.id}`;
+
+    setConfirmDialog({
+      title: "Hapus user admin?",
+      description: `User admin "${userLabel}" akan dihapus dan tidak bisa login lagi. Lanjut hapus?`,
+      confirmLabel: "Hapus user",
+      onConfirm: () => deleteUser(user.id),
+    });
   }
 
   async function saveCustomer() {
@@ -446,8 +463,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function deleteCustomer(id: number) {
-    if (!window.confirm("Hapus customer ini beserta akun login dan riwayat terkait?")) return;
-
     setSaving(true);
     setError("");
     try {
@@ -465,6 +480,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function requestDeleteCustomer(customer: AdminCustomer) {
+    setConfirmDialog({
+      title: "Hapus customer?",
+      description: `Customer "${customer.name}" beserta akun login dan riwayat terkait akan dihapus. Lanjut hapus?`,
+      confirmLabel: "Hapus customer",
+      onConfirm: () => deleteCustomer(customer.id),
+    });
   }
 
   async function saveRedeemItem() {
@@ -503,8 +527,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function deleteRedeemItem(item: RedeemItem) {
-    if (!window.confirm(`Hapus item redeem "${item.menu_item.name}"?`)) return;
-
     setSaving(true);
     setError("");
     try {
@@ -527,6 +549,23 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function requestDeleteRedeemItem(item: RedeemItem) {
+    setConfirmDialog({
+      title: `Hapus item redeem "${item.menu_item.name}"?`,
+      description:
+        "Item ini akan hilang dari menu redeem customer. Data yang sudah tersimpan sebelumnya tidak bisa dikembalikan dari aksi ini.",
+      confirmLabel: "Hapus item",
+      onConfirm: () => deleteRedeemItem(item),
+    });
+  }
+
+  async function confirmDeleteAction() {
+    if (!confirmDialog) return;
+
+    await confirmDialog.onConfirm();
+    setConfirmDialog(null);
   }
 
   if (!canAccess) return null;
@@ -772,7 +811,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
                               disabled={saving || user.id === currentUser?.id}
-                              onClick={() => deleteUser(user.id)}
+                              onClick={() => requestDeleteUser(user)}
                             >
                               <Trash2 className="h-4 w-4" /> Hapus
                             </button>
@@ -1032,7 +1071,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
                               disabled={saving}
-                              onClick={() => deleteCustomer(customer.id)}
+                              onClick={() => requestDeleteCustomer(customer)}
                             >
                               <Trash2 className="h-4 w-4" /> Hapus
                             </button>
@@ -1186,7 +1225,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive"
                               disabled={saving}
-                              onClick={() => deleteRedeemItem(item)}
+                              onClick={() => requestDeleteRedeemItem(item)}
                             >
                               <Trash2 className="h-4 w-4" /> Hapus
                             </button>
@@ -1201,7 +1240,86 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </section>
         )}
       </section>
+      <ConfirmDeleteDialog
+        dialog={confirmDialog}
+        saving={saving}
+        onCancel={() => setConfirmDialog(null)}
+        onConfirm={confirmDeleteAction}
+      />
     </main>
+  );
+}
+
+function ConfirmDeleteDialog({
+  dialog,
+  saving,
+  onCancel,
+  onConfirm,
+}: {
+  dialog: ConfirmDialogState | null;
+  saving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!dialog) return null;
+
+  const closeDialog = () => {
+    if (!saving) onCancel();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid cursor-pointer place-items-center bg-foreground/35 px-4 backdrop-blur-sm"
+      onClick={closeDialog}
+      role="presentation"
+    >
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirm-delete-title"
+        aria-describedby="confirm-delete-description"
+        onClick={(event) => event.stopPropagation()}
+        className="relative w-full max-w-md cursor-default rounded-xl border border-border bg-card p-6 shadow-(--shadow-pop)"
+      >
+        <button
+          type="button"
+          onClick={closeDialog}
+          disabled={saving}
+          aria-label="Tutup dialog konfirmasi"
+          className="absolute right-4 top-4 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="mb-4 grid h-12 w-12 place-items-center rounded-lg bg-destructive/10 text-destructive">
+          <Trash2 className="h-6 w-6" />
+        </div>
+        <h2 id="confirm-delete-title" className="text-xl font-black tracking-tight">
+          {dialog.title}
+        </h2>
+        <p id="confirm-delete-description" className="mt-2 text-sm leading-6 text-muted-foreground">
+          {dialog.description}
+        </p>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={saving}
+            className="font-bold"
+          >
+            Tidak, batal
+          </Button>
+          <Button
+            type="button"
+            onClick={onConfirm}
+            disabled={saving}
+            className="bg-destructive font-bold text-destructive-foreground hover:bg-destructive/90"
+          >
+            {saving ? "Menghapus..." : dialog.confirmLabel}
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }
 
