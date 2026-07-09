@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin } from "lucide-react";
+import { ExternalLink, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/lokasi")({
@@ -19,6 +19,10 @@ type Location = {
   name: string;
   address: string | null;
   city: string | null;
+  province: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  maps_url: string;
 };
 
 async function readLocationsResponse(response: Response): Promise<Location[]> {
@@ -55,7 +59,11 @@ function isLocation(item: unknown): item is Location {
     Number.isFinite(location.id) &&
     typeof location.name === "string" &&
     (location.address === null || typeof location.address === "string") &&
-    (location.city === null || typeof location.city === "string")
+    (location.city === null || typeof location.city === "string") &&
+    (location.province === null || typeof location.province === "string") &&
+    (location.latitude === null || Number.isFinite(location.latitude)) &&
+    (location.longitude === null || Number.isFinite(location.longitude)) &&
+    typeof location.maps_url === "string"
   );
 }
 
@@ -106,9 +114,19 @@ function LokasiPage() {
                   <p className="text-sm font-bold text-primary uppercase tracking-wide">{o.city}</p>
                 )}
                 <h3 className="text-2xl font-extrabold mb-3">{o.name}</h3>
-                {o.address && <p className="text-muted-foreground mb-3">{o.address}</p>}
+                {o.address && <p className="text-muted-foreground">{o.address}</p>}
               </div>
             </div>
+            <a
+              href={o.maps_url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <MapPin className="h-4 w-4" />
+              Lihat di Maps
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </article>
         ))}
       </section>
@@ -133,6 +151,7 @@ function LocationSkeleton() {
               <Skeleton className="mb-4 h-4 w-5/6" />
             </div>
           </div>
+          <Skeleton className="mt-5 h-10 w-full rounded-lg" />
         </div>
       ))}
     </section>
