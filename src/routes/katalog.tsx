@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
-import { Search, X } from "lucide-react";
+import { ArrowUp, Search, X } from "lucide-react";
 
 export const Route = createFileRoute("/katalog")({
   head: () => ({
@@ -107,6 +107,7 @@ function KatalogPage() {
   const [error, setError] = useState("");
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const categoryNavRef = useRef<HTMLDivElement | null>(null);
   const categorySectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -186,6 +187,13 @@ function KatalogPage() {
     });
   };
 
+  const scrollToPageTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   useEffect(() => {
     if (loading || error || groupedProducts.length === 0) return;
 
@@ -233,6 +241,19 @@ function KatalogPage() {
       });
     }
   }, [activeCategoryId]);
+
+  useEffect(() => {
+    const updateBackToTopVisibility = () => {
+      setShowBackToTop(window.scrollY > 600);
+    };
+
+    updateBackToTopVisibility();
+    window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateBackToTopVisibility);
+    };
+  }, []);
 
   return (
     <main className="px-4 mt-10">
@@ -389,6 +410,17 @@ function KatalogPage() {
             Reset semua filter
           </button>
         </div>
+      )}
+
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToPageTop}
+          aria-label="Kembali ke atas"
+          className="fixed bottom-5 right-5 z-30 grid h-11 w-11 place-items-center rounded-full border border-primary bg-primary text-primary-foreground shadow-(--shadow-pop) transition-all hover:-translate-y-0.5 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 sm:bottom-6 sm:right-6 sm:h-12 sm:w-12"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
       )}
     </main>
   );
