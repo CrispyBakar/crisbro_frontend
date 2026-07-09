@@ -17,6 +17,7 @@ import {
   type RedeemItem,
 } from "@/lib/admin";
 import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
   Bar,
   BarChart,
@@ -349,6 +350,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   async function saveUser() {
     setSaving(true);
     setError("");
+    const isEditing = Boolean(userForm.id);
     try {
       const payload = {
         email: userForm.email || null,
@@ -365,8 +367,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
       setUserForm(emptyUserForm);
       setUsers(await adminApi.users(userSearch));
+      toast.success(isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan user");
+      const message = err instanceof Error ? err.message : "Gagal menyimpan user";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -381,8 +386,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       await adminApi.deleteUser(id);
       setUsers(await adminApi.users(userSearch));
       if (userForm.id === id) setUserForm(emptyUserForm);
+      toast.success("User admin berhasil dihapus");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus user");
+      const message = err instanceof Error ? err.message : "Gagal menghapus user";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -391,6 +399,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   async function saveCustomer() {
     setSaving(true);
     setError("");
+    const isEditing = Boolean(customerForm.id);
     try {
       const payload = {
         name: customerForm.name,
@@ -426,8 +435,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
       await loadCustomersPage(customerForm.id ? customerPage : 1);
       setSummary(await adminApi.summary(reportFilters));
+      toast.success(isEditing ? "Customer berhasil diperbarui" : "Customer berhasil ditambahkan");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan customer");
+      const message = err instanceof Error ? err.message : "Gagal menyimpan customer";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -445,8 +457,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       );
       setSummary(await adminApi.summary(reportFilters));
       if (customerForm.id === id) setCustomerForm(emptyCustomerForm);
+      toast.success("Customer berhasil dihapus");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus customer");
+      const message = err instanceof Error ? err.message : "Gagal menghapus customer";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -454,6 +469,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
   async function saveRedeemItem() {
     setSaving(true);
+    setError("");
+    const isEditing = Boolean(redeemForm.id);
     try {
       const payload = {
         menu_item_id: Number(redeemForm.menu_item_id),
@@ -475,8 +492,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       });
       await loadRedeem();
       setSummary(await adminApi.summary(reportFilters));
+      toast.success(isEditing ? "Menu redeem berhasil diperbarui" : "Menu redeem berhasil ditambahkan");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan menu redeem");
+      const message = err instanceof Error ? err.message : "Gagal menyimpan menu redeem";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -499,8 +519,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           is_active: true,
         });
       }
+      toast.success("Menu redeem berhasil dihapus");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus item redeem");
+      const message = err instanceof Error ? err.message : "Gagal menghapus item redeem";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }

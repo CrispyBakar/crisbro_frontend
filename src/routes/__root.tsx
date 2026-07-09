@@ -1,6 +1,7 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import logoCrisbar from "@/assets/logo-crisbar.png";
 
@@ -85,6 +86,7 @@ function RootComponent() {
       <Navbar />
       <Outlet />
       <Footer />
+      <Toaster richColors position="top-right" />
     </div>
   );
 }
