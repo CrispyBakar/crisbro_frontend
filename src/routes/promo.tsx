@@ -251,7 +251,7 @@ function PromoPage() {
         {loading && <PromoSkeleton />}
 
         {!loading && !error && promos.length > 0 && (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6">
             {promos.map((promo) => {
               const st = statusLabel[promo.status] ?? {
                 label: promo.status,
@@ -260,32 +260,34 @@ function PromoPage() {
               return (
                 <article
                   key={promo.id}
-                  className="rounded-xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
+                  className="rounded-xl bg-card border border-border p-3 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="h-12 w-12 rounded-lg bg-secondary grid place-items-center shrink-0">
-                      <Tag className="h-6 w-6 text-primary" />
+                  <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary sm:h-12 sm:w-12">
+                      <Tag className="h-4 w-4 text-primary sm:h-6 sm:w-6" />
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`text-xs font-bold px-3 py-1 rounded-full ${st.color}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-3 sm:py-1 sm:text-xs ${st.color}`}>
                         {st.label}
                       </span>
                     </div>
                   </div>
 
-                  <h3 className="text-xl font-extrabold mb-2">{promo.name}</h3>
+                  <h3 className="mb-2 line-clamp-2 text-sm font-extrabold leading-tight sm:text-xl">
+                    {promo.name}
+                  </h3>
 
                   {promo.discount_amount !== null && (
-                    <p className="text-2xl font-black text-primary mb-3">
+                    <p className="mb-3 text-base font-black text-primary sm:text-2xl">
                       {promo.discount_is_percentage
                         ? `Diskon ${promo.discount_amount}%`
                         : `Hemat Rp ${promo.discount_amount.toLocaleString("id-ID")}`}
                     </p>
                   )}
 
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground sm:gap-3 sm:text-sm">
                     <span className="inline-flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4 text-primary" />
+                      <Calendar className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
                       {promo.start_date ?? "Tanggal mulai belum tersedia"}
                       {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
                     </span>
@@ -298,17 +300,17 @@ function PromoPage() {
 
                   {promo.is_all_outlets ? (
                     <div className="mt-3">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded-full">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary sm:px-3 sm:py-1.5 sm:text-xs">
                         <MapPin className="h-3 w-3" /> Berlaku di semua outlet
                       </span>
                     </div>
                   ) : (
                     promo.locations.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
                         {promo.locations.map((loc) => (
                           <span
                             key={loc.id}
-                            className="inline-flex items-center gap-1 text-xs font-semibold bg-secondary text-secondary-foreground px-2.5 py-1 rounded-full"
+                            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground sm:px-2.5 sm:py-1 sm:text-xs"
                           >
                             <MapPin className="h-3 w-3" /> {loc.name}
                           </span>
@@ -319,7 +321,7 @@ function PromoPage() {
 
                   {/* Penanda Online Baru - Ditaruh sebagai Footer */}
                   {promo.is_online_only && (
-                    <div className="mt-4 pt-3 border-t border-dashed border-border text-xs text-muted-foreground/80 flex items-center gap-1.5">
+                    <div className="mt-4 flex items-center gap-1.5 border-t border-dashed border-border pt-3 text-[10px] text-muted-foreground/80 sm:text-xs">
                       <Smartphone className="h-3 w-3" />
                       <span>Hanya berlaku untuk pemesanan online</span>
                     </div>
@@ -360,20 +362,20 @@ function PromoPage() {
 
 function PromoSkeleton() {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid grid-cols-2 gap-3 sm:gap-6">
       {Array.from({ length: promoLimit }).map((_, index) => (
         <div
           key={index}
-          className="min-h-55 rounded-xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+          className="min-h-48 rounded-xl border border-border bg-card p-3 shadow-(--shadow-soft) sm:min-h-55 sm:p-7"
         >
-          <div className="mb-5 flex items-start justify-between">
-            <Skeleton className="h-12 w-12 rounded-lg" />
-            <Skeleton className="h-7 w-20 rounded-full" />
+          <div className="mb-4 flex items-start justify-between sm:mb-5">
+            <Skeleton className="h-9 w-9 rounded-lg sm:h-12 sm:w-12" />
+            <Skeleton className="h-5 w-14 rounded-full sm:h-7 sm:w-20" />
           </div>
-          <Skeleton className="mb-3 h-6 w-3/4" />
-          <Skeleton className="mb-5 h-8 w-1/2" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="mt-3 h-4 w-2/3" />
+          <Skeleton className="mb-3 h-4 w-3/4 sm:h-6" />
+          <Skeleton className="mb-5 h-6 w-1/2 sm:h-8" />
+          <Skeleton className="h-3 w-full sm:h-4" />
+          <Skeleton className="mt-3 h-3 w-2/3 sm:h-4" />
         </div>
       ))}
     </div>

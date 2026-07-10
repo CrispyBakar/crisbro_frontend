@@ -120,29 +120,37 @@ function LokasiPage() {
         <p className="text-center text-muted-foreground mt-10">Belum ada outlet yang tersedia.</p>
       )}
 
-      <section className="mx-auto max-w-6xl grid md:grid-cols-2 gap-6">
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
         {locations.map((o) => (
           <article
             key={o.id}
-            className="rounded-xl bg-card border border-border p-7 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform"
+            className="rounded-xl bg-card border border-border p-3 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
           >
-            <div className="flex items-start gap-4">
-              <div className="h-14 w-14 rounded-lg bg-secondary grid place-items-center shrink-0">
-                <MapPin className="h-7 w-7 text-primary" />
+            <div className="flex items-start gap-2 sm:gap-4">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary sm:h-14 sm:w-14">
+                <MapPin className="h-4 w-4 text-primary sm:h-7 sm:w-7" />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 {o.city && (
-                  <p className="text-sm font-bold text-primary uppercase tracking-wide">{o.city}</p>
+                  <p className="truncate text-[10px] font-bold uppercase tracking-wide text-primary sm:text-sm">
+                    {o.city}
+                  </p>
                 )}
-                <h3 className="text-2xl font-extrabold mb-3">{o.name}</h3>
-                {o.address && <p className="text-muted-foreground">{o.address}</p>}
+                <h3 className="mb-2 line-clamp-2 text-sm font-extrabold leading-tight sm:mb-3 sm:text-2xl">
+                  {o.name}
+                </h3>
+                {o.address && (
+                  <p className="text-xs text-muted-foreground sm:text-base">
+                    {o.address}
+                  </p>
+                )}
               </div>
             </div>
             <a
               href={o.maps_url}
               target="_blank"
               rel="noreferrer"
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-2 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground sm:mt-5 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm"
             >
               <MapPin className="h-4 w-4" />
               Lihat di Maps
@@ -168,22 +176,22 @@ function LokasiPage() {
 
 function LocationSkeleton() {
   return (
-    <section className="mx-auto max-w-6xl grid gap-6 md:grid-cols-2">
+    <section className="mx-auto grid max-w-6xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
-          className="rounded-xl border border-border bg-card p-7 shadow-(--shadow-soft)"
+          className="rounded-xl border border-border bg-card p-3 shadow-(--shadow-soft) sm:p-7"
         >
-          <div className="flex items-start gap-4">
-            <Skeleton className="h-14 w-14 shrink-0 rounded-lg" />
+          <div className="flex items-start gap-2 sm:gap-4">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-lg sm:h-14 sm:w-14" />
             <div className="min-w-0 flex-1">
-              <Skeleton className="mb-3 h-4 w-24" />
-              <Skeleton className="mb-4 h-7 w-3/4" />
-              <Skeleton className="mb-2 h-4 w-full" />
-              <Skeleton className="mb-4 h-4 w-5/6" />
+              <Skeleton className="mb-3 h-3 w-20 sm:h-4 sm:w-24" />
+              <Skeleton className="mb-4 h-4 w-3/4 sm:h-7" />
+              <Skeleton className="mb-2 h-3 w-full sm:h-4" />
+              <Skeleton className="mb-4 h-3 w-5/6 sm:h-4" />
             </div>
           </div>
-          <Skeleton className="mt-5 h-10 w-full rounded-lg" />
+          <Skeleton className="mt-4 h-9 w-full rounded-lg sm:mt-5 sm:h-10" />
         </div>
       ))}
     </section>

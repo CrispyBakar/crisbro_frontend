@@ -153,7 +153,7 @@ function MenuPage() {
       {error && <p className="text-center text-destructive mt-10">{error}</p>}
 
       {/* Grid Menu */}
-      <section className="mx-auto max-w-6xl grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
         {items.map((item) => (
           <article
             key={item.id}
@@ -179,20 +179,22 @@ function MenuPage() {
               )}
             </div>
 
-            <div className="p-6 flex flex-col flex-1">
-              <h3 className="text-xl font-extrabold mb-1.5">{item.name}</h3>
+            <div className="flex flex-1 flex-col p-3 sm:p-6">
+              <h3 className="mb-1 line-clamp-2 text-sm font-extrabold leading-tight sm:mb-1.5 sm:text-xl">
+                {item.name}
+              </h3>
               {item.description && (
-                <p className="text-muted-foreground text-sm mb-5 flex-1 line-clamp-2">
+                <p className="mb-3 line-clamp-2 flex-1 text-xs text-muted-foreground sm:mb-5 sm:text-sm">
                   {item.description}
                 </p>
               )}
-              <div className="flex items-center justify-between mt-auto">
-                <span className="text-2xl font-black text-primary">
+              <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-base font-black text-primary sm:text-2xl">
                   {item.points_required.toLocaleString("id-ID")} Poin
                 </span>
                 <button
                   onClick={() => handleTukar(item)}
-                  className="rounded-full bg-primary text-primary-foreground font-bold px-5 py-2 shadow-(--shadow-pop) hover:bg-primary/90 transition-colors"
+                  className="rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-(--shadow-pop) transition-colors hover:bg-primary/90 sm:px-5 sm:py-2 sm:text-sm"
                 >
                   Estimasi
                 </button>
@@ -227,20 +229,20 @@ function MenuPage() {
 
 function MenuSkeleton() {
   return (
-    <section className="mx-auto max-w-6xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
           className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
         >
           <Skeleton className="aspect-4/3 w-full rounded-none" />
-          <div className="flex flex-1 flex-col p-6">
-            <Skeleton className="mb-3 h-6 w-3/4" />
-            <Skeleton className="mb-2 h-4 w-full" />
-            <Skeleton className="mb-5 h-4 w-2/3" />
-            <div className="mt-auto flex items-center justify-between gap-3">
-              <Skeleton className="h-8 w-28" />
-              <Skeleton className="h-10 w-20 rounded-full" />
+          <div className="flex flex-1 flex-col p-3 sm:p-6">
+            <Skeleton className="mb-3 h-4 w-3/4 sm:h-6" />
+            <Skeleton className="mb-2 h-3 w-full sm:h-4" />
+            <Skeleton className="mb-4 h-3 w-2/3 sm:mb-5 sm:h-4" />
+            <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              <Skeleton className="h-6 w-24 sm:h-8 sm:w-28" />
+              <Skeleton className="h-8 w-full rounded-full sm:h-10 sm:w-20" />
             </div>
           </div>
         </div>
