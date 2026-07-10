@@ -210,6 +210,8 @@ function PromoPage() {
     });
   }
 
+  const hasOnlineOnlyPromo = promos.some((promo) => promo.is_online_only);
+
   return (
     <main className="px-4 mt-10">
       <section className="mx-auto max-w-6xl text-center mb-10">
@@ -249,6 +251,13 @@ function PromoPage() {
 
       <section ref={promoListRef} className="mx-auto max-w-6xl scroll-mt-24">
         {loading && <PromoSkeleton />}
+
+        {!loading && !error && hasOnlineOnlyPromo && (
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary shadow-(--shadow-soft) sm:mb-5 sm:px-4 sm:text-sm">
+            <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Hanya berlaku untuk pemesanan online
+          </div>
+        )}
 
         {!loading && !error && promos.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:gap-6">
@@ -319,13 +328,6 @@ function PromoPage() {
                     )
                   )}
 
-                  {/* Penanda Online Baru - Ditaruh sebagai Footer */}
-                  {promo.is_online_only && (
-                    <div className="mt-4 flex items-center gap-1.5 border-t border-dashed border-border pt-3 text-[10px] text-muted-foreground/80 sm:text-xs">
-                      <Smartphone className="h-3 w-3" />
-                      <span>Hanya berlaku untuk pemesanan online</span>
-                    </div>
-                  )}
                 </article>
               );
             })}
