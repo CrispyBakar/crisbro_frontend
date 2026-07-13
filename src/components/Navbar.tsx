@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Coins, Menu, X, LogOut, LayoutDashboard } from "lucide-react";
+import { Coins, Menu, X, LogOut, LayoutDashboard, KeyRound } from "lucide-react";
 import logoCrisbar from "@/assets/logo-crisbar.png";
 import { getUser, logout, type AuthUser } from "@/lib/auth";
 
@@ -154,6 +154,14 @@ export function Navbar() {
                     >
                       <LayoutDashboard className="h-4 w-4 text-primary" />
                       {dashboardLabel}
+                    </Link>
+                    <Link
+                      to="/change-password"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <KeyRound className="h-4 w-4 text-primary" />
+                      Ganti Password
                     </Link>
                     <button
                       type="button"
@@ -316,6 +324,13 @@ export function Navbar() {
               >
                 <LayoutDashboard className="h-4 w-4 text-primary" />{" "}
                 {dashboardLabel}
+              </Link>
+              <Link
+                to="/change-password"
+                onClick={close}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
+              >
+                <KeyRound className="h-4 w-4 text-primary" /> Ganti Password
               </Link>
               <button
                 type="button"

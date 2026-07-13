@@ -21,6 +21,7 @@ import {
   Coins,
   Gift,
   ListChecks,
+  Mail,
   Pencil,
   RefreshCw,
   TicketCheck,
@@ -126,6 +127,10 @@ function dateFormat(value: string) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function accountStatusLabel(status?: string | null) {
+  return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
 }
 
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
@@ -502,6 +507,21 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       confirmLabel: "Hapus customer",
       onConfirm: () => deleteCustomer(customer.id),
     });
+  }
+
+  async function resendActivation(customer: AdminCustomer) {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await adminApi.resendCustomerActivation(customer.id);
+      toast.success(result.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gagal mengirim email aktivasi";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveRedeemItem() {
@@ -1050,6 +1070,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       <th className="p-2">Outlet</th>
                       <th className="p-2">Poin</th>
                       <th className="p-2">Status</th>
+                      <th className="p-2">Status Akun</th>
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
@@ -1076,7 +1097,32 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         </td>
                         <td className="p-2 capitalize">{customer.status ?? "-"}</td>
                         <td className="p-2">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${
+                              customer.user.activation_status === "pending_activation"
+                                ? "bg-amber-500/10 text-amber-700"
+                                : "bg-emerald-500/10 text-emerald-700"
+                            }`}
+                          >
+                            {accountStatusLabel(customer.user.activation_status)}
+                          </span>
+                        </td>
+                        <td className="p-2">
                           <div className="flex items-center gap-3">
+                            {customer.user.activation_status === "pending_activation" && (
+                              <button
+                                className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
+                                disabled={saving || !customer.user.email}
+                                onClick={() => resendActivation(customer)}
+                                title={
+                                  customer.user.email
+                                    ? "Kirim ulang email aktivasi"
+                                    : "Customer belum punya email"
+                                }
+                              >
+                                <Mail className="h-4 w-4" /> Aktivasi
+                              </button>
+                            )}
                             <button
                               className="inline-flex items-center gap-1 font-bold text-primary"
                               onClick={() =>

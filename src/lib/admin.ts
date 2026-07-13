@@ -187,7 +187,14 @@ export type AdminCustomer = {
     location_id: number;
     location?: AdminLocation;
   }>;
-  user: { id: number; email: string | null; phone_number: string | null; role: string };
+  user: {
+    id: number;
+    email: string | null;
+    phone_number: string | null;
+    role: string;
+    activation_status?: string;
+    activated_at?: string | null;
+  };
   brand: AdminBrand;
   owner_location: AdminLocation | null;
   customer_point: {
@@ -248,6 +255,11 @@ export const adminApi = {
     }),
   deleteCustomer: (id: number) =>
     adminRequest<{ message: string }>(`/customers/${id}`, { method: "DELETE" }),
+  resendCustomerActivation: (id: number) =>
+    adminRequest<{ message: string; activation_email?: { sent?: boolean; skipped?: boolean } }>(
+      `/customers/${id}/activation`,
+      { method: "POST" },
+    ),
   brands: () => adminRequest<AdminBrand[]>("/brands"),
   locations: () => adminRequest<AdminLocation[]>("/locations"),
   summary: (

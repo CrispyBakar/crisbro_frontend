@@ -170,6 +170,60 @@ export async function apiLogin(phone_number: string, password: string) {
   return data;
 }
 
+export async function apiValidateActivation(token: string) {
+  const res = await fetch(apiUrl(`/activate?token=${encodeURIComponent(token)}`));
+  const data = await readJsonResponse(res, "Link aktivasi tidak valid");
+
+  if (!isRecord(data) || data.valid !== true) {
+    throw new Error("Format data aktivasi tidak valid");
+  }
+
+  return data as {
+    valid: true;
+    customer_name: string | null;
+    expires_at: string;
+  };
+}
+
+export async function apiActivateAccount(token: string, password: string) {
+  const res = await fetch(apiUrl("/activate"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await readJsonResponse(res, "Aktivasi akun gagal");
+
+  if (!isRecord(data) || typeof data.message !== "string") {
+    throw new Error("Format data aktivasi tidak valid");
+  }
+
+  return data as { message: string };
+}
+
+export async function apiChangePassword(currentPassword: string, newPassword: string) {
+  const token = getToken();
+  if (!token) throw new Error("Token tidak ditemukan");
+
+  const res = await fetch(apiUrl("/change-password"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+  const data = await readJsonResponse(res, "Gagal mengganti password");
+
+  if (!isRecord(data) || typeof data.message !== "string") {
+    throw new Error("Format data ganti password tidak valid");
+  }
+
+  return data as { message: string };
+}
+
 export async function apiRegister(name: string, phone_number: string, password: string) {
   const res = await fetch(apiUrl("/register"), {
     method: "POST",
