@@ -178,7 +178,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         currentUser?.role === "marketing"
       : currentUser?.role === "admin" || currentUser?.role === "staff";
   const canManageUsers = currentUser?.role === "admin";
-  const canViewCustomers = mode === "admin";
+  const canViewCustomers = mode === "admin" || mode === "marketing";
   const isMarketingConsole = mode === "marketing";
   const selectedCatalogItem = useMemo(
     () => catalogItems.find((item) => item.id === redeemForm.menu_item_id) ?? null,
@@ -356,7 +356,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       navigate({ to: "/login" });
       return;
     }
-    if (isMarketingConsole && tab !== "report" && tab !== "redeem") {
+    if (isMarketingConsole && tab !== "report" && tab !== "customers" && tab !== "redeem") {
       setTab("report");
       return;
     }
