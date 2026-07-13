@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiChangePassword, getToken } from "@/lib/auth";
+import { apiChangePassword, getToken, logout } from "@/lib/auth";
 import { CheckCircle2, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/change-password")({
@@ -58,6 +58,10 @@ function ChangePasswordPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setTimeout(() => {
+        logout();
+        navigate({ to: "/login" });
+      }, 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal mengganti password.");
     } finally {
