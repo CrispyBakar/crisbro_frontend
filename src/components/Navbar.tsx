@@ -42,12 +42,19 @@ export function Navbar() {
     navigate({ to: "/" });
   };
 
-  const customerName = user?.customer?.name ?? (user?.role === "marketing" ? "Marketing" : "");
+  const customerName =
+    user?.customer?.name ??
+    (user?.role === "admin" || user?.role === "staff"
+      ? "Admin"
+      : user?.role === "marketing"
+        ? "Marketing"
+        : "");
   const initial = customerName.charAt(0).toUpperCase() || "?";
   const phoneNumber = user?.phone_number ?? "-";
   const isAdmin = user?.role === "admin" || user?.role === "staff";
   const isMarketing = user?.role === "marketing";
-  const dashboardPath = isMarketing ? "/marketing" : "/dashboard";
+  const dashboardPath = isAdmin ? "/admin" : isMarketing ? "/marketing" : "/dashboard";
+  const dashboardLabel = isAdmin ? "Admin" : isMarketing ? "Marketing" : "Dashboard";
 
   const linkClass =
     "px-4 py-2 rounded-full text-sm font-semibold text-foreground/80 hover:text-primary hover:bg-secondary/60 transition-all";
@@ -146,18 +153,8 @@ export function Navbar() {
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
                     >
                       <LayoutDashboard className="h-4 w-4 text-primary" />
-                      {isMarketing ? "Marketing" : "Dashboard"}
+                      {dashboardLabel}
                     </Link>
-                    {isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors"
-                      >
-                        <LayoutDashboard className="h-4 w-4 text-primary" />
-                        Admin
-                      </Link>
-                    )}
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -318,17 +315,8 @@ export function Navbar() {
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
               >
                 <LayoutDashboard className="h-4 w-4 text-primary" />{" "}
-                {isMarketing ? "Marketing" : "Dashboard"}
+                {dashboardLabel}
               </Link>
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={close}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
-                >
-                  <LayoutDashboard className="h-4 w-4 text-primary" /> Admin
-                </Link>
-              )}
               <button
                 type="button"
                 onClick={() => {
