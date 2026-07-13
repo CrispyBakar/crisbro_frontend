@@ -587,7 +587,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </Button>
         </div>
 
-        <div className="mb-5 flex flex-wrap gap-2">
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <TabButton
             active={tab === "report"}
             onClick={() => setTab("report")}
@@ -1337,9 +1337,10 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold border ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
+      className={`inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-bold ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
     >
-      {icon} {label}
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate">{label}</span>
     </button>
   );
 }
