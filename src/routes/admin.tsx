@@ -1436,22 +1436,24 @@ function Metric({
 
   return (
     <div
-      className={`relative min-w-0 overflow-hidden rounded-xl border bg-card p-3 shadow-(--shadow-soft) sm:rounded-2xl sm:p-5 ${classes.border}`}
+      className={`relative flex min-h-[104px] min-w-0 flex-col overflow-hidden rounded-xl border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px] ${classes.border}`}
     >
       <span className={`absolute inset-x-0 top-0 h-1 ${classes.accent}`} />
-      <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 text-[11px] font-black uppercase leading-tight text-muted-foreground sm:text-xs">
-          {title}
-        </p>
+      <div className="flex min-h-[32px] items-center gap-2 sm:min-h-[36px] sm:gap-2.5">
         <span
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full sm:h-9 sm:w-9 ${classes.icon}`}
+          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full [&>svg]:h-3.5 [&>svg]:w-3.5 sm:h-8 sm:w-8 sm:[&>svg]:h-4 sm:[&>svg]:w-4 ${classes.icon}`}
         >
           {icon}
         </span>
+        <p className="min-w-0 text-[11px] font-black uppercase leading-tight text-muted-foreground sm:text-xs">
+          {title}
+        </p>
       </div>
-      <p className="mt-3 truncate text-2xl font-black leading-none tracking-normal tabular-nums sm:text-3xl">
-        {value}
-      </p>
+      <div className="flex flex-1 items-center justify-center px-1 pt-1.5">
+        <p className="max-w-full truncate text-[1.45rem] font-black leading-none tracking-normal tabular-nums sm:text-[1.65rem] lg:text-2xl">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1464,10 +1466,15 @@ function AdminPageSkeleton({ tab }: { tab: Tab }) {
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="rounded-xl border border-border bg-card p-3 shadow-(--shadow-soft) sm:rounded-2xl sm:p-5"
+              className="flex min-h-[104px] flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px]"
             >
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="mt-2 h-7 w-24 sm:mt-3 sm:h-9 sm:w-28" />
+              <div className="flex min-h-[32px] items-center gap-2 sm:min-h-[36px] sm:gap-2.5">
+                <Skeleton className="h-7 w-7 rounded-full sm:h-8 sm:w-8" />
+                <Skeleton className="h-3 w-20 sm:w-24" />
+              </div>
+              <div className="flex flex-1 items-center justify-center pt-1.5">
+                <Skeleton className="h-7 w-24 sm:h-8 sm:w-28" />
+              </div>
             </div>
           ))}
         </div>
