@@ -16,7 +16,20 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, ListChecks, Pencil, RefreshCw, Trash2, Users, X } from "lucide-react";
+import {
+  BarChart3,
+  Coins,
+  Gift,
+  ListChecks,
+  Pencil,
+  RefreshCw,
+  TicketCheck,
+  Trash2,
+  UserCheck,
+  Users,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Bar,
@@ -627,13 +640,43 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "report" && summary && (
           <section className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-4">
-              <Metric title="Total Member" value={numberFormat(summary.total_members)} />
-              <Metric title="Member Aktif" value={numberFormat(summary.active_members)} />
-              <Metric title="Poin Diberikan" value={numberFormat(summary.total_points_given)} />
-              <Metric title="Poin Ditukar" value={numberFormat(summary.points_redeemed)} />
-              <Metric title="Poin Tersedia" value={numberFormat(summary.total_points_available)} />
-              <Metric title="Total Redeem" value={numberFormat(summary.redemption_count)} />
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+              <Metric
+                title="Total Member"
+                value={numberFormat(summary.total_members)}
+                icon={<Users className="h-4 w-4" />}
+                tone="primary"
+              />
+              <Metric
+                title="Member Aktif"
+                value={numberFormat(summary.active_members)}
+                icon={<UserCheck className="h-4 w-4" />}
+                tone="success"
+              />
+              <Metric
+                title="Poin Diberikan"
+                value={numberFormat(summary.total_points_given)}
+                icon={<Coins className="h-4 w-4" />}
+                tone="gold"
+              />
+              <Metric
+                title="Poin Ditukar"
+                value={numberFormat(summary.points_redeemed)}
+                icon={<TicketCheck className="h-4 w-4" />}
+                tone="info"
+              />
+              <Metric
+                title="Poin Tersedia"
+                value={numberFormat(summary.total_points_available)}
+                icon={<WalletCards className="h-4 w-4" />}
+                tone="muted"
+              />
+              <Metric
+                title="Total Redeem"
+                value={numberFormat(summary.redemption_count)}
+                icon={<Gift className="h-4 w-4" />}
+                tone="danger"
+              />
             </div>
             <div className="grid min-w-0 gap-5 lg:grid-cols-2">
               <Panel title="Reward paling sering ditukar">
@@ -1345,11 +1388,70 @@ function TabButton({
   );
 }
 
-function Metric({ title, value }: { title: string; value: string }) {
+const metricToneClasses = {
+  primary: {
+    border: "border-primary/20",
+    icon: "bg-primary/10 text-primary",
+    accent: "bg-primary",
+  },
+  success: {
+    border: "border-emerald-500/20",
+    icon: "bg-emerald-500/10 text-emerald-700",
+    accent: "bg-emerald-500",
+  },
+  gold: {
+    border: "border-amber-500/20",
+    icon: "bg-amber-500/10 text-amber-700",
+    accent: "bg-amber-500",
+  },
+  info: {
+    border: "border-sky-500/20",
+    icon: "bg-sky-500/10 text-sky-700",
+    accent: "bg-sky-500",
+  },
+  muted: {
+    border: "border-muted-foreground/20",
+    icon: "bg-muted text-muted-foreground",
+    accent: "bg-muted-foreground",
+  },
+  danger: {
+    border: "border-rose-500/20",
+    icon: "bg-rose-500/10 text-rose-700",
+    accent: "bg-rose-500",
+  },
+} as const;
+
+function Metric({
+  title,
+  value,
+  icon,
+  tone = "primary",
+}: {
+  title: string;
+  value: string;
+  icon: ReactNode;
+  tone?: keyof typeof metricToneClasses;
+}) {
+  const classes = metricToneClasses[tone];
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
-      <p className="text-xs font-bold uppercase text-muted-foreground">{title}</p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+    <div
+      className={`relative min-w-0 overflow-hidden rounded-xl border bg-card p-3 shadow-(--shadow-soft) sm:rounded-2xl sm:p-5 ${classes.border}`}
+    >
+      <span className={`absolute inset-x-0 top-0 h-1 ${classes.accent}`} />
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-[11px] font-black uppercase leading-tight text-muted-foreground sm:text-xs">
+          {title}
+        </p>
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full sm:h-9 sm:w-9 ${classes.icon}`}
+        >
+          {icon}
+        </span>
+      </div>
+      <p className="mt-3 truncate text-2xl font-black leading-none tracking-normal tabular-nums sm:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }
@@ -1358,14 +1460,14 @@ function AdminPageSkeleton({ tab }: { tab: Tab }) {
   if (tab === "report") {
     return (
       <section className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)"
+              className="rounded-xl border border-border bg-card p-3 shadow-(--shadow-soft) sm:rounded-2xl sm:p-5"
             >
               <Skeleton className="h-3 w-24" />
-              <Skeleton className="mt-3 h-9 w-28" />
+              <Skeleton className="mt-2 h-7 w-24 sm:mt-3 sm:h-9 sm:w-28" />
             </div>
           ))}
         </div>
