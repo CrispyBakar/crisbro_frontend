@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
@@ -103,6 +104,8 @@ type ConfirmDialogState = {
   onConfirm: () => Promise<void>;
 };
 
+type MobileCrudForm = "user" | "customer" | "redeem";
+
 function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
@@ -135,6 +138,7 @@ function accountStatusLabel(status?: string | null) {
 
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
@@ -168,6 +172,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [activeMobileForm, setActiveMobileForm] = useState<MobileCrudForm | null>(null);
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
 
   const currentUser = useMemo(() => getUser(), []);
@@ -373,6 +378,81 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
   }, [catalogCategories.length, searchCatalog, tab]);
 
+  function resetRedeemForm() {
+    setRedeemForm({
+      id: 0,
+      menu_item_id: 0,
+      points_required: 0,
+      sort_order: 0,
+      is_active: true,
+    });
+  }
+
+  function openCreateUserForm() {
+    setUserForm(emptyUserForm);
+    setActiveMobileForm("user");
+  }
+
+  function openCreateCustomerForm() {
+    setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
+    setActiveMobileForm("customer");
+  }
+
+  function openCreateRedeemForm() {
+    resetRedeemForm();
+    setActiveMobileForm("redeem");
+  }
+
+  function editUser(user: AdminUser) {
+    setUserForm({
+      id: user.id,
+      email: user.email ?? "",
+      phone_number: user.phone_number ?? "",
+      password: "",
+      role: user.role,
+    });
+    if (isMobile) setActiveMobileForm("user");
+  }
+
+  function editCustomer(customer: AdminCustomer) {
+    setCustomerForm({
+      id: customer.id,
+      name: customer.name,
+      email: customer.user.email ?? "",
+      phone_number: customer.phone_number ?? "",
+      phone_number_country_code: customer.phone_number_country_code,
+      address: customer.address ?? "",
+      province: customer.province ?? "",
+      city: customer.city ?? "",
+      country: customer.country ?? "Indonesia",
+      postal_code: customer.postal_code ?? "",
+      dob: customer.dob ? customer.dob.slice(0, 10) : "",
+      gender: customer.gender ?? "unknown",
+      status: customer.status ?? "active",
+      balance: Number(customer.balance ?? 0),
+      brand_id: customer.brand_id,
+      owner_location_id: customer.owner_location_id ?? 0,
+      location_ids:
+        customer.customer_locations?.map((location) => location.location_id) ??
+        (customer.owner_location_id ? [customer.owner_location_id] : []),
+      total_point: customer.customer_point?.total_point ?? 0,
+      available_point: customer.customer_point?.available_point ?? 0,
+      next_reward_threshold: customer.customer_point?.next_reward_threshold ?? 2000,
+    });
+    if (isMobile) setActiveMobileForm("customer");
+  }
+
+  function editRedeemItem(item: RedeemItem) {
+    setRedeemForm({
+      id: item.id,
+      menu_item_id: item.menu_item_id,
+      points_required: item.points_required,
+      sort_order: item.sort_order,
+      is_active: item.is_active,
+    });
+    if (isMobile) setActiveMobileForm("redeem");
+  }
+
   async function saveUser() {
     setSaving(true);
     setError("");
@@ -392,6 +472,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       }
 
       setUserForm(emptyUserForm);
+      setActiveMobileForm(null);
       setUsers(await adminApi.users(userSearch));
       toast.success(isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan");
     } catch (err) {
@@ -468,6 +549,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       }
 
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
+      setActiveMobileForm(null);
       await loadCustomersPage(customerForm.id ? customerPage : 1);
       setSummary(await adminApi.summary(reportFilters));
       toast.success(isEditing ? "Customer berhasil diperbarui" : "Customer berhasil ditambahkan");
@@ -540,13 +622,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       } else {
         await adminApi.createRedeemItem(payload);
       }
-      setRedeemForm({
-        id: 0,
-        menu_item_id: 0,
-        points_required: 0,
-        sort_order: 0,
-        is_active: true,
-      });
+      resetRedeemForm();
+      setActiveMobileForm(null);
       await loadRedeem();
       setSummary(await adminApi.summary(reportFilters));
       toast.success(isEditing ? "Menu redeem berhasil diperbarui" : "Menu redeem berhasil ditambahkan");
@@ -566,13 +643,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       await adminApi.deleteRedeemItem(item.id);
       setRedeemItems(await adminApi.redeemItems());
       if (redeemForm.id === item.id) {
-        setRedeemForm({
-          id: 0,
-          menu_item_id: 0,
-          points_required: 0,
-          sort_order: 0,
-          is_active: true,
-        });
+        resetRedeemForm();
       }
       toast.success("Menu redeem berhasil dihapus");
     } catch (err) {
@@ -600,6 +671,254 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     await confirmDialog.onConfirm();
     setConfirmDialog(null);
   }
+
+  const mobileUserForm = (
+    <>
+      <FormInput
+        label="Email"
+        type="email"
+        value={userForm.email}
+        onChange={(v) => setUserForm({ ...userForm, email: v })}
+      />
+      <FormInput
+        label="Nomor Telepon"
+        value={userForm.phone_number}
+        onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
+      />
+      <FormInput
+        label={userForm.id ? "Password Baru" : "Password"}
+        type="password"
+        value={userForm.password}
+        onChange={(v) => setUserForm({ ...userForm, password: v })}
+      />
+      <Select
+        label="Role"
+        value={userForm.role}
+        onChange={(v) => setUserForm({ ...userForm, role: v })}
+        options={[
+          { value: "marketing", label: "Marketing" },
+          { value: "staff", label: "Staff" },
+          { value: "admin", label: "Admin" },
+        ]}
+      />
+      <Button onClick={saveUser} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+        Simpan User
+      </Button>
+    </>
+  );
+
+  const mobileCustomerForm = (
+    <>
+      <CustomerFormGroup title="Identitas">
+        <div className="grid gap-3 md:grid-cols-2">
+          <FormInput
+            label="Nama"
+            value={customerForm.name}
+            onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
+          />
+          <FormInput
+            label="Nomor Telepon"
+            value={customerForm.phone_number}
+            onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
+          />
+          <FormInput
+            label="Email"
+            type="email"
+            value={customerForm.email}
+            onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
+          />
+          <Select
+            label="Gender"
+            value={customerForm.gender}
+            onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
+            options={[
+              { value: "unknown", label: "Unknown" },
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+            ]}
+          />
+          <FormInput
+            label="Tanggal Lahir"
+            type="date"
+            value={customerForm.dob}
+            onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
+          />
+        </div>
+      </CustomerFormGroup>
+
+      <CustomerFormGroup title="Lokasi">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Select
+            label="Brand"
+            value={String(customerForm.brand_id)}
+            onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
+            options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
+              (brand) => ({
+                value: String(brand.id),
+                label: brand.name,
+              }),
+            )}
+          />
+          <Select
+            label="Owner Outlet"
+            value={String(customerForm.owner_location_id)}
+            onChange={(v) => {
+              const ownerId = Number(v);
+              setCustomerForm({
+                ...customerForm,
+                owner_location_id: ownerId,
+                location_ids:
+                  ownerId > 0
+                    ? Array.from(new Set([...customerForm.location_ids, ownerId]))
+                    : customerForm.location_ids,
+              });
+            }}
+            options={[
+              { value: "0", label: "Tanpa outlet" },
+              ...(locations ?? []).map((location) => ({
+                value: String(location.id),
+                label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
+              })),
+            ]}
+          />
+        </div>
+        <FormInput
+          label="Alamat"
+          value={customerForm.address}
+          onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
+        />
+        <div className="grid gap-3 md:grid-cols-2">
+          <FormInput
+            label="Kota"
+            value={customerForm.city}
+            onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
+          />
+          <FormInput
+            label="Provinsi"
+            value={customerForm.province}
+            onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
+          />
+          <FormInput
+            label="Negara"
+            value={customerForm.country}
+            onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
+          />
+          <FormInput
+            label="Kode Pos"
+            value={customerForm.postal_code}
+            onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
+          />
+        </div>
+      </CustomerFormGroup>
+
+      <CustomerFormGroup title="Loyalty">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Select
+            label="Status"
+            value={customerForm.status}
+            onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+          />
+          <FormInput
+            label="Saldo"
+            type="number"
+            value={String(customerForm.balance)}
+            onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
+          />
+          <FormInput
+            label="Total Poin"
+            type="number"
+            value={String(customerForm.total_point)}
+            onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
+          />
+          <FormInput
+            label="Poin Tersedia"
+            type="number"
+            value={String(customerForm.available_point)}
+            onChange={(v) => setCustomerForm({ ...customerForm, available_point: Number(v) })}
+          />
+        </div>
+      </CustomerFormGroup>
+      <Button onClick={saveCustomer} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+        Simpan Customer
+      </Button>
+    </>
+  );
+
+  const mobileRedeemForm = (
+    <>
+      <div className="mb-3 flex gap-2">
+        <input
+          value={catalogSearch}
+          onChange={(e) => setCatalogSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") searchCatalog();
+          }}
+          placeholder="Cari menu..."
+          className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+        />
+        <Button onClick={searchCatalog} variant="outline">
+          Cari
+        </Button>
+        {appliedCatalogSearch && (
+          <Button onClick={resetCatalogSearch} variant="outline">
+            Reset
+          </Button>
+        )}
+      </div>
+      <CategoryMenuPicker
+        categories={catalogCategories}
+        items={catalogItems}
+        searchQuery={appliedCatalogSearch}
+        selectedItem={selectedCatalogItem}
+        selectedItemId={redeemForm.menu_item_id}
+        onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
+      />
+      <FormInput
+        label="Poin Redeem"
+        type="number"
+        value={String(redeemForm.points_required)}
+        onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
+      />
+      <FormInput
+        label="Urutan"
+        type="number"
+        value={String(redeemForm.sort_order)}
+        onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
+      />
+      <Toggle
+        label="Aktif"
+        checked={redeemForm.is_active}
+        onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
+      />
+      <Button onClick={saveRedeemItem} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+        Simpan Item
+      </Button>
+    </>
+  );
+
+  const mobileCrudTitle =
+    activeMobileForm === "user"
+      ? userForm.id
+        ? "Edit User Admin"
+        : "Tambah User Admin"
+      : activeMobileForm === "customer"
+        ? customerForm.id
+          ? "Edit Customer"
+          : "Tambah Customer"
+        : redeemForm.id
+          ? "Edit Menu Redeem"
+          : "Tambah Menu Redeem";
+
+  const mobileCrudContent =
+    activeMobileForm === "user"
+      ? mobileUserForm
+      : activeMobileForm === "customer"
+        ? mobileCustomerForm
+        : mobileRedeemForm;
 
   if (!canAccess) return null;
 
@@ -779,6 +1098,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "users" && canManageUsers && (
           <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
+            <div className="hidden md:block">
             <Panel title={userForm.id ? "Edit User" : "Tambah User"}>
               <FormInput
                 label="Email"
@@ -827,7 +1147,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 )}
               </div>
             </Panel>
+            </div>
             <Panel title="Daftar User Admin">
+              <Button
+                type="button"
+                onClick={openCreateUserForm}
+                className="mb-4 w-full rounded-full font-bold md:hidden"
+              >
+                Tambah User Admin
+              </Button>
               <div className="mb-4 flex gap-2">
                 <input
                   value={userSearch}
@@ -859,15 +1187,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                           <div className="flex items-center gap-3">
                             <button
                               className="inline-flex items-center gap-1 font-bold text-primary"
-                              onClick={() =>
-                                setUserForm({
-                                  id: user.id,
-                                  email: user.email ?? "",
-                                  phone_number: user.phone_number ?? "",
-                                  password: "",
-                                  role: user.role,
-                                })
-                              }
+                              onClick={() => editUser(user)}
                             >
                               <Pencil className="h-4 w-4" /> Edit
                             </button>
@@ -891,6 +1211,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "customers" && (
           <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
+            <div className="hidden md:block">
             <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
               <CustomerFormGroup title="Identitas">
                 <div className="grid gap-3 md:grid-cols-2">
@@ -1049,7 +1370,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 )}
               </div>
             </Panel>
+            </div>
             <Panel title="Daftar Customer">
+              <Button
+                type="button"
+                onClick={openCreateCustomerForm}
+                className="mb-4 w-full rounded-full font-bold md:hidden"
+              >
+                Tambah Customer
+              </Button>
               <div className="mb-4 flex gap-2">
                 <input
                   value={customerSearch}
@@ -1125,35 +1454,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             )}
                             <button
                               className="inline-flex items-center gap-1 font-bold text-primary"
-                              onClick={() =>
-                                setCustomerForm({
-                                  id: customer.id,
-                                  name: customer.name,
-                                  email: customer.user.email ?? "",
-                                  phone_number: customer.phone_number ?? "",
-                                  phone_number_country_code: customer.phone_number_country_code,
-                                  address: customer.address ?? "",
-                                  province: customer.province ?? "",
-                                  city: customer.city ?? "",
-                                  country: customer.country ?? "Indonesia",
-                                  postal_code: customer.postal_code ?? "",
-                                  dob: customer.dob ? customer.dob.slice(0, 10) : "",
-                                  gender: customer.gender ?? "unknown",
-                                  status: customer.status ?? "active",
-                                  balance: Number(customer.balance ?? 0),
-                                  brand_id: customer.brand_id,
-                                  owner_location_id: customer.owner_location_id ?? 0,
-                                  location_ids:
-                                    customer.customer_locations?.map(
-                                      (location) => location.location_id,
-                                    ) ??
-                                    (customer.owner_location_id ? [customer.owner_location_id] : []),
-                                  total_point: customer.customer_point?.total_point ?? 0,
-                                  available_point: customer.customer_point?.available_point ?? 0,
-                                  next_reward_threshold:
-                                    customer.customer_point?.next_reward_threshold ?? 2000,
-                                })
-                              }
+                              onClick={() => editCustomer(customer)}
                             >
                               <Pencil className="h-4 w-4" /> Edit
                             </button>
@@ -1203,6 +1504,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "redeem" && (
           <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <div className="hidden md:block">
             <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
               <div className="mb-3 flex gap-2">
                 <input
@@ -1256,7 +1558,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 Simpan Item
               </Button>
             </Panel>
+            </div>
             <Panel title="Menu Redeem Aktif dan Draft">
+              <Button
+                type="button"
+                onClick={openCreateRedeemForm}
+                className="mb-4 w-full rounded-full font-bold md:hidden"
+              >
+                Tambah Menu Redeem
+              </Button>
               <TableScrollArea>
                 <table className="min-w-[820px] w-full text-sm">
                   <thead>
@@ -1299,15 +1609,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                           <div className="flex flex-wrap gap-2">
                             <button
                               className="inline-flex items-center gap-1 font-bold text-primary"
-                              onClick={() =>
-                                setRedeemForm({
-                                  id: item.id,
-                                  menu_item_id: item.menu_item_id,
-                                  points_required: item.points_required,
-                                  sort_order: item.sort_order,
-                                  is_active: item.is_active,
-                                })
-                              }
+                              onClick={() => editRedeemItem(item)}
                             >
                               <Pencil className="h-4 w-4" /> Edit
                             </button>
@@ -1335,7 +1637,67 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         onCancel={() => setConfirmDialog(null)}
         onConfirm={confirmDeleteAction}
       />
+      <MobileCrudDialog
+        open={Boolean(activeMobileForm)}
+        title={mobileCrudTitle}
+        saving={saving}
+        onClose={() => setActiveMobileForm(null)}
+      >
+        {mobileCrudContent}
+      </MobileCrudDialog>
     </main>
+  );
+}
+
+function MobileCrudDialog({
+  open,
+  title,
+  saving,
+  children,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  saving: boolean;
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+
+  const closeDialog = () => {
+    if (!saving) onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/35 p-3 backdrop-blur-sm md:hidden"
+      onClick={closeDialog}
+      role="presentation"
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-crud-title"
+        onClick={(event) => event.stopPropagation()}
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg cursor-default flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-pop)"
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3">
+          <h2 id="mobile-crud-title" className="text-lg font-black">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={closeDialog}
+            disabled={saving}
+            aria-label="Tutup form"
+            className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">{children}</div>
+      </section>
+    </div>
   );
 }
 
