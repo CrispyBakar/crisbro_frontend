@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
 import { getUser } from "@/lib/auth";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Coins, Sparkles, X } from "lucide-react";
 
 export const Route = createFileRoute("/menu")({
   head: () => ({
@@ -55,6 +55,10 @@ function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [insufficientPoints, setInsufficientPoints] = useState<{
+    item: MenuItem;
+    availablePoint: number;
+  } | null>(null);
 
   useEffect(() => {
     fetch(apiUrl("/catalog/redeem-menu"))
@@ -113,7 +117,7 @@ function MenuPage() {
     const availablePoint = user.customer?.customer_point?.available_point ?? 0;
 
     if (availablePoint < item.points_required) {
-      alert("Poin kamu tidak cukup untuk menukarkan menu ini 😭");
+      setInsufficientPoints({ item, availablePoint });
       return;
     }
 
@@ -223,7 +227,95 @@ function MenuPage() {
           <ArrowUp className="h-5 w-5" />
         </button>
       )}
+
+      <InsufficientPointsDialog
+        data={insufficientPoints}
+        onClose={() => setInsufficientPoints(null)}
+      />
     </main>
+  );
+}
+
+function InsufficientPointsDialog({
+  data,
+  onClose,
+}: {
+  data: { item: MenuItem; availablePoint: number } | null;
+  onClose: () => void;
+}) {
+  if (!data) return null;
+
+  const requiredPoint = data.item.points_required;
+  const shortage = Math.max(0, requiredPoint - data.availablePoint);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+      role="presentation"
+      onClick={onClose}
+    >
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="insufficient-points-title"
+        aria-describedby="insufficient-points-description"
+        onClick={(event) => event.stopPropagation()}
+        className="relative w-full max-w-md cursor-default overflow-hidden rounded-3xl border border-border bg-card p-6 text-center shadow-(--shadow-pop)"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup pesan poin tidak cukup"
+          className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-secondary text-primary shadow-(--shadow-pop)">
+          <Coins className="h-8 w-8" />
+        </div>
+        <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-black uppercase text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> Poin Belum Cukup
+        </p>
+        <h2 id="insufficient-points-title" className="text-2xl font-black tracking-tight">
+          Poin kamu belum cukup
+        </h2>
+        <p
+          id="insufficient-points-description"
+          className="mt-2 text-sm leading-6 text-muted-foreground"
+        >
+          Kamu butuh tambahan poin untuk menukarkan menu{" "}
+          <span className="font-extrabold text-foreground">{data.item.name}</span>.
+        </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 text-left">
+          <div className="rounded-2xl border border-border bg-background p-3">
+            <p className="text-xs font-black uppercase text-muted-foreground">Poin Kamu</p>
+            <p className="mt-1 text-lg font-black text-foreground">
+              {data.availablePoint.toLocaleString("id-ID")}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border bg-background p-3">
+            <p className="text-xs font-black uppercase text-muted-foreground">Dibutuhkan</p>
+            <p className="mt-1 text-lg font-black text-primary">
+              {requiredPoint.toLocaleString("id-ID")}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-extrabold text-destructive">
+          Kurang {shortage.toLocaleString("id-ID")} poin lagi
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 w-full rounded-full bg-primary px-5 py-3 text-sm font-black text-primary-foreground shadow-(--shadow-pop) transition-colors hover:bg-primary/90"
+        >
+          Mengerti
+        </button>
+      </section>
+    </div>
   );
 }
 
