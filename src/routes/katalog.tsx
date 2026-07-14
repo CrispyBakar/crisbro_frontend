@@ -33,6 +33,48 @@ type Category = {
 
 const SKELETON_COUNT = 9;
 
+const CATEGORY_DISPLAY_ORDER = [
+  "Best Seller Bundling",
+  "Crisbarbar Whole Chicken",
+  "Skin Lovers Squad",
+  "Bundling Tea Series",
+  "My Kisah Katsu <3",
+  "#TeamHot",
+  "Little Hero Crisbar",
+  "Cocolove Stories 🫶🏻",
+  "Paket Ayam Crisbar",
+  "Cita Rasa Nusantara",
+  "Paket Ayam Crisbee",
+  "Smart Deal",
+  "Keju Mozzarella Naikin Mood",
+  "Balinese Series",
+  "Paket Ayam Spicy",
+  "Crisbar Korean Chicken",
+  "Keju Salju Sensasi Baru",
+  "It's DJ Time!!",
+  "#TeamCool",
+  "Teman Gawe",
+  "Survival Kit",
+  "Nasi Kulit",
+  "Crisbar Coffe",
+  "Mood Booster Drinks",
+  "Snack & Sides",
+  "Topping",
+  "CMP",
+];
+
+const CATEGORY_DISPLAY_ORDER_MAP = new Map(
+  CATEGORY_DISPLAY_ORDER.map((name, index) => [normalizeCategoryName(name), index]),
+);
+
+function normalizeCategoryName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getCategoryDisplayOrder(name: string) {
+  return CATEGORY_DISPLAY_ORDER_MAP.get(normalizeCategoryName(name)) ?? Number.MAX_SAFE_INTEGER;
+}
+
 type ProductGroup = {
   id: number | null;
   name: string;
@@ -135,8 +177,18 @@ function KatalogPage() {
     });
   }, [products, search]);
 
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const orderA = getCategoryDisplayOrder(a.name);
+      const orderB = getCategoryDisplayOrder(b.name);
+
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [categories]);
+
   const groupedProducts = useMemo<ProductGroup[]>(() => {
-    const categoryOrder = new Map(categories.map((category, index) => [category.id, index]));
+    const categoryOrder = new Map(sortedCategories.map((category, index) => [category.id, index]));
     const groups = new Map<string, ProductGroup>();
 
     for (const product of filtered) {
@@ -165,7 +217,7 @@ function KatalogPage() {
       if (orderA === undefined && orderB !== undefined) return 1;
       return a.name.localeCompare(b.name);
     });
-  }, [categories, filtered]);
+  }, [filtered, sortedCategories]);
 
   const categoryKey = (categoryId: number | null) => String(categoryId ?? "uncategorized");
 
@@ -320,7 +372,7 @@ function KatalogPage() {
                   Semua
                 </button>
 
-                {categories.map((cat) => (
+                {sortedCategories.map((cat) => (
                   <button
                     key={cat.id}
                     data-category-id={categoryKey(cat.id)}
