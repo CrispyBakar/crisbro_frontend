@@ -163,3 +163,25 @@
     cursor: pointer;
   }
 }
+
+@layer components {
+  .table-scroll-area {
+    scrollbar-color: var(--color-primary) var(--color-muted);
+    scrollbar-width: thin;
+  }
+
+  .table-scroll-area::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .table-scroll-area::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: var(--color-muted);
+  }
+
+  .table-scroll-area::-webkit-scrollbar-thumb {
+    border: 2px solid var(--color-muted);
+    border-radius: 999px;
+    background: var(--color-primary);
+  }
+}

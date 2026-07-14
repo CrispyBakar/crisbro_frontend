@@ -839,8 +839,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   Cari
                 </Button>
               </div>
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
+              <TableScrollArea>
+                <table className="min-w-[720px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Email</th>
@@ -884,7 +884,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollArea>
             </Panel>
           </section>
         )}
@@ -1061,8 +1061,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   Cari
                 </Button>
               </div>
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
+              <TableScrollArea>
+                <table className="min-w-[980px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Nama</th>
@@ -1170,7 +1170,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollArea>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                 <p className="font-semibold text-muted-foreground">
                   Total {numberFormat(customerTotal)} customer · Halaman {customerPage} dari{" "}
@@ -1257,8 +1257,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               </Button>
             </Panel>
             <Panel title="Menu Redeem Aktif dan Draft">
-              <div className="overflow-x-auto">
-                <table className="min-w-[820px] text-sm">
+              <TableScrollArea>
+                <table className="min-w-[820px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Menu</th>
@@ -1324,7 +1324,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollArea>
             </Panel>
           </section>
         )}
@@ -2220,20 +2220,31 @@ function Select({
   );
 }
 
+function TableScrollArea({ children }: { children: ReactNode }) {
+  return (
+    <div className="table-scroll-area -mx-1 min-w-0 max-w-full overflow-x-scroll overflow-y-hidden overscroll-x-contain px-1 pb-3">
+      {children}
+    </div>
+  );
+}
+
 function DataTable({
   headers,
   rows,
   emptyMessage = "Belum ada data.",
+  minWidth,
 }: {
   headers: string[];
   rows?: string[][];
   emptyMessage?: string;
+  minWidth?: number;
 }) {
   const hasRows = (rows ?? []).length > 0;
+  const tableMinWidth = minWidth ?? Math.max(640, headers.length * 160);
 
   return (
-    <div className="overflow-auto">
-      <table className="w-full text-sm">
+    <TableScrollArea>
+      <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
         <thead>
           <tr className="text-left text-muted-foreground">
             {(headers ?? []).map((header) => (
@@ -2263,6 +2274,6 @@ function DataTable({
           )}
         </tbody>
       </table>
-    </div>
+    </TableScrollArea>
   );
 }
