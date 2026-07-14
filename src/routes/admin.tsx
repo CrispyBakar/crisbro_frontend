@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/admin";
 import {
   BarChart3,
+  ChevronDown,
   Coins,
   Gift,
   ListChecks,
@@ -2564,20 +2566,138 @@ function Select({
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
 }) {
+  const [open, setOpen] = useState(false);
+  const selectRef = useRef<HTMLLabelElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
+  const selectedOption = options.find((option) => option.value === value);
+
+  const updateDropdownStyle = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 6;
+    const edgePadding = 12;
+    const preferredMaxHeight = 208;
+    const width = Math.min(rect.width, viewportWidth - edgePadding * 2);
+    const left = Math.min(Math.max(rect.left, edgePadding), viewportWidth - width - edgePadding);
+    const top = rect.bottom + gap;
+    const spaceBelow = viewportHeight - top - edgePadding;
+    const maxHeight = Math.max(
+      72,
+      Math.min(preferredMaxHeight, Math.max(72, spaceBelow)),
+    );
+
+    setDropdownStyle({ left, top, width, maxHeight });
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (
+        selectRef.current &&
+        !selectRef.current.contains(target) &&
+        !dropdownRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    updateDropdownStyle();
+    window.addEventListener("resize", updateDropdownStyle);
+    window.addEventListener("scroll", updateDropdownStyle, true);
+
+    return () => {
+      window.removeEventListener("resize", updateDropdownStyle);
+      window.removeEventListener("scroll", updateDropdownStyle, true);
+    };
+  }, [open, updateDropdownStyle]);
+
   return (
-    <label className="mb-3 block text-sm font-bold">
-      {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 font-medium"
-      >
-        {(options ?? []).map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+    <label ref={selectRef} className="relative mb-3 block text-sm font-bold text-foreground">
+      <span className="mb-1.5 block text-xs font-black uppercase text-muted-foreground">
+        {label}
+      </span>
+      <span className="relative block">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            updateDropdownStyle();
+            setOpen((current) => !current);
+          }}
+          className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5 text-left text-sm font-bold text-foreground shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/20"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span className="min-w-0 truncate">{selectedOption?.label ?? "Pilih opsi"}</span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-primary transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        {open &&
+          dropdownStyle &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              className="fixed z-[220] overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
+              style={{
+                left: dropdownStyle.left,
+                top: dropdownStyle.top,
+                width: dropdownStyle.width,
+              }}
+            >
+              <div
+                role="listbox"
+                className="overflow-y-auto p-1"
+                style={{ maxHeight: dropdownStyle.maxHeight }}
+              >
+              {(options ?? []).map((option) => {
+                const selected = option.value === value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors ${
+                      selected
+                        ? "bg-primary text-primary-foreground"
+                        : "text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    <span className="block truncate">{option.label}</span>
+                  </button>
+                );
+              })}
+              </div>
+            </div>
+            ,
+            document.body,
+          )}
+      </span>
     </label>
   );
 }
