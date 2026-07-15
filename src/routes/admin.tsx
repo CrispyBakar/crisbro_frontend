@@ -274,10 +274,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const currentUser = useMemo(() => getUser(), []);
   const canAccess =
     mode === "marketing"
-      ? currentUser?.role === "admin" ||
-        currentUser?.role === "staff" ||
-        currentUser?.role === "marketing"
-      : currentUser?.role === "admin" || currentUser?.role === "staff";
+      ? currentUser?.role === "admin" || currentUser?.role === "marketing"
+      : currentUser?.role === "admin";
   const canManageUsers = currentUser?.role === "admin";
   const canViewCustomers = mode === "admin" || mode === "marketing";
   const isMarketingConsole = mode === "marketing";

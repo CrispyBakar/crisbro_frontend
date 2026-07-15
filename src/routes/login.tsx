@@ -65,7 +65,7 @@ function LoginPage() {
       saveAuth(token, user);
       navigate({
         to:
-          user.role === "admin" || user.role === "staff"
+          user.role === "admin"
             ? "/admin"
             : user.role === "marketing"
               ? "/marketing"
