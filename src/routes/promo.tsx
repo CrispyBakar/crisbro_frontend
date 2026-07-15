@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import gofoodLogo from "@/assets/gofood-logo.webp";
+import grabfoodLogo from "@/assets/grabfood-logo.svg";
+import shopeefoodLogo from "@/assets/shopeefood-logo.png";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
@@ -48,6 +51,45 @@ type PromoResponse = {
 };
 
 const promoLimit = 8;
+
+type ChannelBrand = {
+  label: string;
+  logoSrc: string;
+  textClassName: string;
+};
+
+const channelBrands: Record<string, ChannelBrand> = {
+  shopeefood: {
+    label: "ShopeeFood",
+    logoSrc: shopeefoodLogo,
+    textClassName: "text-[#ee4d2d]",
+  },
+  shopee: {
+    label: "ShopeeFood",
+    logoSrc: shopeefoodLogo,
+    textClassName: "text-[#ee4d2d]",
+  },
+  grabfood: {
+    label: "GrabFood",
+    logoSrc: grabfoodLogo,
+    textClassName: "text-[#00a650]",
+  },
+  grab: {
+    label: "GrabFood",
+    logoSrc: grabfoodLogo,
+    textClassName: "text-[#00a650]",
+  },
+  gofood: {
+    label: "GoFood",
+    logoSrc: gofoodLogo,
+    textClassName: "text-[#d92030]",
+  },
+  gojek: {
+    label: "GoFood",
+    logoSrc: gofoodLogo,
+    textClassName: "text-[#d92030]",
+  },
+};
 
 const statusLabel: Record<string, { label: string; color: string }> = {
   active: { label: "Aktif", color: "bg-green-100 text-green-700" },
@@ -266,15 +308,14 @@ function PromoPage() {
                 label: promo.status,
                 color: "bg-gray-100 text-gray-500",
               };
+              const channelBrand = getChannelBrand(promo.channel);
               return (
                 <article
                   key={promo.id}
                   className="rounded-xl bg-card border border-border p-3 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
                 >
                   <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary sm:h-12 sm:w-12">
-                      <Tag className="h-4 w-4 text-primary sm:h-6 sm:w-6" />
-                    </div>
+                    <ChannelIcon brand={channelBrand} />
                     <div className="flex flex-col items-end gap-1.5">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-3 sm:py-1 sm:text-xs ${st.color}`}>
                         {st.label}
@@ -300,11 +341,6 @@ function PromoPage() {
                       {promo.start_date ?? "Tanggal mulai belum tersedia"}
                       {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
                     </span>
-                    {promo.channel && (
-                      <span className="inline-flex items-center gap-1.5 capitalize">
-                        📱 {promo.channel}
-                      </span>
-                    )}
                   </div>
 
                   {promo.is_all_outlets ? (
@@ -359,6 +395,34 @@ function PromoPage() {
         </button>
       )}
     </main>
+  );
+}
+
+function getChannelBrand(channel: string | null): ChannelBrand | null {
+  if (!channel) return null;
+
+  const normalized = channel.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return channelBrands[normalized] ?? null;
+}
+
+function ChannelIcon({ brand }: { brand: ChannelBrand | null }) {
+  const sizeClass = "h-9 w-14 rounded-lg sm:h-12 sm:w-20";
+
+  if (!brand) {
+    return (
+      <span className={`${sizeClass} grid shrink-0 place-items-center bg-secondary text-primary`}>
+        <Tag className="h-4 w-4 sm:h-6 sm:w-6" />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      aria-label={brand.label}
+      className={`${sizeClass} grid shrink-0 place-items-center overflow-hidden border border-border bg-white px-1.5 shadow-(--shadow-pop)`}
+    >
+      <img src={brand.logoSrc} alt="" aria-hidden className="h-full w-full object-contain" />
+    </span>
   );
 }
 
