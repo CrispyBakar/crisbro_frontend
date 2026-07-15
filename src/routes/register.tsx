@@ -29,6 +29,10 @@ function normalizePhone(raw: string): string {
   return digits;
 }
 
+function requiredFieldsMessage(fields: string[]) {
+  return `Lengkapi field wajib: ${fields.join(", ")}.`;
+}
+
 function RegisterPage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -42,19 +46,26 @@ function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setWhatsappUrl("");
 
     const normalized = normalizePhone(tel);
+    const missingFields: string[] = [];
 
-    if (!name.trim()) {
-      setError("Nama lengkapnya jangan lupa diisi ya Kak 🙏");
+    if (!name.trim()) missingFields.push("Nama Lengkap");
+    if (!tel.trim()) missingFields.push("Nomor Telepon");
+    if (!password) missingFields.push("Password");
+
+    if (missingFields.length > 0) {
+      setError(requiredFieldsMessage(missingFields));
       return;
     }
+
     if (!normalized || !normalized.startsWith("8")) {
-      setError("Nomor telepon harus diawali 8 (tanpa 0 atau +62) 🙏");
+      setError("Nomor telepon harus diawali 8 (tanpa 0 atau +62).");
       return;
     }
     if (password.length < 4) {
-      setError("Password minimal 4 karakter ya.");
+      setError("Password minimal 4 karakter.");
       return;
     }
 
@@ -97,7 +108,9 @@ function RegisterPage() {
           className="rounded-3xl bg-card border border-border p-7 shadow-(--shadow-soft) space-y-4"
         >
           <label className="block">
-            <span className="text-sm font-bold text-foreground/80">Nama Lengkap</span>
+            <span className="text-sm font-bold text-foreground/80">
+              Nama Lengkap <span className="text-destructive">*</span>
+            </span>
             <Input
               type="text"
               placeholder="masukkan nama lengkap"
@@ -109,7 +122,9 @@ function RegisterPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-bold text-foreground/80">Nomor Telepon</span>
+            <span className="text-sm font-bold text-foreground/80">
+              Nomor Telepon <span className="text-destructive">*</span>
+            </span>
             <div className="flex mt-2 rounded-2xl overflow-hidden border-2 bg-background focus-within:ring-2 focus-within:ring-ring">
               <span className="flex items-center px-3 text-sm font-bold text-muted-foreground bg-muted border-r border-border">
                 +62
@@ -126,7 +141,9 @@ function RegisterPage() {
           </label>
 
           <label className="block">
-            <span className="text-sm font-bold text-foreground/80">Password</span>
+            <span className="text-sm font-bold text-foreground/80">
+              Password <span className="text-destructive">*</span>
+            </span>
             <div className="relative mt-2">
               <Input
                 type={showPassword ? "text" : "password"}

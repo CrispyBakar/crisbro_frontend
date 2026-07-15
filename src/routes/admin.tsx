@@ -167,6 +167,14 @@ function nextSortState<T extends string>(
   return { sort_by: sortBy, sort_order: current.sort_order === "asc" ? "desc" : "asc" };
 }
 
+function requiredFieldsMessage(fields: string[]) {
+  return `Lengkapi field wajib: ${fields.join(", ")}.`;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function runchiseSyncLabel(status?: string | null) {
   if (status === "synced") return "Runchise OK";
   if (status === "failed") return "Sync Gagal";
@@ -556,9 +564,39 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function saveUser() {
-    setSaving(true);
     setError("");
     const isEditing = Boolean(userForm.id);
+    const missingFields: string[] = [];
+    if (!userForm.email.trim() && !userForm.phone_number.trim()) {
+      missingFields.push("Email atau Nomor Telepon");
+    }
+    if (!isEditing && !userForm.password.trim()) {
+      missingFields.push("Password");
+    }
+    if (!userForm.role) {
+      missingFields.push("Role");
+    }
+
+    if (missingFields.length > 0) {
+      const message = requiredFieldsMessage(missingFields);
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (userForm.email.trim() && !isValidEmail(userForm.email.trim())) {
+      const message = "Format email tidak valid.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (userForm.password && userForm.password.length < 6) {
+      const message = "Password minimal 6 karakter.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setSaving(true);
     try {
       const payload = {
         email: userForm.email || null,
@@ -615,9 +653,29 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function saveCustomer() {
-    setSaving(true);
     setError("");
     const isEditing = Boolean(customerForm.id);
+    const missingFields: string[] = [];
+    if (!customerForm.name.trim()) missingFields.push("Nama");
+    if (!customerForm.phone_number.trim()) missingFields.push("Nomor Telepon");
+    if (!customerForm.email.trim()) missingFields.push("Email");
+    if (!customerForm.brand_id) missingFields.push("Brand");
+    if (!customerForm.owner_location_id) missingFields.push("Owner Outlet");
+
+    if (missingFields.length > 0) {
+      const message = requiredFieldsMessage(missingFields);
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (!isValidEmail(customerForm.email.trim())) {
+      const message = "Format email customer tidak valid.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setSaving(true);
     try {
       if (!customerForm.owner_location_id) {
         throw new Error("Owner outlet wajib dipilih agar customer bisa tersinkron ke Runchise");
@@ -787,9 +845,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   async function saveRedeemItem() {
-    setSaving(true);
     setError("");
     const isEditing = Boolean(redeemForm.id);
+    const missingFields: string[] = [];
+    if (!redeemForm.menu_item_id) missingFields.push("Menu");
+    if (!redeemForm.points_required) missingFields.push("Poin Redeem");
+
+    if (missingFields.length > 0) {
+      const message = requiredFieldsMessage(missingFields);
+      setError(message);
+      toast.error(message);
+      return;
+    }
+    if (Number(redeemForm.points_required) <= 0) {
+      const message = "Poin Redeem harus lebih dari 0.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
+    setSaving(true);
     try {
       const payload = {
         menu_item_id: Number(redeemForm.menu_item_id),
@@ -868,11 +943,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       <FormInput
         label={userForm.id ? "Password Baru" : "Password"}
         type="password"
+        required={!userForm.id}
         value={userForm.password}
         onChange={(v) => setUserForm({ ...userForm, password: v })}
       />
       <Select
         label="Role"
+        required
         value={userForm.role}
         onChange={(v) => setUserForm({ ...userForm, role: v })}
         options={[
@@ -1054,6 +1131,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       <FormInput
         label="Poin Redeem"
         type="number"
+        required
         value={String(redeemForm.points_required)}
         onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
       />
@@ -1288,11 +1366,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <FormInput
                 label={userForm.id ? "Password Baru" : "Password"}
                 type="password"
+                required={!userForm.id}
                 value={userForm.password}
                 onChange={(v) => setUserForm({ ...userForm, password: v })}
               />
               <Select
                 label="Role"
+                required
                 value={userForm.role}
                 onChange={(v) => setUserForm({ ...userForm, role: v })}
                 options={[
@@ -1818,6 +1898,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <FormInput
                 label="Poin Redeem"
                 type="number"
+                required
                 value={String(redeemForm.points_required)}
                 onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
               />
