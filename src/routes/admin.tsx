@@ -171,6 +171,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [appliedUserSearch, setAppliedUserSearch] = useState("");
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -335,9 +336,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }, [canViewCustomers, customerSearch, tab]);
 
   async function searchUsers() {
+    const normalizedSearch = userSearch.trim();
     setError("");
     try {
-      setUsers(await adminApi.users(userSearch));
+      setAppliedUserSearch(normalizedSearch);
+      setUsers(await adminApi.users(normalizedSearch));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari user");
     }
@@ -1265,6 +1268,22 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     </tr>
                   </thead>
                   <tbody>
+                    {users.length === 0 && (
+                      <tr className="border-t border-border">
+                        <td colSpan={4} className="p-8 text-center">
+                          <p className="font-bold text-foreground">
+                            {appliedUserSearch
+                              ? "Kata kunci yang Anda cari tidak ditemukan"
+                              : "Belum ada data user admin"}
+                          </p>
+                          {appliedUserSearch && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Tidak ada hasil untuk "{appliedUserSearch}".
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
                     {users.map((user) => (
                       <tr key={user.id} className="border-t border-border">
                         <td className="p-2 font-bold">{user.email ?? "-"}</td>
@@ -1503,7 +1522,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td colSpan={8} className="p-8 text-center">
                           <p className="font-bold text-foreground">
                             {appliedCustomerSearch
-                              ? "Data customer yang dicari tidak ada"
+                              ? "Kata kunci yang Anda cari tidak ditemukan"
                               : "Belum ada data customer"}
                           </p>
                           {appliedCustomerSearch && (
