@@ -78,7 +78,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-1">
           <Link
             to="/"
             className={linkClass}
@@ -112,7 +112,7 @@ export function Navbar() {
         </div>
 
         {/* Desktop CTA — kondisional */}
-        <div className="hidden md:flex items-center">
+        <div className="hidden lg:flex items-center">
           {user ? (
             // Sudah login → avatar + dropdown
             <div className="relative" ref={dropdownRef}>
@@ -195,7 +195,7 @@ export function Navbar() {
           aria-label="Buka menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
+          className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -203,7 +203,7 @@ export function Navbar() {
 
       {/* Mobile menu panel */}
       <div
-        className={`md:hidden mx-auto max-w-6xl overflow-hidden transition-all duration-300 ease-out ${
+        className={`lg:hidden mx-auto max-w-6xl overflow-hidden transition-all duration-300 ease-out ${
           open ? "max-h-[calc(100vh-5.5rem)] opacity-100 mt-3" : "max-h-0 opacity-0 mt-0"
         }`}
       >
