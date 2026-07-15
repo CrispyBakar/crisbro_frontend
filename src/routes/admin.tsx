@@ -877,7 +877,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         onChange={(v) => setUserForm({ ...userForm, role: v })}
         options={[
           { value: "marketing", label: "Marketing" },
-          { value: "staff", label: "Staff" },
           { value: "admin", label: "Admin" },
         ]}
       />
@@ -1298,7 +1297,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 onChange={(v) => setUserForm({ ...userForm, role: v })}
                 options={[
                   { value: "marketing", label: "Marketing" },
-                  { value: "staff", label: "Staff" },
                   { value: "admin", label: "Admin" },
                 ]}
               />
