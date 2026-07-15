@@ -122,6 +122,8 @@ export type RedeemItem = {
   sort_order: number;
   menu_item: CatalogMenuItem;
   category: RedeemCategory;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Redemption = {
@@ -220,6 +222,8 @@ export type AdminCustomer = {
     available_point: number;
     next_reward_threshold: number;
   } | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type AdminCustomerPayload = {
@@ -251,19 +255,38 @@ export type AdminCustomerPage = {
   total_pages: number;
 };
 
+export type SortOrder = "asc" | "desc";
+
+export type AdminSort = {
+  sort_by?: string;
+  sort_order?: SortOrder;
+};
+
 export const adminApi = {
-  users: (search = "") =>
-    adminRequest<AdminUser[]>(`/users${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  users: (search = "", sort: AdminSort = {}) => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (sort.sort_by) params.set("sort_by", sort.sort_by);
+    if (sort.sort_order) params.set("sort_order", sort.sort_order);
+    const query = params.toString();
+    return adminRequest<AdminUser[]>(`/users${query ? `?${query}` : ""}`);
+  },
   createUser: (payload: AdminUserPayload) =>
     adminRequest<AdminUser>("/users", { method: "POST", body: JSON.stringify(payload) }),
   updateUser: (id: number, payload: AdminUserPayload) =>
     adminRequest<AdminUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteUser: (id: number) =>
     adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
-  customers: (search = "", page = 1, limit = 20) =>
-    adminRequest<AdminCustomerPage>(
-      `/customers?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-    ),
+  customers: (search = "", page = 1, limit = 20, sort: AdminSort = {}) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (search) params.set("search", search);
+    if (sort.sort_by) params.set("sort_by", sort.sort_by);
+    if (sort.sort_order) params.set("sort_order", sort.sort_order);
+    return adminRequest<AdminCustomerPage>(`/customers?${params.toString()}`);
+  },
   createCustomer: (payload: AdminCustomerPayload) =>
     adminRequest<AdminCustomer>("/customers", { method: "POST", body: JSON.stringify(payload) }),
   updateCustomer: (id: number, payload: AdminCustomerPayload) =>
@@ -301,7 +324,13 @@ export const adminApi = {
     adminRequest<CatalogMenuResponse>(
       `/catalog/menu-items?limit=1000${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     ),
-  redeemItems: () => adminRequest<RedeemItem[]>("/redeem-menu/items"),
+  redeemItems: (sort: AdminSort = {}) => {
+    const params = new URLSearchParams();
+    if (sort.sort_by) params.set("sort_by", sort.sort_by);
+    if (sort.sort_order) params.set("sort_order", sort.sort_order);
+    const query = params.toString();
+    return adminRequest<RedeemItem[]>(`/redeem-menu/items${query ? `?${query}` : ""}`);
+  },
   createRedeemItem: (payload: Partial<RedeemItem>) =>
     adminRequest<RedeemItem>("/redeem-menu/items", {
       method: "POST",

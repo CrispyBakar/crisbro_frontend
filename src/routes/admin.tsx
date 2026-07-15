@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
+  type SortOrder,
   type AdminBrand,
   type AdminCustomer,
   type AdminLocation,
@@ -20,6 +21,9 @@ import {
 } from "@/lib/admin";
 import {
   BarChart3,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ChevronDown,
   Coins,
   Gift,
@@ -59,6 +63,19 @@ export const Route = createFileRoute("/admin")({
 
 type Tab = "report" | "users" | "customers" | "redeem";
 type ConsoleMode = "admin" | "marketing";
+type SortState<T extends string> = { sort_by: T; sort_order: SortOrder };
+type UserSortKey = "email" | "phone_number" | "role" | "created_at";
+type CustomerSortKey =
+  | "name"
+  | "email"
+  | "phone_number"
+  | "outlet"
+  | "points"
+  | "status"
+  | "activation_status"
+  | "runchise_sync_status"
+  | "created_at";
+type RedeemSortKey = "menu" | "price" | "points" | "status" | "sort_order" | "created_at";
 
 const emptyUserForm = {
   id: 0,
@@ -138,6 +155,18 @@ function accountStatusLabel(status?: string | null) {
   return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
 }
 
+function nextSortState<T extends string>(
+  current: SortState<T>,
+  sortBy: T,
+  defaultOrder: SortOrder = "asc",
+): SortState<T> {
+  if (current.sort_by !== sortBy) {
+    return { sort_by: sortBy, sort_order: defaultOrder };
+  }
+
+  return { sort_by: sortBy, sort_order: current.sort_order === "asc" ? "desc" : "asc" };
+}
+
 function runchiseSyncLabel(status?: string | null) {
   if (status === "synced") return "Runchise OK";
   if (status === "failed") return "Sync Gagal";
@@ -172,10 +201,18 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [appliedUserSearch, setAppliedUserSearch] = useState("");
+  const [userSort, setUserSort] = useState<SortState<UserSortKey>>({
+    sort_by: "role",
+    sort_order: "asc",
+  });
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [appliedCustomerSearch, setAppliedCustomerSearch] = useState("");
+  const [customerSort, setCustomerSort] = useState<SortState<CustomerSortKey>>({
+    sort_by: "created_at",
+    sort_order: "desc",
+  });
   const [customerPage, setCustomerPage] = useState(1);
   const [customerTotalPages, setCustomerTotalPages] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
@@ -185,6 +222,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
+  const [redeemSort, setRedeemSort] = useState<SortState<RedeemSortKey>>({
+    sort_by: "sort_order",
+    sort_order: "asc",
+  });
   const [catalogCategories, setCatalogCategories] = useState<CatalogMenuCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
@@ -252,21 +293,21 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setLoading(true);
     setError("");
     try {
-      setUsers(await adminApi.users(userSearch));
+      setUsers(await adminApi.users(appliedUserSearch || userSearch.trim(), userSort));
       loadedTabs.current.users = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat user admin");
     } finally {
       setLoading(false);
     }
-  }, [canManageUsers, userSearch]);
+  }, [appliedUserSearch, canManageUsers, userSearch, userSort]);
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const [customerData, brandData, locationData] = await Promise.all([
-        adminApi.customers(appliedCustomerSearch, customerPage, customerLimit),
+        adminApi.customers(appliedCustomerSearch, customerPage, customerLimit, customerSort),
         adminApi.brands(),
         adminApi.locations(),
       ]);
@@ -285,13 +326,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setLoading(false);
     }
-  }, [appliedCustomerSearch, customerForm.brand_id, customerLimit, customerPage]);
+  }, [appliedCustomerSearch, customerForm.brand_id, customerLimit, customerPage, customerSort]);
 
   const loadRedeem = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setRedeemItems(await adminApi.redeemItems());
+      setRedeemItems(await adminApi.redeemItems(redeemSort));
       loadedTabs.current.redeem = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat menu redeem");
@@ -340,9 +381,20 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       setAppliedUserSearch(normalizedSearch);
-      setUsers(await adminApi.users(normalizedSearch));
+      setUsers(await adminApi.users(normalizedSearch, userSort));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari user");
+    }
+  }
+
+  async function sortUsers(sortBy: UserSortKey) {
+    const nextSort = nextSortState(userSort, sortBy, sortBy === "created_at" ? "desc" : "asc");
+    setUserSort(nextSort);
+    setError("");
+    try {
+      setUsers(await adminApi.users(appliedUserSearch, nextSort));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengurutkan user");
     }
   }
 
@@ -352,7 +404,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     try {
       setCustomerPage(1);
       setAppliedCustomerSearch(normalizedSearch);
-      const data = await adminApi.customers(normalizedSearch, 1, customerLimit);
+      const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort);
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
@@ -365,7 +417,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
     setError("");
     try {
-      const data = await adminApi.customers(appliedCustomerSearch, nextPage, customerLimit);
+      const data = await adminApi.customers(
+        appliedCustomerSearch,
+        nextPage,
+        customerLimit,
+        customerSort,
+      );
       setCustomers(data.items ?? []);
       setCustomerPage(data.page ?? nextPage);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -518,7 +575,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
       setUserForm(emptyUserForm);
       setActiveMobileForm(null);
-      setUsers(await adminApi.users(userSearch));
+      setUsers(await adminApi.users(appliedUserSearch, userSort));
       toast.success(isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyimpan user";
@@ -534,7 +591,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       await adminApi.deleteUser(id);
-      setUsers(await adminApi.users(userSearch));
+      setUsers(await adminApi.users(appliedUserSearch, userSort));
       if (userForm.id === id) setUserForm(emptyUserForm);
       toast.success("User admin berhasil dihapus");
     } catch (err) {
@@ -663,6 +720,45 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }
 
+  async function sortCustomers(sortBy: CustomerSortKey) {
+    const nextSort = nextSortState(
+      customerSort,
+      sortBy,
+      sortBy === "created_at" || sortBy === "points" ? "desc" : "asc",
+    );
+    setCustomerSort(nextSort);
+    setCustomerPage(1);
+    setError("");
+    try {
+      const data = await adminApi.customers(
+        appliedCustomerSearch,
+        1,
+        customerLimit,
+        nextSort,
+      );
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengurutkan customer");
+    }
+  }
+
+  async function sortRedeemItems(sortBy: RedeemSortKey) {
+    const nextSort = nextSortState(
+      redeemSort,
+      sortBy,
+      sortBy === "created_at" || sortBy === "points" || sortBy === "price" ? "desc" : "asc",
+    );
+    setRedeemSort(nextSort);
+    setError("");
+    try {
+      setRedeemItems(await adminApi.redeemItems(nextSort));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengurutkan menu redeem");
+    }
+  }
+
   async function retryCustomerRunchiseSync(customer: AdminCustomer) {
     setSaving(true);
     setError("");
@@ -725,7 +821,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       await adminApi.deleteRedeemItem(item.id);
-      setRedeemItems(await adminApi.redeemItems());
+      setRedeemItems(await adminApi.redeemItems(redeemSort));
       if (redeemForm.id === item.id) {
         resetRedeemForm();
       }
@@ -1263,19 +1359,40 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </Button>
               </div>
               <TableScrollArea>
-                <table className="min-w-[720px] w-full text-sm">
+                <table className="min-w-[840px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
-                      <th className="p-2">Email</th>
-                      <th className="p-2">Nomor</th>
-                      <th className="p-2">Role</th>
+                      <SortableHeader
+                        label="Email"
+                        sortKey="email"
+                        sort={userSort}
+                        onSort={sortUsers}
+                      />
+                      <SortableHeader
+                        label="Nomor"
+                        sortKey="phone_number"
+                        sort={userSort}
+                        onSort={sortUsers}
+                      />
+                      <SortableHeader
+                        label="Role"
+                        sortKey="role"
+                        sort={userSort}
+                        onSort={sortUsers}
+                      />
+                      <SortableHeader
+                        label="Dibuat"
+                        sortKey="created_at"
+                        sort={userSort}
+                        onSort={sortUsers}
+                      />
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.length === 0 && (
                       <tr className="border-t border-border">
-                        <td colSpan={4} className="p-8 text-center">
+                        <td colSpan={5} className="p-8 text-center">
                           <p className="font-bold text-foreground">
                             {appliedUserSearch
                               ? "Kata kunci yang Anda cari tidak ditemukan"
@@ -1294,6 +1411,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td className="p-2 font-bold">{user.email ?? "-"}</td>
                         <td className="p-2">{user.phone_number ?? "-"}</td>
                         <td className="p-2 capitalize">{user.role}</td>
+                        <td className="p-2">{dateFormat(user.created_at)}</td>
                         <td className="p-2">
                           <div className="flex items-center gap-3">
                             <button
@@ -1513,23 +1631,64 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </Button>
               </div>
               <TableScrollArea>
-                <table className="min-w-[1120px] w-full text-sm">
+                <table className="min-w-[1280px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
-                      <th className="p-2">Nama</th>
-                      <th className="p-2">Kontak</th>
-                      <th className="p-2">Outlet</th>
-                      <th className="p-2">Poin</th>
-                      <th className="p-2">Status</th>
-                      <th className="p-2">Status Akun</th>
-                      <th className="p-2">Sync Runchise</th>
+                      <SortableHeader
+                        label="Nama"
+                        sortKey="name"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Kontak"
+                        sortKey="phone_number"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Outlet"
+                        sortKey="outlet"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Poin"
+                        sortKey="points"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Status"
+                        sortKey="status"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Status Akun"
+                        sortKey="activation_status"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Sync Runchise"
+                        sortKey="runchise_sync_status"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
+                      <SortableHeader
+                        label="Tanggal Daftar"
+                        sortKey="created_at"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {customers.length === 0 && (
                       <tr className="border-t border-border">
-                        <td colSpan={8} className="p-8 text-center">
+                        <td colSpan={9} className="p-8 text-center">
                           <p className="font-bold text-foreground">
                             {appliedCustomerSearch
                               ? "Kata kunci yang Anda cari tidak ditemukan"
@@ -1599,6 +1758,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                               </button>
                             )}
                           </div>
+                        </td>
+                        <td className="p-2">
+                          {customer.created_at ? dateFormat(customer.created_at) : "-"}
                         </td>
                         <td className="p-2">
                           <div className="flex items-center gap-3">
@@ -1732,13 +1894,45 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 Tambah Menu Redeem
               </Button>
               <TableScrollArea>
-                <table className="min-w-[820px] w-full text-sm">
+                <table className="min-w-[1040px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
-                      <th className="p-2">Menu</th>
-                      <th className="p-2">Nilai Jual & PB1</th>
-                      <th className="p-2">Poin</th>
-                      <th className="p-2">Status</th>
+                      <SortableHeader
+                        label="Menu"
+                        sortKey="menu"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
+                      <SortableHeader
+                        label="Nilai Jual & PB1"
+                        sortKey="price"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
+                      <SortableHeader
+                        label="Poin"
+                        sortKey="points"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
+                      <SortableHeader
+                        label="Status"
+                        sortKey="status"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
+                      <SortableHeader
+                        label="Urutan"
+                        sortKey="sort_order"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
+                      <SortableHeader
+                        label="Dibuat"
+                        sortKey="created_at"
+                        sort={redeemSort}
+                        onSort={sortRedeemItems}
+                      />
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
@@ -1769,6 +1963,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         </td>
                         <td className="p-2">{numberFormat(item.points_required)}</td>
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
+                        <td className="p-2">{numberFormat(item.sort_order)}</td>
+                        <td className="p-2">{item.created_at ? dateFormat(item.created_at) : "-"}</td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -2689,6 +2885,41 @@ function RequiredLabel({ label, required }: { label: string; required?: boolean 
   );
 }
 
+function SortableHeader<T extends string>({
+  label,
+  sortKey,
+  sort,
+  onSort,
+  className = "p-2",
+}: {
+  label: string;
+  sortKey: T;
+  sort: SortState<T>;
+  onSort: (sortKey: T) => void;
+  className?: string;
+}) {
+  const active = sort.sort_by === sortKey;
+  const Icon = active ? (sort.sort_order === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+
+  return (
+    <th
+      className={className}
+      aria-sort={active ? (sort.sort_order === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1.5 rounded-md text-left font-black transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/25 ${
+          active ? "text-primary" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </th>
+  );
+}
+
 function FormInput({
   label,
   value,
@@ -2903,24 +3134,39 @@ function DataTable({
   emptyMessage?: string;
   minWidth?: number;
 }) {
+  const [sort, setSort] = useState<SortState<string>>({ sort_by: "", sort_order: "asc" });
   const hasRows = (rows ?? []).length > 0;
   const tableMinWidth = minWidth ?? Math.max(640, headers.length * 160);
+  const sortedRows = useMemo(() => {
+    if (!sort.sort_by) return rows ?? [];
+    const columnIndex = Number(sort.sort_by);
+    if (!Number.isInteger(columnIndex)) return rows ?? [];
+
+    return [...(rows ?? [])].sort((a, b) => {
+      const direction = sort.sort_order === "asc" ? 1 : -1;
+      return compareTableCell(a[columnIndex], b[columnIndex]) * direction;
+    });
+  }, [rows, sort]);
 
   return (
     <TableScrollArea>
       <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
         <thead>
           <tr className="text-left text-muted-foreground">
-            {(headers ?? []).map((header) => (
-              <th key={header} className="p-2">
-                {header}
-              </th>
+            {(headers ?? []).map((header, index) => (
+              <SortableHeader
+                key={header}
+                label={header}
+                sortKey={String(index)}
+                sort={sort}
+                onSort={(sortKey) => setSort((current) => nextSortState(current, sortKey))}
+              />
             ))}
           </tr>
         </thead>
         <tbody>
           {hasRows ? (
-            (rows ?? []).map((row, index) => (
+            sortedRows.map((row, index) => (
               <tr key={index} className="border-t border-border">
                 {(row ?? []).map((cell, cellIndex) => (
                   <td key={cellIndex} className="p-2 font-medium">
@@ -2940,4 +3186,27 @@ function DataTable({
       </table>
     </TableScrollArea>
   );
+}
+
+function compareTableCell(a = "", b = "") {
+  const firstDate = Date.parse(a);
+  const secondDate = Date.parse(b);
+  if (!Number.isNaN(firstDate) && !Number.isNaN(secondDate)) {
+    return firstDate - secondDate;
+  }
+
+  const firstNumber = parseTableNumber(a);
+  const secondNumber = parseTableNumber(b);
+  if (firstNumber !== null && secondNumber !== null) {
+    return firstNumber - secondNumber;
+  }
+
+  return a.localeCompare(b, "id-ID", { numeric: true, sensitivity: "base" });
+}
+
+function parseTableNumber(value: string) {
+  const normalized = value.replace(/[^\d,-]/g, "").replace(/\./g, "").replace(",", ".");
+  if (!normalized || normalized === "-") return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
 }
