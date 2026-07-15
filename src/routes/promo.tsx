@@ -260,7 +260,7 @@ function PromoPage() {
         <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-1.5 text-sm font-bold text-secondary-foreground shadow-(--shadow-pop)">
           🎉 Promo Spesial
         </span>
-        <h1 className="mt-4 text-5xl md:text-6xl font-black tracking-tight">
+        <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl md:text-6xl">
           Promo <span className="text-primary">Hari Ini</span>
         </h1>
         <p className="text-muted-foreground mt-3 text-lg">
@@ -270,13 +270,13 @@ function PromoPage() {
 
       {/* Filter status */}
       {!loading && !error && (
-        <section className="mx-auto max-w-6xl mb-10 flex justify-center">
-          <div className="inline-flex gap-2 rounded-full bg-card border border-border p-2 shadow-(--shadow-soft)">
+        <section className="mx-auto mb-10 max-w-6xl overflow-x-auto px-1 pb-1">
+          <div className="mx-auto flex w-max gap-2 rounded-full border border-border bg-card p-2 shadow-(--shadow-soft)">
             {(["semua", "active", "completed"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => changeFilter(f)}
-                className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-bold transition-all sm:px-5 ${
                   activeFilter === f
                     ? "bg-primary text-primary-foreground shadow-(--shadow-pop)"
                     : "text-foreground/70 hover:bg-secondary"
@@ -302,7 +302,7 @@ function PromoPage() {
         )}
 
         {!loading && !error && promos.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 sm:gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
             {promos.map((promo) => {
               const st = statusLabel[promo.status] ?? {
                 label: promo.status,
@@ -312,7 +312,7 @@ function PromoPage() {
               return (
                 <article
                   key={promo.id}
-                  className="rounded-xl bg-card border border-border p-3 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
+                  className="rounded-xl bg-card border border-border p-4 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
                 >
                   <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
                     <ChannelIcon brand={channelBrand} />
@@ -323,12 +323,12 @@ function PromoPage() {
                     </div>
                   </div>
 
-                  <h3 className="mb-2 line-clamp-2 text-sm font-extrabold leading-tight sm:text-xl">
+                  <h3 className="mb-2 line-clamp-3 text-base font-extrabold leading-snug sm:line-clamp-2 sm:text-xl">
                     {promo.name}
                   </h3>
 
                   {promo.discount_amount !== null && (
-                    <p className="mb-3 text-base font-black text-primary sm:text-2xl">
+                    <p className="mb-3 text-xl font-black text-primary sm:text-2xl">
                       {promo.discount_is_percentage
                         ? `Diskon ${promo.discount_amount}%`
                         : `Hemat Rp ${promo.discount_amount.toLocaleString("id-ID")}`}
@@ -336,7 +336,7 @@ function PromoPage() {
                   )}
 
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground sm:gap-3 sm:text-sm">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-start gap-1.5">
                       <Calendar className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
                       {promo.start_date ?? "Tanggal mulai belum tersedia"}
                       {promo.end_date ? ` — ${promo.end_date}` : " (tidak ada batas)"}
@@ -352,7 +352,7 @@ function PromoPage() {
                   ) : (
                     promo.locations.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5 sm:gap-2">
-                        {promo.locations.map((loc) => (
+                        {promo.locations.slice(0, 3).map((loc) => (
                           <span
                             key={loc.id}
                             className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground sm:px-2.5 sm:py-1 sm:text-xs"
@@ -360,6 +360,11 @@ function PromoPage() {
                             <MapPin className="h-3 w-3" /> {loc.name}
                           </span>
                         ))}
+                        {promo.locations.length > 3 && (
+                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground sm:px-2.5 sm:py-1 sm:text-xs">
+                            +{promo.locations.length - 3} outlet lainnya
+                          </span>
+                        )}
                       </div>
                     )
                   )}
@@ -428,11 +433,11 @@ function ChannelIcon({ brand }: { brand: ChannelBrand | null }) {
 
 function PromoSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-6">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
       {Array.from({ length: promoLimit }).map((_, index) => (
         <div
           key={index}
-          className="min-h-48 rounded-xl border border-border bg-card p-3 shadow-(--shadow-soft) sm:min-h-55 sm:p-7"
+          className="min-h-48 rounded-xl border border-border bg-card p-4 shadow-(--shadow-soft) sm:min-h-55 sm:p-7"
         >
           <div className="mb-4 flex items-start justify-between sm:mb-5">
             <Skeleton className="h-9 w-9 rounded-lg sm:h-12 sm:w-12" />
