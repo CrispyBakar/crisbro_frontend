@@ -202,6 +202,22 @@ function getCustomerSyncMessage(customer: AdminCustomer) {
   );
 }
 
+function getCustomerSyncNotice(customer: AdminCustomer) {
+  const status = getCustomerSyncStatus(customer);
+
+  if (status === "failed") {
+    return "Perubahan lokal belum terkirim ke Runchise.";
+  }
+  if (status === "pending") {
+    return "Data lokal menunggu sync Runchise.";
+  }
+  if (status === "skipped") {
+    return "Sync Runchise dilewati.";
+  }
+
+  return null;
+}
+
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -721,8 +737,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       } else {
         toast.warning(
           syncMessage
-            ? `Customer tersimpan lokal, tetapi sync Runchise gagal: ${syncMessage}`
-            : "Customer tersimpan lokal, tetapi belum tersinkron ke Runchise",
+            ? isEditing
+              ? `Perubahan tersimpan lokal, tetapi belum terkirim ke Runchise: ${syncMessage}`
+              : `Customer tersimpan lokal, tetapi sync Runchise gagal: ${syncMessage}`
+            : isEditing
+              ? "Perubahan tersimpan lokal, tetapi belum terkirim ke Runchise"
+              : "Customer tersimpan lokal, tetapi belum tersinkron ke Runchise",
         );
       }
     } catch (err) {
@@ -1779,6 +1799,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             >
                               {runchiseSyncLabel(getCustomerSyncStatus(customer))}
                             </span>
+                            {getCustomerSyncNotice(customer) && (
+                              <p className="max-w-[220px] text-xs font-semibold text-amber-700">
+                                {getCustomerSyncNotice(customer)}
+                              </p>
+                            )}
                             {getCustomerSyncMessage(customer) && (
                               <p className="max-w-[220px] text-xs text-muted-foreground">
                                 {getCustomerSyncMessage(customer)}
