@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
@@ -150,6 +151,7 @@ function KatalogPage() {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const categoryNavRef = useRef<HTMLDivElement | null>(null);
   const categorySectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -419,7 +421,7 @@ function KatalogPage() {
 
             <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
               {group.items.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <ProductCard key={p.id} product={p} onOpen={() => setSelectedProduct(p)} />
               ))}
             </div>
           </section>
@@ -452,13 +454,29 @@ function KatalogPage() {
           <ArrowUp className="h-5 w-5" />
         </button>
       )}
+
+      <ProductDetailDialog product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </main>
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
+  const openWithKeyboard = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpen();
+    }
+  };
+
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft) transition-transform hover:-translate-y-1">
+    <article
+      role="button"
+      tabIndex={0}
+      aria-label={`Lihat detail ${product.name}`}
+      onClick={onOpen}
+      onKeyDown={openWithKeyboard}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-(--shadow-soft) transition-transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+    >
       <div className="relative aspect-4/3 overflow-hidden bg-secondary">
         {product.image_url ? (
           <img
@@ -475,11 +493,11 @@ function ProductCard({ product }: { product: Product }) {
         </Badge>
       </div>
       <div className="flex flex-1 flex-col p-3 sm:p-6">
-        <h3 className="mb-1 line-clamp-2 text-sm font-extrabold leading-tight sm:mb-1.5 sm:text-xl">
+        <h3 className="mb-1 break-words text-sm font-extrabold leading-snug sm:mb-1.5 sm:text-xl">
           {product.name}
         </h3>
         {product.description && (
-          <p className="mb-3 line-clamp-2 flex-1 text-xs text-muted-foreground sm:mb-4 sm:text-sm">
+          <p className="mb-3 hidden flex-1 break-words text-xs leading-relaxed text-muted-foreground sm:mb-4 sm:block sm:text-sm">
             {product.description}
           </p>
         )}
@@ -488,6 +506,84 @@ function ProductCard({ product }: { product: Product }) {
         </p>
       </div>
     </article>
+  );
+}
+
+function ProductDetailDialog({
+  product,
+  onClose,
+}: {
+  product: Product | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!product) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose, product]);
+
+  if (!product) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
+      role="presentation"
+      onClick={onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-detail-title"
+        onClick={(event) => event.stopPropagation()}
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg cursor-default overflow-y-auto rounded-3xl border border-border bg-card shadow-(--shadow-pop)"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup detail produk"
+          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full border border-border bg-card/95 text-muted-foreground shadow-(--shadow-soft) transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+          {product.image_url ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-5xl">ðŸ½ï¸</div>
+          )}
+          <Badge className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-full border border-primary/20 bg-card/95 px-3 py-1 text-xs font-bold text-primary shadow-(--shadow-pop) backdrop-blur-sm hover:bg-card hover:text-primary">
+            {product.category}
+          </Badge>
+        </div>
+
+        <div className="space-y-4 p-5 sm:p-6">
+          <div className="space-y-2">
+            <h2 id="product-detail-title" className="text-2xl font-black leading-tight">
+              {product.name}
+            </h2>
+            <p className="text-2xl font-black text-primary">
+              Rp {product.sell_price.toLocaleString("id-ID")}
+            </p>
+          </div>
+
+          {product.description && (
+            <p className="break-words text-sm leading-7 text-muted-foreground sm:text-base">
+              {product.description}
+            </p>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
