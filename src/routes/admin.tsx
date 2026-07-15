@@ -138,6 +138,33 @@ function accountStatusLabel(status?: string | null) {
   return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
 }
 
+function runchiseSyncLabel(status?: string | null) {
+  if (status === "synced") return "Runchise OK";
+  if (status === "failed") return "Sync Gagal";
+  if (status === "skipped") return "Belum Sync";
+  return "Pending Sync";
+}
+
+function runchiseSyncClassName(status?: string | null) {
+  if (status === "synced") return "bg-emerald-500/10 text-emerald-700";
+  if (status === "failed") return "bg-red-500/10 text-red-700";
+  if (status === "skipped") return "bg-amber-500/10 text-amber-700";
+  return "bg-slate-500/10 text-slate-700";
+}
+
+function getCustomerSyncStatus(customer: AdminCustomer) {
+  return customer.runchise_sync?.status ?? customer.runchise_sync_status ?? "pending";
+}
+
+function getCustomerSyncMessage(customer: AdminCustomer) {
+  return (
+    customer.runchise_sync?.error ??
+    customer.runchise_sync_error ??
+    customer.runchise_sync?.reason ??
+    null
+  );
+}
+
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -147,6 +174,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [appliedCustomerSearch, setAppliedCustomerSearch] = useState("");
   const [customerPage, setCustomerPage] = useState(1);
   const [customerTotalPages, setCustomerTotalPages] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
@@ -237,7 +265,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       const [customerData, brandData, locationData] = await Promise.all([
-        adminApi.customers(customerSearch, customerPage, customerLimit),
+        adminApi.customers(appliedCustomerSearch, customerPage, customerLimit),
         adminApi.brands(),
         adminApi.locations(),
       ]);
@@ -256,7 +284,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setLoading(false);
     }
-  }, [customerForm.brand_id, customerLimit, customerPage, customerSearch]);
+  }, [appliedCustomerSearch, customerForm.brand_id, customerLimit, customerPage]);
 
   const loadRedeem = useCallback(async () => {
     setLoading(true);
@@ -296,6 +324,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     tab,
   ]);
 
+  useEffect(() => {
+    if (tab !== "customers" || !canViewCustomers) return;
+
+    const timer = window.setTimeout(() => {
+      void searchCustomers(customerSearch);
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [canViewCustomers, customerSearch, tab]);
+
   async function searchUsers() {
     setError("");
     try {
@@ -305,11 +343,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }
 
-  async function searchCustomers() {
+  async function searchCustomers(searchTerm = customerSearch) {
+    const normalizedSearch = searchTerm.trim();
     setError("");
     try {
       setCustomerPage(1);
-      const data = await adminApi.customers(customerSearch, 1, customerLimit);
+      setAppliedCustomerSearch(normalizedSearch);
+      const data = await adminApi.customers(normalizedSearch, 1, customerLimit);
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
@@ -322,7 +362,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
     setError("");
     try {
-      const data = await adminApi.customers(customerSearch, nextPage, customerLimit);
+      const data = await adminApi.customers(appliedCustomerSearch, nextPage, customerLimit);
       setCustomers(data.items ?? []);
       setCustomerPage(data.page ?? nextPage);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -519,6 +559,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     const isEditing = Boolean(customerForm.id);
     try {
+      if (!customerForm.owner_location_id) {
+        throw new Error("Owner outlet wajib dipilih agar customer bisa tersinkron ke Runchise");
+      }
+
       const payload = {
         name: customerForm.name,
         email: customerForm.email || null,
@@ -544,17 +588,25 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         available_point: Number(customerForm.available_point),
       };
 
-      if (customerForm.id) {
-        await adminApi.updateCustomer(customerForm.id, payload);
-      } else {
-        await adminApi.createCustomer(payload);
-      }
+      const savedCustomer = customerForm.id
+        ? await adminApi.updateCustomer(customerForm.id, payload)
+        : await adminApi.createCustomer(payload);
+      const syncStatus = getCustomerSyncStatus(savedCustomer);
+      const syncMessage = getCustomerSyncMessage(savedCustomer);
 
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
       setActiveMobileForm(null);
       await loadCustomersPage(customerForm.id ? customerPage : 1);
       setSummary(await adminApi.summary(reportFilters));
-      toast.success(isEditing ? "Customer berhasil diperbarui" : "Customer berhasil ditambahkan");
+      if (syncStatus === "synced") {
+        toast.success(isEditing ? "Customer berhasil diperbarui" : "Customer berhasil ditambahkan");
+      } else {
+        toast.warning(
+          syncMessage
+            ? `Customer tersimpan lokal, tetapi sync Runchise gagal: ${syncMessage}`
+            : "Customer tersimpan lokal, tetapi belum tersinkron ke Runchise",
+        );
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyimpan customer";
       setError(message);
@@ -601,6 +653,33 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       toast.success(result.message);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal mengirim email aktivasi";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function retryCustomerRunchiseSync(customer: AdminCustomer) {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await adminApi.retryCustomerRunchiseSync(customer.id);
+      await loadCustomersPage(customerPage);
+      const syncStatus = getCustomerSyncStatus(result);
+      const syncMessage = getCustomerSyncMessage(result);
+
+      if (syncStatus === "synced") {
+        toast.success("Customer berhasil tersinkron ke Runchise");
+      } else {
+        toast.warning(
+          syncMessage
+            ? `Customer belum tersinkron ke Runchise: ${syncMessage}`
+            : "Customer belum tersinkron ke Runchise",
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gagal retry sync Runchise";
       setError(message);
       toast.error(message);
     } finally {
@@ -1162,6 +1241,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 <input
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void searchUsers();
+                    }
+                  }}
                   placeholder="Cari email, nomor, atau role..."
                   className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
                 />
@@ -1385,6 +1470,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 <input
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void searchCustomers();
+                    }
+                  }}
                   placeholder="Cari nama, nomor, email, atau outlet..."
                   className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
                 />
@@ -1393,7 +1484,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </Button>
               </div>
               <TableScrollArea>
-                <table className="min-w-[980px] w-full text-sm">
+                <table className="min-w-[1120px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">Nama</th>
@@ -1402,10 +1493,27 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       <th className="p-2">Poin</th>
                       <th className="p-2">Status</th>
                       <th className="p-2">Status Akun</th>
+                      <th className="p-2">Sync Runchise</th>
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
+                    {customers.length === 0 && (
+                      <tr className="border-t border-border">
+                        <td colSpan={8} className="p-8 text-center">
+                          <p className="font-bold text-foreground">
+                            {appliedCustomerSearch
+                              ? "Data customer yang dicari tidak ada"
+                              : "Belum ada data customer"}
+                          </p>
+                          {appliedCustomerSearch && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Tidak ada hasil untuk "{appliedCustomerSearch}".
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
                     {customers.map((customer) => (
                       <tr key={customer.id} className="border-t border-border">
                         <td className="p-2 font-bold">{customer.name}</td>
@@ -1437,6 +1545,31 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                           >
                             {accountStatusLabel(customer.user.activation_status)}
                           </span>
+                        </td>
+                        <td className="p-2">
+                          <div className="space-y-1">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${runchiseSyncClassName(
+                                getCustomerSyncStatus(customer),
+                              )}`}
+                            >
+                              {runchiseSyncLabel(getCustomerSyncStatus(customer))}
+                            </span>
+                            {getCustomerSyncMessage(customer) && (
+                              <p className="max-w-[220px] text-xs text-muted-foreground">
+                                {getCustomerSyncMessage(customer)}
+                              </p>
+                            )}
+                            {getCustomerSyncStatus(customer) !== "synced" && (
+                              <button
+                                className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
+                                disabled={saving}
+                                onClick={() => retryCustomerRunchiseSync(customer)}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" /> Retry
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="p-2">
                           <div className="flex items-center gap-3">
