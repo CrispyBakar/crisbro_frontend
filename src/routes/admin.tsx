@@ -1761,7 +1761,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td className="p-2 capitalize">{customer.status ?? "-"}</td>
                         <td className="p-2">
                           <span
-                            className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${
+                            className={`inline-flex min-w-[104px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
                               customer.user.activation_status === "pending_activation"
                                 ? "bg-amber-500/10 text-amber-700"
                                 : "bg-emerald-500/10 text-emerald-700"
@@ -1801,18 +1801,31 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td className="p-2">
                           <div className="flex items-center gap-3">
                             {customer.user.activation_status === "pending_activation" && (
-                              <button
-                                className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
-                                disabled={saving || !customer.user.email}
-                                onClick={() => resendActivation(customer)}
+                              <span
+                                className="inline-flex min-w-[130px] flex-col items-start gap-1"
                                 title={
                                   customer.user.email
                                     ? "Kirim ulang email aktivasi"
-                                    : "Customer belum punya email"
+                                    : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
                                 }
                               >
-                                <Mail className="h-4 w-4" /> Aktivasi
-                              </button>
+                                <button
+                                  className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                  disabled={saving || !customer.user.email}
+                                  onClick={() => resendActivation(customer)}
+                                >
+                                  <Mail className="h-4 w-4" /> Aktivasi
+                                </button>
+                                {!customer.user.email && (
+                                  <button
+                                    type="button"
+                                    className="inline-flex max-w-[150px] items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
+                                    onClick={() => editCustomer(customer)}
+                                  >
+                                    Tambah email dulu
+                                  </button>
+                                )}
+                              </span>
                             )}
                             <button
                               className="inline-flex items-center gap-1 font-bold text-primary"
