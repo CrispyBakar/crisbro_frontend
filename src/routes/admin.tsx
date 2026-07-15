@@ -635,8 +635,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         postal_code: customerForm.postal_code || null,
         dob: customerForm.dob || null,
         gender: customerForm.gender,
-        status: customerForm.status,
-        balance: Number(customerForm.balance),
+        status: isEditing ? customerForm.status : "active",
+        balance: isEditing ? Number(customerForm.balance) : 0,
         brand_id: Number(customerForm.brand_id || brands[0]?.id || 1),
         owner_location_id: customerForm.owner_location_id
           ? Number(customerForm.owner_location_id)
@@ -644,8 +644,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         location_ids: customerForm.owner_location_id
           ? Array.from(new Set([...customerForm.location_ids, Number(customerForm.owner_location_id)]))
           : customerForm.location_ids,
-        total_point: Number(customerForm.total_point),
-        available_point: Number(customerForm.available_point),
+        total_point: isEditing ? Number(customerForm.total_point) : 0,
+        available_point: isEditing ? Number(customerForm.available_point) : 0,
       };
 
       const savedCustomer = customerForm.id
@@ -887,6 +887,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     </>
   );
 
+  const customerLoyaltyFields =
+    customerForm.id > 0 ? (
+      <CustomerFormGroup title="Loyalty">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Select
+            label="Status"
+            value={customerForm.status}
+            onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
+            options={[
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Inactive" },
+            ]}
+          />
+          <ReadOnlyField label="Saldo" value={currencyFormat(Number(customerForm.balance))} />
+          <ReadOnlyField label="Total Poin" value={numberFormat(customerForm.total_point)} />
+          <ReadOnlyField label="Poin Tersedia" value={numberFormat(customerForm.available_point)} />
+        </div>
+      </CustomerFormGroup>
+    ) : null;
+
   const mobileCustomerForm = (
     <>
       <CustomerFormGroup title="Identitas">
@@ -996,37 +1016,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         </div>
       </CustomerFormGroup>
 
-      <CustomerFormGroup title="Loyalty">
-        <div className="grid gap-3 md:grid-cols-2">
-          <Select
-            label="Status"
-            value={customerForm.status}
-            onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
-            options={[
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
-            ]}
-          />
-          <FormInput
-            label="Saldo"
-            type="number"
-            value={String(customerForm.balance)}
-            onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
-          />
-          <FormInput
-            label="Total Poin"
-            type="number"
-            value={String(customerForm.total_point)}
-            onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
-          />
-          <FormInput
-            label="Poin Tersedia"
-            type="number"
-            value={String(customerForm.available_point)}
-            onChange={(v) => setCustomerForm({ ...customerForm, available_point: Number(v) })}
-          />
-        </div>
-      </CustomerFormGroup>
+      {customerLoyaltyFields}
       <Button onClick={saveCustomer} disabled={saving} className="mt-3 w-full rounded-full font-bold">
         Simpan Customer
       </Button>
@@ -1549,39 +1539,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </div>
               </CustomerFormGroup>
 
-              <CustomerFormGroup title="Loyalty">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Select
-                    label="Status"
-                    value={customerForm.status}
-                    onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
-                    options={[
-                      { value: "active", label: "Active" },
-                      { value: "inactive", label: "Inactive" },
-                    ]}
-                  />
-                  <FormInput
-                    label="Saldo"
-                    type="number"
-                    value={String(customerForm.balance)}
-                    onChange={(v) => setCustomerForm({ ...customerForm, balance: Number(v) })}
-                  />
-                  <FormInput
-                    label="Total Poin"
-                    type="number"
-                    value={String(customerForm.total_point)}
-                    onChange={(v) => setCustomerForm({ ...customerForm, total_point: Number(v) })}
-                  />
-                  <FormInput
-                    label="Poin Tersedia"
-                    type="number"
-                    value={String(customerForm.available_point)}
-                    onChange={(v) =>
-                      setCustomerForm({ ...customerForm, available_point: Number(v) })
-                    }
-                  />
-                </div>
-              </CustomerFormGroup>
+              {customerLoyaltyFields}
               <div className="mt-3 flex gap-2">
                 <Button
                   onClick={saveCustomer}
@@ -2945,6 +2903,19 @@ function FormInput({
         className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 font-medium"
       />
     </label>
+  );
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mb-3 block text-sm font-bold">
+      <span className="block">
+        {label}
+      </span>
+      <div className="mt-1 w-full rounded-xl border border-border bg-muted/40 px-3 py-2 font-medium text-muted-foreground">
+        {value}
+      </div>
+    </div>
   );
 }
 
