@@ -164,12 +164,30 @@ export type AdminLocation = {
   id: number;
   name: string;
   city: string | null;
+  runchise_id?: number | null;
+};
+
+export type RunchiseSyncResult = {
+  status?: "pending" | "synced" | "failed" | "skipped" | string;
+  error?: string;
+  reason?: string;
+  skipped?: boolean;
+  runchise_customer_id?: number;
+  matched_existing?: boolean;
+  relinked_existing?: boolean;
+  updated_existing?: boolean;
 };
 
 export type AdminCustomer = {
   id: number;
   user_id: number;
   name: string;
+  runchise_id?: number | null;
+  runchise_location_id?: number | null;
+  runchise_sync_status?: "pending" | "synced" | "failed" | "skipped" | string | null;
+  runchise_sync_error?: string | null;
+  runchise_synced_at?: string | null;
+  runchise_sync?: RunchiseSyncResult;
   phone_number: string | null;
   phone_number_country_code: number;
   address: string | null;
@@ -260,6 +278,8 @@ export const adminApi = {
       `/customers/${id}/activation`,
       { method: "POST" },
     ),
+  retryCustomerRunchiseSync: (id: number) =>
+    adminRequest<AdminCustomer>(`/customers/${id}/runchise-sync`, { method: "POST" }),
   brands: () => adminRequest<AdminBrand[]>("/brands"),
   locations: () => adminRequest<AdminLocation[]>("/locations"),
   summary: (
