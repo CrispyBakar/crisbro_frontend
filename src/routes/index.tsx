@@ -53,12 +53,10 @@ function Home() {
         <div aria-hidden className="absolute top-6 right-6 text-4xl rotate-12 opacity-40 -z-10">
           ⭐
         </div>
-        <div
+        <Sparkles
           aria-hidden
-          className="absolute bottom-8 right-1/4 text-3xl -rotate-12 opacity-40 -z-10"
-        >
-          ✨
-        </div>
+          className="absolute bottom-8 right-1/4 h-8 w-8 -rotate-12 opacity-40 -z-10 text-primary"
+        />
         <div aria-hidden className="absolute top-1/2 left-4 text-3xl opacity-30 -z-10">
           🌟
         </div>
