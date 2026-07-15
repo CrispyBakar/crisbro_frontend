@@ -797,16 +797,19 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         <div className="grid gap-3 md:grid-cols-2">
           <FormInput
             label="Nama"
+            required
             value={customerForm.name}
             onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
           />
           <FormInput
             label="Nomor Telepon"
+            required
             value={customerForm.phone_number}
             onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
           />
           <FormInput
             label="Email"
+            required
             type="email"
             value={customerForm.email}
             onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
@@ -834,6 +837,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         <div className="grid gap-3 md:grid-cols-2">
           <Select
             label="Brand"
+            required
             value={String(customerForm.brand_id)}
             onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
             options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
@@ -845,6 +849,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           />
           <Select
             label="Owner Outlet"
+            required
             value={String(customerForm.owner_location_id)}
             onChange={(v) => {
               const ownerId = Number(v);
@@ -1323,16 +1328,19 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <FormInput
                     label="Nama"
+                    required
                     value={customerForm.name}
                     onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
                   />
                   <FormInput
                     label="Nomor Telepon"
+                    required
                     value={customerForm.phone_number}
                     onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
                   />
                   <FormInput
                     label="Email"
+                    required
                     type="email"
                     value={customerForm.email}
                     onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
@@ -1360,6 +1368,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 <div className="grid gap-3 md:grid-cols-2">
                   <Select
                     label="Brand"
+                    required
                     value={String(customerForm.brand_id)}
                     onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
                     options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
@@ -1371,6 +1380,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   />
                   <Select
                     label="Owner Outlet"
+                    required
                     value={String(customerForm.owner_location_id)}
                     onChange={(v) => {
                       const ownerId = Number(v);
@@ -2666,23 +2676,40 @@ function CustomerFormGroup({
   );
 }
 
+function RequiredLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <>
+      {label}
+      {required && (
+        <span className="ml-1 text-destructive" aria-label="wajib diisi">
+          *
+        </span>
+      )}
+    </>
+  );
+}
+
 function FormInput({
   label,
   value,
   onChange,
   type = "text",
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <label className="mb-3 block text-sm font-bold">
-      {label}
+      <RequiredLabel label={label} required={required} />
       <input
         type={type}
         value={value}
+        required={required}
+        aria-required={required}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 font-medium"
       />
@@ -2712,11 +2739,13 @@ function Select({
   value,
   onChange,
   options,
+  required = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
+  required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const selectRef = useRef<HTMLLabelElement>(null);
@@ -2784,7 +2813,7 @@ function Select({
   return (
     <label ref={selectRef} className="relative mb-3 block text-sm font-bold text-foreground">
       <span className="mb-1.5 block text-xs font-black uppercase text-muted-foreground">
-        {label}
+        <RequiredLabel label={label} required={required} />
       </span>
       <span className="relative block">
         <button
@@ -2797,6 +2826,7 @@ function Select({
           className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5 text-left text-sm font-bold text-foreground shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/20"
           aria-haspopup="listbox"
           aria-expanded={open}
+          aria-required={required}
         >
           <span className="min-w-0 truncate">{selectedOption?.label ?? "Pilih opsi"}</span>
           <ChevronDown
