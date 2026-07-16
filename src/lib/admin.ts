@@ -263,6 +263,35 @@ export type AdminCustomerPage = {
   total_pages: number;
 };
 
+export type AdminActivityLog = {
+  id: number;
+  actor_user_id: number | null;
+  actor_role: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: number | null;
+  before: unknown;
+  after: unknown;
+  metadata: unknown;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  actor?: {
+    id: number;
+    email: string | null;
+    phone_number: string | null;
+    role: string;
+  } | null;
+};
+
+export type AdminActivityLogPage = {
+  items: AdminActivityLog[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 export type SortOrder = "asc" | "desc";
 
 export type AdminSort = {
@@ -271,6 +300,30 @@ export type AdminSort = {
 };
 
 export const adminApi = {
+  activityLogs: (
+    filters: {
+      search?: string;
+      action?: string;
+      entity_type?: string;
+      actor_user_id?: number;
+      from?: string;
+      to?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const params = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      limit: String(filters.limit ?? 50),
+    });
+    if (filters.search) params.set("search", filters.search);
+    if (filters.action) params.set("action", filters.action);
+    if (filters.entity_type) params.set("entity_type", filters.entity_type);
+    if (filters.actor_user_id) params.set("actor_user_id", String(filters.actor_user_id));
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
+    return adminRequest<AdminActivityLogPage>(`/activity-logs?${params.toString()}`);
+  },
   users: (search = "", sort: AdminSort = {}) => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);

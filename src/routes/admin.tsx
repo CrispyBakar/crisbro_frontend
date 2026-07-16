@@ -10,6 +10,7 @@ import { getUser } from "@/lib/auth";
 import {
   adminApi,
   type SortOrder,
+  type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
   type AdminLocation,
@@ -27,6 +28,7 @@ import {
   ChevronDown,
   Coins,
   Gift,
+  History,
   ListChecks,
   Mail,
   Pencil,
@@ -61,7 +63,7 @@ export const Route = createFileRoute("/admin")({
   component: () => <AdminPage mode="admin" />,
 });
 
-type Tab = "report" | "users" | "customers" | "redeem";
+type Tab = "report" | "users" | "customers" | "redeem" | "activity";
 type ConsoleMode = "admin" | "marketing";
 type SortState<T extends string> = { sort_by: T; sort_order: SortOrder };
 type UserSortKey = "email" | "phone_number" | "role" | "created_at";
@@ -149,6 +151,197 @@ function dateFormat(value: string) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function dateTimeFormat(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function compactJson(value: unknown) {
+  if (value === null || value === undefined) return "-";
+  const text = JSON.stringify(value);
+  if (!text) return "-";
+  return text.length > 140 ? `${text.slice(0, 140)}...` : text;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeAuditValue(value: unknown) {
+  return value === undefined || value === "" ? null : value;
+}
+
+function auditValuesEqual(before: unknown, after: unknown) {
+  return JSON.stringify(normalizeAuditValue(before)) === JSON.stringify(normalizeAuditValue(after));
+}
+
+function sortedAuditLocationIds(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => (isRecord(item) ? Number(item.location_id) : Number(item)))
+    .filter((locationId) => Number.isInteger(locationId))
+    .sort((a, b) => a - b);
+}
+
+function actualCustomerChangedFields(log?: AdminActivityLog) {
+  if (log?.action !== "update_customer" || log.entity_type !== "customer") return [];
+  if (!isRecord(log.before) || !isRecord(log.after)) return [];
+
+  const customerFields = [
+    "name",
+    "phone_number",
+    "phone_number_country_code",
+    "address",
+    "province",
+    "city",
+    "country",
+    "postal_code",
+    "dob",
+    "gender",
+    "status",
+    "balance",
+    "brand_id",
+    "owner_location_id",
+  ];
+  const changedFields = customerFields.filter(
+    (field) => !auditValuesEqual(log.before[field], log.after[field]),
+  );
+
+  const beforeUser = isRecord(log.before.user) ? log.before.user : {};
+  const afterUser = isRecord(log.after.user) ? log.after.user : {};
+  for (const field of ["phone_number", "email"]) {
+    if (!auditValuesEqual(beforeUser[field], afterUser[field])) {
+      changedFields.push(`user.${field}`);
+    }
+  }
+
+  const beforePoint = isRecord(log.before.customer_point) ? log.before.customer_point : {};
+  const afterPoint = isRecord(log.after.customer_point) ? log.after.customer_point : {};
+  for (const field of ["total_point", "available_point"]) {
+    if (!auditValuesEqual(beforePoint[field], afterPoint[field])) {
+      changedFields.push(`point.${field}`);
+    }
+  }
+
+  if (
+    !auditValuesEqual(
+      sortedAuditLocationIds(log.before.customer_locations),
+      sortedAuditLocationIds(log.after.customer_locations),
+    )
+  ) {
+    changedFields.push("location_ids");
+  }
+
+  return changedFields;
+}
+
+function metadataLabels(value: unknown, log?: AdminActivityLog) {
+  if (!isRecord(value)) return [];
+
+  const labels: Array<{ label: string; value: string; tone?: "success" | "warning" | "danger" }> = [];
+  const sync = value.runchise_sync;
+  if (isRecord(sync)) {
+    const status = typeof sync.status === "string" ? sync.status : "";
+    labels.push({
+      label: "Sync Runchise",
+      value:
+        status === "synced"
+          ? "Berhasil"
+          : status === "failed"
+            ? "Gagal"
+            : status === "skipped"
+              ? "Dilewati"
+              : status || "-",
+      tone: status === "synced" ? "success" : status === "failed" ? "danger" : "warning",
+    });
+
+    if (typeof sync.runchise_customer_id === "number") {
+      labels.push({ label: "ID Runchise", value: String(sync.runchise_customer_id) });
+    }
+    if (sync.updated_existing === true) {
+      labels.push({ label: "Aksi Runchise", value: "Update data yang sudah ada" });
+    } else if (sync.matched_existing === true) {
+      labels.push({ label: "Aksi Runchise", value: "Cocokkan data yang sudah ada" });
+    }
+    if (typeof sync.error === "string") {
+      labels.push({ label: "Error Sync", value: sync.error, tone: "danger" });
+    }
+  }
+
+  const activationEmail = value.activation_email;
+  if (isRecord(activationEmail)) {
+    const sent = activationEmail.sent === true;
+    const skipped = activationEmail.skipped === true;
+    labels.push({
+      label: "Email Aktivasi",
+      value: sent ? "Terkirim" : skipped ? "Dilewati" : "Gagal/belum terkirim",
+      tone: sent ? "success" : skipped ? "warning" : "danger",
+    });
+    if (typeof activationEmail.error === "string") {
+      labels.push({ label: "Error Email", value: activationEmail.error, tone: "danger" });
+    }
+    if (typeof activationEmail.reason === "string") {
+      labels.push({ label: "Alasan Email", value: activationEmail.reason });
+    }
+  }
+
+  const actualChangedFields = actualCustomerChangedFields(log);
+  const changedFields = actualChangedFields.length > 0 ? actualChangedFields : value.changed_fields;
+  if (Array.isArray(changedFields) && changedFields.length > 0) {
+    labels.push({
+      label: "Field Berubah",
+      value: changedFields.map(String).join(", "),
+    });
+  }
+
+  return labels;
+}
+
+function metadataToneClass(tone?: "success" | "warning" | "danger") {
+  if (tone === "success") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700";
+  if (tone === "danger") return "border-red-500/20 bg-red-500/10 text-red-700";
+  if (tone === "warning") return "border-amber-500/20 bg-amber-500/10 text-amber-700";
+  return "border-border bg-muted text-muted-foreground";
+}
+
+function ActivityMetadata({ log }: { log: AdminActivityLog }) {
+  const value = log.metadata;
+  const labels = metadataLabels(value, log);
+
+  if (labels.length === 0) {
+    return (
+      <code
+        className="block max-h-24 overflow-auto rounded-md bg-muted px-2 py-1 font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap break-words"
+        title={compactJson(value)}
+      >
+        {compactJson(value)}
+      </code>
+    );
+  }
+
+  return (
+    <div className="flex max-h-28 flex-col gap-1 overflow-auto pr-1">
+      {labels.map((item) => (
+        <span
+          key={`${item.label}:${item.value}`}
+          className={`rounded-md border px-2 py-1 text-[11px] font-semibold leading-snug ${metadataToneClass(
+            item.tone,
+          )}`}
+          title={`${item.label}: ${item.value}`}
+        >
+          <span className="font-black">{item.label}:</span> {item.value}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function accountStatusLabel(status?: string | null) {
@@ -250,6 +443,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     sort_by: "sort_order",
     sort_order: "asc",
   });
+  const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([]);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityAction, setActivityAction] = useState("");
+  const [activityEntityType, setActivityEntityType] = useState("");
+  const [activityFrom, setActivityFrom] = useState("");
+  const [activityTo, setActivityTo] = useState("");
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityTotalPages, setActivityTotalPages] = useState(1);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const activityLimit = 50;
   const [catalogCategories, setCatalogCategories] = useState<CatalogMenuCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogMenuItem[]>([]);
   const [reportRedemptionFrom, setReportRedemptionFrom] = useState("");
@@ -363,6 +566,34 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }, []);
 
+  const loadActivityLogs = useCallback(
+    async (page = activityPage) => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await adminApi.activityLogs({
+          search: activitySearch.trim(),
+          action: activityAction.trim(),
+          entity_type: activityEntityType.trim(),
+          from: activityFrom,
+          to: activityTo,
+          page,
+          limit: activityLimit,
+        });
+        setActivityLogs(data.items ?? []);
+        setActivityPage(data.page ?? page);
+        setActivityTotalPages(data.total_pages ?? 1);
+        setActivityTotal(data.total ?? 0);
+        loadedTabs.current.activity = true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat activity log");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activityAction, activityEntityType, activityFrom, activityPage, activitySearch, activityTo],
+  );
+
   const refreshCurrentTab = useCallback(async () => {
     if (tab === "report") {
       await loadReport();
@@ -376,8 +607,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       if (canViewCustomers) await loadCustomers();
       return;
     }
+    if (tab === "activity") {
+      await loadActivityLogs();
+      return;
+    }
     await loadRedeem();
   }, [
+    loadActivityLogs,
     canManageUsers,
     canViewCustomers,
     isMarketingConsole,
@@ -485,7 +721,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       navigate({ to: "/login" });
       return;
     }
-    if (isMarketingConsole && tab !== "report" && tab !== "customers" && tab !== "redeem") {
+    if (
+      isMarketingConsole &&
+      tab !== "report" &&
+      tab !== "customers" &&
+      tab !== "redeem" &&
+      tab !== "activity"
+    ) {
       setTab("report");
       return;
     }
@@ -1249,6 +1491,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             icon={<ListChecks className="h-4 w-4" />}
             label="Menu Redeem"
           />
+          <TabButton
+            active={tab === "activity"}
+            onClick={() => setTab("activity")}
+            icon={<History className="h-4 w-4" />}
+            label="Activity Log"
+          />
         </div>
 
         {error && (
@@ -1373,6 +1621,127 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 ])}
                 emptyMessage="Belum ada data aktivasi akun per outlet."
               />
+            </Panel>
+          </section>
+        )}
+
+        {!loading && tab === "activity" && (
+          <section>
+            <Panel title="Activity Log Admin & Marketing">
+              <div className="mb-4 grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto] md:items-end">
+                <FormInput
+                  label="Search"
+                  value={activitySearch}
+                  onChange={setActivitySearch}
+                />
+                <FormInput
+                  label="Action"
+                  value={activityAction}
+                  onChange={setActivityAction}
+                  placeholder="update_customer"
+                />
+                <FormInput
+                  label="Entity"
+                  value={activityEntityType}
+                  onChange={setActivityEntityType}
+                  placeholder="customer"
+                />
+                <FormInput
+                  label="Dari"
+                  type="date"
+                  value={activityFrom}
+                  onChange={setActivityFrom}
+                />
+                <FormInput
+                  label="Hingga"
+                  type="date"
+                  value={activityTo}
+                  onChange={setActivityTo}
+                />
+                <Button
+                  onClick={() => loadActivityLogs(1)}
+                  disabled={loading}
+                  className="mb-3 rounded-full font-bold"
+                >
+                  Filter
+                </Button>
+              </div>
+              <TableScrollArea>
+                <table className="min-w-[1180px] w-full table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[150px]" />
+                    <col className="w-[220px]" />
+                    <col className="w-[190px]" />
+                    <col className="w-[150px]" />
+                    <col className="w-[360px]" />
+                    <col className="w-[110px]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="p-2">Waktu</th>
+                      <th className="p-2">Actor</th>
+                      <th className="p-2">Action</th>
+                      <th className="p-2">Entity</th>
+                      <th className="p-2">Metadata</th>
+                      <th className="p-2">IP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activityLogs.length === 0 && (
+                      <tr className="border-t border-border">
+                        <td colSpan={6} className="p-8 text-center font-bold">
+                          Belum ada activity log
+                        </td>
+                      </tr>
+                    )}
+                    {activityLogs.map((log) => (
+                      <tr key={log.id} className="border-t border-border align-top">
+                        <td className="p-2 whitespace-nowrap">{dateTimeFormat(log.created_at)}</td>
+                        <td className="p-2">
+                          <p className="truncate font-bold" title={log.actor?.email ?? log.actor?.phone_number ?? undefined}>
+                            {log.actor?.email ?? log.actor?.phone_number ?? `User #${log.actor_user_id ?? "-"}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{log.actor_role ?? log.actor?.role ?? "-"}</p>
+                        </td>
+                        <td className="p-2 break-words font-bold">{log.action}</td>
+                        <td className="p-2 whitespace-nowrap">
+                          {log.entity_type}
+                          {log.entity_id ? ` #${log.entity_id}` : ""}
+                        </td>
+                        <td className="p-2">
+                          <ActivityMetadata log={log} />
+                        </td>
+                        <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">{log.ip_address ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableScrollArea>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p className="font-semibold text-muted-foreground">
+                  Total {numberFormat(activityTotal)} log · Halaman {activityPage} dari {activityTotalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || activityPage <= 1}
+                    onClick={() => loadActivityLogs(activityPage - 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || activityPage >= activityTotalPages}
+                    onClick={() => loadActivityLogs(activityPage + 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
+              </div>
             </Panel>
           </section>
         )}
