@@ -191,6 +191,10 @@ function sortedAuditLocationIds(value: unknown) {
     .sort((a, b) => a - b);
 }
 
+function isNoisyLegacyCustomerChangedFields(value: unknown) {
+  return Array.isArray(value) && value.map(String).includes("last_updated_by_id");
+}
+
 function actualCustomerChangedFields(log?: AdminActivityLog) {
   if (log?.action !== "update_customer" || log.entity_type !== "customer") return [];
   if (!isRecord(log.before) || !isRecord(log.after)) return [];
@@ -294,11 +298,19 @@ function metadataLabels(value: unknown, log?: AdminActivityLog) {
   }
 
   const actualChangedFields = actualCustomerChangedFields(log);
-  const changedFields = actualChangedFields.length > 0 ? actualChangedFields : value.changed_fields;
-  if (Array.isArray(changedFields) && changedFields.length > 0) {
+  const metadataChangedFields = value.changed_fields;
+  if (isNoisyLegacyCustomerChangedFields(metadataChangedFields)) {
     labels.push({
       label: "Field Berubah",
-      value: changedFields.map(String).join(", "),
+      value: actualChangedFields.length
+        ? actualChangedFields.join(", ")
+        : "Log lama sebelum perbaikan metadata, daftar field belum akurat",
+      tone: "warning",
+    });
+  } else if (Array.isArray(metadataChangedFields) && metadataChangedFields.length > 0) {
+    labels.push({
+      label: "Field Berubah",
+      value: metadataChangedFields.map(String).join(", "),
     });
   }
 
@@ -481,6 +493,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       : currentUser?.role === "admin";
   const canManageUsers = currentUser?.role === "admin";
   const canViewCustomers = mode === "admin" || mode === "marketing";
+  const canViewActivityLogs = currentUser?.role === "admin" && mode === "admin";
   const isMarketingConsole = mode === "marketing";
   const selectedCatalogItem = useMemo(
     () => catalogItems.find((item) => item.id === redeemForm.menu_item_id) ?? null,
@@ -568,6 +581,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
   const loadActivityLogs = useCallback(
     async (page = activityPage) => {
+      if (!canViewActivityLogs) return;
       setLoading(true);
       setError("");
       try {
@@ -591,7 +605,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         setLoading(false);
       }
     },
-    [activityAction, activityEntityType, activityFrom, activityPage, activitySearch, activityTo],
+    [
+      activityAction,
+      activityEntityType,
+      activityFrom,
+      activityPage,
+      activitySearch,
+      activityTo,
+      canViewActivityLogs,
+    ],
   );
 
   const refreshCurrentTab = useCallback(async () => {
@@ -608,13 +630,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       return;
     }
     if (tab === "activity") {
-      await loadActivityLogs();
+      if (canViewActivityLogs) await loadActivityLogs();
       return;
     }
     await loadRedeem();
   }, [
     loadActivityLogs,
     canManageUsers,
+    canViewActivityLogs,
     canViewCustomers,
     isMarketingConsole,
     loadCustomers,
@@ -725,9 +748,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       isMarketingConsole &&
       tab !== "report" &&
       tab !== "customers" &&
-      tab !== "redeem" &&
-      tab !== "activity"
+      tab !== "redeem"
     ) {
+      setTab("report");
+      return;
+    }
+    if (tab === "activity" && !canViewActivityLogs) {
       setTab("report");
       return;
     }
@@ -738,7 +764,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     refreshCurrentTab();
     // Run only when access or the active tab changes. Filter/search inputs fetch via their buttons.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccess, isMarketingConsole, navigate, tab]);
+  }, [canAccess, canViewActivityLogs, isMarketingConsole, navigate, tab]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
@@ -1491,12 +1517,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             icon={<ListChecks className="h-4 w-4" />}
             label="Menu Redeem"
           />
-          <TabButton
-            active={tab === "activity"}
-            onClick={() => setTab("activity")}
-            icon={<History className="h-4 w-4" />}
-            label="Activity Log"
-          />
+          {canViewActivityLogs && (
+            <TabButton
+              active={tab === "activity"}
+              onClick={() => setTab("activity")}
+              icon={<History className="h-4 w-4" />}
+              label="Activity Log"
+            />
+          )}
         </div>
 
         {error && (
@@ -1625,7 +1653,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </section>
         )}
 
-        {!loading && tab === "activity" && (
+        {!loading && tab === "activity" && canViewActivityLogs && (
           <section>
             <Panel title="Activity Log Admin & Marketing">
               <div className="mb-4 grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto] md:items-end">
