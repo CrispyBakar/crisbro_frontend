@@ -725,6 +725,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         : await adminApi.createCustomer(payload);
       const syncStatus = getCustomerSyncStatus(savedCustomer);
       const syncMessage = getCustomerSyncMessage(savedCustomer);
+      const activationEmail = savedCustomer.activation_email;
 
       setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 });
       setActiveMobileForm(null);
@@ -741,6 +742,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             : isEditing
               ? "Perubahan tersimpan lokal, tetapi belum terkirim ke Runchise"
               : "Customer tersimpan lokal, tetapi belum tersinkron ke Runchise",
+        );
+      }
+
+      if (activationEmail?.sent) {
+        toast.success("Email aktivasi berhasil dikirim otomatis");
+      } else if (activationEmail && !activationEmail.skipped) {
+        toast.warning(
+          activationEmail.error
+            ? `Email aktivasi belum terkirim: ${activationEmail.error}`
+            : "Email aktivasi belum terkirim",
         );
       }
     } catch (err) {

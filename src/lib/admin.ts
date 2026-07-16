@@ -180,6 +180,13 @@ export type RunchiseSyncResult = {
   updated_existing?: boolean;
 };
 
+export type ActivationEmailResult = {
+  sent?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+};
+
 export type AdminCustomer = {
   id: number;
   user_id: number;
@@ -190,6 +197,7 @@ export type AdminCustomer = {
   runchise_sync_error?: string | null;
   runchise_synced_at?: string | null;
   runchise_sync?: RunchiseSyncResult;
+  activation_email?: ActivationEmailResult | null;
   phone_number: string | null;
   phone_number_country_code: number;
   address: string | null;
