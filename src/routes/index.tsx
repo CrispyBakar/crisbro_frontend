@@ -146,8 +146,8 @@ function Home() {
           </div>
           <div className="relative">
             <div className="relative">
-              <div className="absolute -inset-x-3 -inset-y-3 rounded-[1.75rem] bg-[#ffe27a] rotate-[4deg] md:rounded-[2rem]" />
-              <div className="absolute -inset-x-2.5 -inset-y-2.5 rounded-[1.75rem] bg-[#fddd0d] -rotate-[3deg] md:rounded-[2rem]" />
+              <div className="absolute inset-0 rounded-[3rem] rotate-3 bg-secondary/80" />
+              <div className="absolute inset-0 rounded-[3rem] -rotate-2 bg-accent/70" />
               <img
                 src={currentSlide.src}
                 alt={currentSlide.alt}
@@ -162,7 +162,7 @@ function Home() {
                 <p className="text-base font-black uppercase text-primary">{currentSlide.label}</p>
               </div>
             </div>
-            <div className="relative mt-9 flex justify-center gap-2">
+            <div className="relative mt-7 flex justify-center gap-2">
               {heroSlides.map((slide, index) => (
                 <button
                   key={slide.label}
