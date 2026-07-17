@@ -146,10 +146,8 @@ function Home() {
           </div>
           <div className="relative">
             <div className="relative">
-              <div className="absolute -inset-x-4 -inset-y-2 rounded-3xl md:rounded-[3rem] rotate-[7deg] bg-secondary/70" />
-              <div className="absolute -inset-x-5 -inset-y-3 rounded-3xl md:rounded-[3rem] -rotate-[6deg] bg-accent/70" />
-              <div className="absolute -inset-x-3 -inset-y-4 rounded-3xl md:rounded-[3rem] rotate-[4deg] bg-primary/25" />
-              <div className="absolute -inset-x-2 -inset-y-2 rounded-3xl md:rounded-[3rem] -rotate-[3deg] bg-card/90" />
+              <div className="absolute -inset-x-3 -inset-y-3 rounded-[1.75rem] bg-[#ffe27a] rotate-[4deg] md:rounded-[2rem]" />
+              <div className="absolute -inset-x-2.5 -inset-y-2.5 rounded-[1.75rem] bg-[#fddd0d] -rotate-[3deg] md:rounded-[2rem]" />
               <img
                 src={currentSlide.src}
                 alt={currentSlide.alt}
