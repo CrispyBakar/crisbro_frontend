@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownLeft, ArrowUpRight, Sparkles, LogOut, Gift } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { apiProfile, getToken, getUser, logout, type AuthUser } from "@/lib/auth";
+import membershipCardBg from "@/assets/membership-card-bg.png";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -207,7 +208,10 @@ function DashboardPage() {
         )}
 
         {/* Membership Card */}
-        <div className="relative overflow-hidden rounded-[2rem] bg-[#fddd0d] p-7 text-[#251608] shadow-(--shadow-soft) md:p-9">
+        <div
+          className="relative overflow-hidden rounded-[2rem] bg-[#fddd0d] bg-cover bg-center p-7 text-[#251608] shadow-(--shadow-soft) md:p-9"
+          style={{ backgroundImage: `url(${membershipCardBg})` }}
+        >
           <div className="relative flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-2xl bg-[#251608] text-[#fddd0d] grid place-items-center font-black text-lg">
