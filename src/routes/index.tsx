@@ -155,7 +155,7 @@ function Home() {
                 alt={currentSlide.alt}
                 width={1024}
                 height={1024}
-                className="relative aspect-square rounded-3xl md:rounded-[3rem] w-full object-cover shadow-(--shadow-soft) transition-opacity duration-500"
+                className="relative mx-auto aspect-square w-[94%] rounded-2xl object-cover shadow-(--shadow-soft) transition-opacity duration-500 md:rounded-[1.75rem]"
               />
               <div className="absolute -bottom-3 -left-3 rounded-2xl bg-card px-4 py-2.5 shadow-(--shadow-soft) border border-border -rotate-6">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
