@@ -165,6 +165,15 @@
 }
 
 @layer components {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   .table-scroll-area {
     scrollbar-color: var(--color-primary) var(--color-muted);
     scrollbar-width: thin;

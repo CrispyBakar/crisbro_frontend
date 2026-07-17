@@ -359,7 +359,7 @@ function KatalogPage() {
               )}
             </div>
 
-            <div ref={categoryNavRef} className="-mx-1 overflow-x-auto px-1 pb-1">
+            <div ref={categoryNavRef} className="scrollbar-none -mx-1 overflow-x-auto px-1 pb-1">
               <div className="flex w-max min-w-full items-center gap-2">
                 {/* Tombol Semua */}
                 <button
