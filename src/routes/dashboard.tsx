@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownLeft, ArrowUpRight, Sparkles, LogOut, Gift } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { apiProfile, getToken, getUser, logout, type AuthUser } from "@/lib/auth";
+import coinMembershipCard from "@/assets/coin-membership-card.png";
 import membershipCardBg from "@/assets/membership-card-bg.png";
 
 export const Route = createFileRoute("/dashboard")({
@@ -214,8 +215,13 @@ function DashboardPage() {
         >
           <div className="relative flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-2xl bg-[#251608] text-[#fddd0d] grid place-items-center font-black text-lg">
-                C
+              <div className="grid h-10 w-10 place-items-center">
+                <img
+                  src={coinMembershipCard}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-10 w-10 object-contain drop-shadow-[0_3px_6px_rgba(37,22,8,0.28)]"
+                />
               </div>
               <div>
                 <p className="text-xs font-extrabold leading-none">Crisbar</p>
