@@ -1,7 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Coins, MapPin, UtensilsCrossed, Heart, Star, LogIn, Sparkles, Smile } from "lucide-react";
 import heroImg from "@/assets/crisbarbar-crisbar-hero.jpg";
+import ayamGeprekSambalIjoImg from "@/assets/ayam-geprek-sambal-ijo.jpg";
+import chickenKatsuNashvilleImg from "@/assets/chicken-katsu-nashville.jpg";
+import nikmatNashvilleCheeseImg from "@/assets/nikmat-nashville-cheese.jpg";
+
+const heroSlides = [
+  {
+    src: heroImg,
+    alt: "Rayakan dengan Crisbarbar Crisbar Whole Chicken",
+    label: "crisbarbar crisbar",
+  },
+  {
+    src: nikmatNashvilleCheeseImg,
+    alt: "Menu Nikmat Nashville Cheese Crisbar",
+    label: "nikmat nashville cheese",
+  },
+  {
+    src: chickenKatsuNashvilleImg,
+    alt: "Chicken Katsu Nashville Crisbar",
+    label: "chicken katsu nashville",
+  },
+  {
+    src: ayamGeprekSambalIjoImg,
+    alt: "Ayam Geprek Sambal Ijo Crisbar",
+    label: "ayam geprek sambal ijo",
+  },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +45,17 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const currentSlide = heroSlides[activeSlide];
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((slide) => (slide + 1) % heroSlides.length);
+    }, 4000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <main className="px-4">
       {/* Hero */}
@@ -107,20 +145,38 @@ function Home() {
             </div>
           </div>
           <div className="relative">
-            <div className="absolute inset-0 rounded-3xl md:rounded-[3rem] rotate-3 bg-secondary/80" />
-            <div className="absolute inset-0 rounded-3xl md:rounded-[3rem] -rotate-2 bg-accent/70" />
-            <img
-              src={heroImg}
-              alt="Rayakan dengan Crisbarbar Crisbar Whole Chicken"
-              width={1024}
-              height={1024}
-              className="relative rounded-3xl md:rounded-[3rem] w-full h-auto object-cover shadow-(--shadow-soft)"
-            />
-            <div className="absolute -bottom-3 -left-3 rounded-2xl bg-card px-4 py-2.5 shadow-(--shadow-soft) border border-border -rotate-6">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                Best Seller
-              </p>
-              <p className="text-base font-black uppercase text-primary">crisbarbar crisbar</p>
+            <div className="relative">
+              <div className="absolute -inset-x-4 -inset-y-2 rounded-3xl md:rounded-[3rem] rotate-[7deg] bg-secondary/70" />
+              <div className="absolute -inset-x-5 -inset-y-3 rounded-3xl md:rounded-[3rem] -rotate-[6deg] bg-accent/70" />
+              <div className="absolute -inset-x-3 -inset-y-4 rounded-3xl md:rounded-[3rem] rotate-[4deg] bg-primary/25" />
+              <div className="absolute -inset-x-2 -inset-y-2 rounded-3xl md:rounded-[3rem] -rotate-[3deg] bg-card/90" />
+              <img
+                src={currentSlide.src}
+                alt={currentSlide.alt}
+                width={1024}
+                height={1024}
+                className="relative aspect-square rounded-3xl md:rounded-[3rem] w-full object-cover shadow-(--shadow-soft) transition-opacity duration-500"
+              />
+              <div className="absolute -bottom-3 -left-3 rounded-2xl bg-card px-4 py-2.5 shadow-(--shadow-soft) border border-border -rotate-6">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Best Seller
+                </p>
+                <p className="text-base font-black uppercase text-primary">{currentSlide.label}</p>
+              </div>
+            </div>
+            <div className="relative mt-9 flex justify-center gap-2">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide.label}
+                  type="button"
+                  aria-label={`Tampilkan ${slide.label}`}
+                  aria-current={activeSlide === index}
+                  onClick={() => setActiveSlide(index)}
+                  className={`h-2 w-2 rounded-full transition-colors ${
+                    activeSlide === index ? "bg-[#fddd0d]" : "bg-muted-foreground/35"
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
