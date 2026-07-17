@@ -477,13 +477,13 @@ function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void
       onKeyDown={openWithKeyboard}
       className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card text-left shadow-(--shadow-soft) transition-transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
     >
-      <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+      <div className="relative aspect-square overflow-hidden bg-secondary/60">
         {product.image_url ? (
           <img
             src={product.image_url}
             alt={product.name}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-contain p-3 sm:p-4"
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
@@ -551,12 +551,12 @@ function ProductDetailDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+        <div className="relative aspect-square overflow-hidden bg-secondary/60">
           {product.image_url ? (
             <img
               src={product.image_url}
               alt={product.name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain p-4"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-5xl">ðŸ½ï¸</div>
@@ -611,7 +611,7 @@ function KatalogSkeleton() {
             key={index}
             className="overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
           >
-            <Skeleton className="aspect-4/3 w-full rounded-none" />
+            <Skeleton className="aspect-square w-full rounded-none" />
             <div className="p-3 sm:p-6">
               <Skeleton className="mb-3 h-4 w-3/4 sm:h-6" />
               <Skeleton className="mb-2 h-3 w-full sm:h-4" />

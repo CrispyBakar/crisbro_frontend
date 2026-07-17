@@ -163,7 +163,7 @@ function MenuPage() {
             key={item.id}
             className="group rounded-xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
           >
-            <div className="relative aspect-4/3 overflow-hidden bg-secondary">
+            <div className="relative aspect-square overflow-hidden bg-secondary/60">
               {item.image_url ? (
                 <img
                   src={item.image_url}
@@ -171,7 +171,7 @@ function MenuPage() {
                   width={768}
                   height={576}
                   loading="lazy"
-                  className="h-full w-full group-hover:scale-105 transition-transform duration-500 object-cover"
+                  className="h-full w-full object-contain p-3 sm:p-4"
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
@@ -327,7 +327,7 @@ function MenuSkeleton() {
           key={index}
           className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
         >
-          <Skeleton className="aspect-4/3 w-full rounded-none" />
+          <Skeleton className="aspect-square w-full rounded-none" />
           <div className="flex flex-1 flex-col p-3 sm:p-6">
             <Skeleton className="mb-3 h-4 w-3/4 sm:h-6" />
             <Skeleton className="mb-2 h-3 w-full sm:h-4" />
