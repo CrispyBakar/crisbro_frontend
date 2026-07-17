@@ -146,7 +146,8 @@ function MenuPage() {
           🍽️ Menu Redeem
         </span>
         <h1 className="mt-4 text-5xl md:text-6xl font-black tracking-tight">
-          Tukar Poin dengan <span className="text-primary">Menu Favoritmu</span>
+          Tukar Poin dengan
+          <span className="block text-primary">Menu Favoritmu</span>
         </h1>
         <p className="text-muted-foreground mt-3 text-lg">
           Menu spesial Crisbar yang bisa kamu dapatkan dengan poin reward.
@@ -200,7 +201,7 @@ function MenuPage() {
                   onClick={() => handleTukar(item)}
                   className="rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-(--shadow-pop) transition-colors hover:bg-primary/90 sm:px-5 sm:py-2 sm:text-sm"
                 >
-                  Estimasi
+                  Tukar Poin
                 </button>
               </div>
             </div>
