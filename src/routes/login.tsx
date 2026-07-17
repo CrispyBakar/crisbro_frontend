@@ -86,7 +86,8 @@ function LoginPage() {
             <Sparkles className="h-4 w-4" /> Crisbar Rewards
           </span>
           <h1 className="mt-4 text-4xl md:text-5xl font-black tracking-tight">
-            Halo, <span className="text-primary">Sahabat Crispy!</span> 👋
+            Halo,
+            <span className="block text-primary">Crisbro!</span>
           </h1>
           <p className="text-muted-foreground mt-3">Login dulu yuk untuk cek poin & reward kamu.</p>
         </div>
@@ -108,7 +109,7 @@ function LoginPage() {
                 placeholder="8123456789"
                 value={tel}
                 onChange={(e) => setTel(e.target.value)}
-                className="rounded-none border-0 h-12 bg-transparent text-base focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="rounded-none border-0 h-12 bg-transparent text-base placeholder:text-muted-foreground/30 placeholder:font-light focus-visible:ring-0 focus-visible:ring-offset-0"
                 autoComplete="tel"
               />
             </div>
@@ -124,7 +125,7 @@ function LoginPage() {
                 placeholder="masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-2xl h-12 bg-background border-2 text-base pr-12"
+                className="rounded-2xl h-12 bg-background border-2 text-base pr-12 placeholder:text-muted-foreground/30 placeholder:font-light"
                 autoComplete="current-password"
               />
               <button
