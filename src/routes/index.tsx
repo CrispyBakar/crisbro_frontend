@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Coins, MapPin, UtensilsCrossed, Heart, Star, LogIn, Sparkles, Smile } from "lucide-react";
-import heroImg from "@/assets/katsu-hero.jpg";
+import heroImg from "@/assets/crisbarbar-crisbar-hero.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Crisbar — Nikmati Katsu Favoritmu & Kumpulkan Poinnya!" },
+      { title: "Crisbar — Nikmati Menu Favoritmu & Kumpulkan Poinnya!" },
       {
         name: "description",
         content:
-          "Katsu crispy gurih dengan saus rahasia. Pesan favoritmu & kumpulkan poin di Crisbar.",
+          "Pilih menu kesukaanmu dan kumpulin poin di setiap pesanan buat dituker dengan hadiah seru selanjutnya.",
       },
     ],
   }),
@@ -67,12 +67,12 @@ function Home() {
               <Coins className="h-4 w-4" /> Crisbar Rewards
             </span>
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-black leading-[1.05] tracking-tight text-foreground">
-              Nikmati <span className="text-primary">Katsu</span> Favoritmu & Kumpulkan{" "}
-              <span className="text-[oklch(0.65_0.2_45)]">Poinnya!</span> 🍱
+              Nikmati <span className="text-primary">Menu</span> Favoritmu & Kumpulkan{" "}
+              <span className="text-[oklch(0.65_0.2_45)]">Poinnya!</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-md">
-              Katsu crispy gurih dengan saus rahasia. Tiap gigitan bikin happy, tiap pesanan dapat
-              poin manis.
+              Pilih menu kesukaanmu dan kumpulin poin di setiap pesanan buat dituker dengan hadiah
+              seru selanjutnya.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
@@ -111,7 +111,7 @@ function Home() {
             <div className="absolute inset-0 rounded-3xl md:rounded-[3rem] -rotate-2 bg-accent/70" />
             <img
               src={heroImg}
-              alt="Katsu ayam crispy Crisbar with special sauce"
+              alt="Rayakan dengan Crisbarbar Crisbar Whole Chicken"
               width={1024}
               height={1024}
               className="relative rounded-3xl md:rounded-[3rem] w-full h-auto object-cover shadow-(--shadow-soft)"
@@ -120,7 +120,7 @@ function Home() {
               <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                 Best Seller
               </p>
-              <p className="text-base font-black text-primary">Crispy Katsu 🍗</p>
+              <p className="text-base font-black uppercase text-primary">crisbarbar crisbar</p>
             </div>
           </div>
         </div>
