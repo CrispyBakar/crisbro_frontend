@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { apiUrl } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUp, ExternalLink, MapPin } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/lokasi")({
   head: () => ({
@@ -24,6 +24,39 @@ type Location = {
   longitude: number | null;
   maps_url: string;
 };
+
+type LocationFilterId = "all" | "bandung-cimahi" | "jabodeta";
+
+const LOCATION_FILTERS: { id: LocationFilterId; label: string }[] = [
+  { id: "all", label: "Semua Lokasi" },
+  { id: "bandung-cimahi", label: "Bandung & Cimahi" },
+  { id: "jabodeta", label: "Jabodeta" },
+];
+
+const BANDUNG_CIMAHI_CITIES = new Set(["bandung", "kota bandung", "kabupaten bandung", "cimahi"]);
+
+const JABODETA_CITIES = new Set([
+  "jakarta",
+  "jakarta barat",
+  "jakarta selatan",
+  "jakarta timur",
+  "jakarta pusat",
+  "jakarta utara",
+  "kota jakarta barat",
+  "kota jakarta selatan",
+  "kota jakarta timur",
+  "kota jakarta pusat",
+  "kota jakarta utara",
+  "bogor",
+  "kota bogor",
+  "kabupaten bogor",
+  "depok",
+  "kota depok",
+  "tangerang",
+  "kota tangerang",
+  "tangerang selatan",
+  "kota tangerang selatan",
+]);
 
 async function readLocationsResponse(response: Response): Promise<Location[]> {
   let data: unknown;
@@ -67,11 +100,25 @@ function isLocation(item: unknown): item is Location {
   );
 }
 
+function normalizeCity(city: string | null) {
+  return (city ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getLocationFilterId(city: string | null): Exclude<LocationFilterId, "all"> | "other" {
+  const normalizedCity = normalizeCity(city);
+
+  if (BANDUNG_CIMAHI_CITIES.has(normalizedCity)) return "bandung-cimahi";
+  if (JABODETA_CITIES.has(normalizedCity)) return "jabodeta";
+
+  return "other";
+}
+
 function LokasiPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<LocationFilterId>("all");
 
   useEffect(() => {
     fetch(apiUrl("/locations"))
@@ -101,6 +148,11 @@ function LokasiPage() {
     });
   };
 
+  const filteredLocations = useMemo(() => {
+    if (activeFilter === "all") return locations;
+    return locations.filter((location) => getLocationFilterId(location.city) === activeFilter);
+  }, [activeFilter, locations]);
+
   return (
     <main className="px-4 mt-10">
       <section className="mx-auto max-w-6xl text-center mb-10">
@@ -120,8 +172,43 @@ function LokasiPage() {
         <p className="text-center text-muted-foreground mt-10">Belum ada outlet yang tersedia.</p>
       )}
 
+      {!loading && !error && locations.length > 0 && (
+        <div className="mx-auto mb-8 max-w-6xl">
+          <div className="flex flex-wrap justify-start gap-2">
+            {LOCATION_FILTERS.map((filter) => {
+              const isActive = activeFilter === filter.id;
+              const inactiveClass =
+                filter.id === "all"
+                  ? "bg-background border-border hover:bg-secondary"
+                  : "bg-secondary border-secondary-foreground/20 text-secondary-foreground hover:bg-secondary/70";
+
+              return (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-bold transition-all ${
+                    isActive
+                      ? "border-primary bg-primary text-primary-foreground shadow-(--shadow-pop)"
+                      : inactiveClass
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && locations.length > 0 && filteredLocations.length === 0 && (
+        <p className="text-center text-muted-foreground mt-10">
+          Belum ada outlet untuk kategori ini.
+        </p>
+      )}
+
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6">
-        {locations.map((o) => (
+        {filteredLocations.map((o) => (
           <article
             key={o.id}
             className="rounded-xl bg-card border border-border p-3 shadow-(--shadow-soft) hover:-translate-y-1 transition-transform sm:p-7"
@@ -140,9 +227,7 @@ function LokasiPage() {
                   {o.name}
                 </h3>
                 {o.address && (
-                  <p className="text-xs text-muted-foreground sm:text-base">
-                    {o.address}
-                  </p>
+                  <p className="text-xs text-muted-foreground sm:text-base">{o.address}</p>
                 )}
               </div>
             </div>
