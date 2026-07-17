@@ -163,7 +163,7 @@ function MenuPage() {
             key={item.id}
             className="group rounded-xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
           >
-            <div className="relative aspect-square overflow-hidden bg-secondary/60">
+            <div className="relative overflow-hidden bg-card">
               {item.image_url ? (
                 <img
                   src={item.image_url}
@@ -171,7 +171,7 @@ function MenuPage() {
                   width={768}
                   height={576}
                   loading="lazy"
-                  className="h-full w-full object-contain p-3 sm:p-4"
+                  className="block h-auto w-full"
                 />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-5xl">🍽️</div>
