@@ -479,7 +479,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [salesTransactionPage, setSalesTransactionPage] = useState(1);
   const [salesTransactionTotalPages, setSalesTransactionTotalPages] = useState(1);
   const [salesTransactionTotal, setSalesTransactionTotal] = useState(0);
-  const salesTransactionLimit = 20;
+  const [salesTransactionLimit, setSalesTransactionLimit] = useState(50);
+  const [salesTransactionPageInput, setSalesTransactionPageInput] = useState("1");
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
@@ -607,7 +608,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }, [appliedCustomerFrom, appliedCustomerSearch, appliedCustomerTo, customerForm.brand_id, customerLimit, customerPage, customerSort]);
 
   const loadSalesTransactions = useCallback(
-    async (page = salesTransactionPage) => {
+    async (page = salesTransactionPage, limit = salesTransactionLimit) => {
       setLoading(true);
       setError("");
       try {
@@ -617,10 +618,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           from: salesTransactionFrom,
           to: salesTransactionTo,
           page,
-          limit: salesTransactionLimit,
+          limit,
         });
         setSalesTransactions(data.items ?? []);
         setSalesTransactionPage(data.page ?? page);
+        setSalesTransactionPageInput(String(data.page ?? page));
         setSalesTransactionTotalPages(data.total_pages ?? 1);
         setSalesTransactionTotal(data.total ?? 0);
         setSalesTransactionOutlets(data.outlets ?? []);
@@ -635,10 +637,27 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       salesTransactionFrom,
       salesTransactionOutlet,
       salesTransactionPage,
+      salesTransactionLimit,
       salesTransactionSearch,
       salesTransactionTo,
     ],
   );
+
+  function jumpToSalesTransactionPage() {
+    const requestedPage = Number(salesTransactionPageInput);
+    if (!Number.isInteger(requestedPage) || requestedPage < 1) {
+      setSalesTransactionPageInput(String(salesTransactionPage));
+      return;
+    }
+    void loadSalesTransactions(requestedPage);
+  }
+
+  function changeSalesTransactionLimit(limit: number) {
+    setSalesTransactionLimit(limit);
+    setSalesTransactionPage(1);
+    setSalesTransactionPageInput("1");
+    void loadSalesTransactions(1, limit);
+  }
 
   const loadRedeem = useCallback(async () => {
     setLoading(true);
@@ -1922,11 +1941,22 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </table>
               </TableScrollArea>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <p className="font-semibold text-muted-foreground">
-                  Total {numberFormat(salesTransactionTotal)} transaksi · Halaman{" "}
-                  {salesTransactionPage} dari {salesTransactionTotalPages}
-                </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
+                  <span>
+                    Menampilkan {salesTransactionTotal === 0 ? 0 : (salesTransactionPage - 1) * salesTransactionLimit + 1}–{Math.min(salesTransactionPage * salesTransactionLimit, salesTransactionTotal)} dari {numberFormat(salesTransactionTotal)} transaksi
+                  </span>
+                  <label className="flex items-center gap-2">
+                    Per halaman
+                    <select
+                      value={salesTransactionLimit}
+                      onChange={(event) => changeSalesTransactionLimit(Number(event.target.value))}
+                      className="rounded-lg border border-border bg-card px-2 py-1"
+                    >
+                      {[25, 50, 100].map((limit) => <option key={limit} value={limit}>{limit}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1936,6 +1966,24 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   >
                     Sebelumnya
                   </Button>
+                  {paginationItems(salesTransactionPage, salesTransactionTotalPages).map((item, index) =>
+                    item === "ellipsis" ? (
+                      <span key={`sales-ellipsis-${index}`} className="px-1 text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={item}
+                        type="button"
+                        variant={item === salesTransactionPage ? "default" : "outline"}
+                        disabled={loading}
+                        onClick={() => loadSalesTransactions(item)}
+                        className="h-9 min-w-9 rounded-full px-3 font-bold"
+                        aria-label={`Halaman transaksi ${item}`}
+                        aria-current={item === salesTransactionPage ? "page" : undefined}
+                      >
+                        {item}
+                      </Button>
+                    ),
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -2653,6 +2701,24 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   >
                     Berikutnya
                   </Button>
+                  <form
+                    className="ml-1 flex items-center gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      jumpToSalesTransactionPage();
+                    }}
+                  >
+                    <input
+                      type="number"
+                      min={1}
+                      max={salesTransactionTotalPages}
+                      value={salesTransactionPageInput}
+                      onChange={(event) => setSalesTransactionPageInput(event.target.value)}
+                      className="w-20 rounded-lg border border-border bg-card px-2 py-2"
+                      aria-label="Nomor halaman transaksi tujuan"
+                    />
+                    <Button type="submit" variant="outline" className="rounded-full font-bold">Pergi</Button>
+                  </form>
                   <form
                     className="ml-1 flex items-center gap-2"
                     onSubmit={(event) => {
