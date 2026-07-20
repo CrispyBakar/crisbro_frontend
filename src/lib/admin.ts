@@ -261,6 +261,10 @@ export type AdminCustomerPage = {
   limit: number;
   total: number;
   total_pages: number;
+  registration_range: {
+    earliest: string | null;
+    latest: string | null;
+  };
 };
 
 export type AdminActivityLog = {
@@ -390,7 +394,13 @@ export const adminApi = {
     adminRequest<AdminUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteUser: (id: number) =>
     adminRequest<{ message: string }>(`/users/${id}`, { method: "DELETE" }),
-  customers: (search = "", page = 1, limit = 20, sort: AdminSort = {}) => {
+  customers: (
+    search = "",
+    page = 1,
+    limit = 20,
+    sort: AdminSort = {},
+    filters: { from?: string; to?: string } = {},
+  ) => {
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
@@ -398,6 +408,8 @@ export const adminApi = {
     if (search) params.set("search", search);
     if (sort.sort_by) params.set("sort_by", sort.sort_by);
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
     return adminRequest<AdminCustomerPage>(`/customers?${params.toString()}`);
   },
   createCustomer: (payload: AdminCustomerPayload) =>

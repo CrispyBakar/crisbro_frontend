@@ -129,6 +129,19 @@ type ConfirmDialogState = {
 
 type MobileCrudForm = "user" | "customer" | "redeem";
 
+function paginationItems(current: number, total: number): Array<number | "ellipsis"> {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+  const result: Array<number | "ellipsis"> = [];
+  sorted.forEach((page, index) => {
+    if (index > 0 && page - sorted[index - 1] > 1) result.push("ellipsis");
+    result.push(page);
+  });
+  return result;
+}
+
 function numberFormat(value: number) {
   return value.toLocaleString("id-ID");
 }
@@ -447,7 +460,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [customerPage, setCustomerPage] = useState(1);
   const [customerTotalPages, setCustomerTotalPages] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
-  const customerLimit = 20;
+  const [customerLimit, setCustomerLimit] = useState(50);
+  const [customerFrom, setCustomerFrom] = useState("");
+  const [customerTo, setCustomerTo] = useState("");
+  const [appliedCustomerFrom, setAppliedCustomerFrom] = useState("");
+  const [appliedCustomerTo, setAppliedCustomerTo] = useState("");
+  const [customerPageInput, setCustomerPageInput] = useState("1");
+  const [customerRegistrationRange, setCustomerRegistrationRange] = useState<{
+    earliest: string | null;
+    latest: string | null;
+  }>({ earliest: null, latest: null });
   const [salesTransactions, setSalesTransactions] = useState<CustomerSalesTransactionReport[]>([]);
   const [salesTransactionSearch, setSalesTransactionSearch] = useState("");
   const [salesTransactionOutlet, setSalesTransactionOutlet] = useState("");
@@ -557,13 +579,19 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       const [customerData, brandData, locationData] = await Promise.all([
-        adminApi.customers(appliedCustomerSearch, customerPage, customerLimit, customerSort),
+        adminApi.customers(appliedCustomerSearch, customerPage, customerLimit, customerSort, {
+          from: appliedCustomerFrom,
+          to: appliedCustomerTo,
+        }),
         adminApi.brands(),
         adminApi.locations(),
       ]);
       setCustomers(customerData.items ?? []);
       setCustomerTotalPages(customerData.total_pages ?? 1);
       setCustomerTotal(customerData.total ?? 0);
+      setCustomerPage(customerData.page ?? customerPage);
+      setCustomerPageInput(String(customerData.page ?? customerPage));
+      setCustomerRegistrationRange(customerData.registration_range ?? { earliest: null, latest: null });
       setBrands(brandData);
       setLocations(locationData);
 
@@ -576,7 +604,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setLoading(false);
     }
-  }, [appliedCustomerSearch, customerForm.brand_id, customerLimit, customerPage, customerSort]);
+  }, [appliedCustomerFrom, appliedCustomerSearch, appliedCustomerTo, customerForm.brand_id, customerLimit, customerPage, customerSort]);
 
   const loadSalesTransactions = useCallback(
     async (page = salesTransactionPage) => {
@@ -736,10 +764,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     try {
       setCustomerPage(1);
       setAppliedCustomerSearch(normalizedSearch);
-      const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort);
+      const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort, {
+        from: appliedCustomerFrom,
+        to: appliedCustomerTo,
+      });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
+      setCustomerPageInput("1");
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari customer");
     }
@@ -754,14 +787,88 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         nextPage,
         customerLimit,
         customerSort,
+        { from: appliedCustomerFrom, to: appliedCustomerTo },
       );
       setCustomers(data.items ?? []);
       setCustomerPage(data.page ?? nextPage);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
+      setCustomerPageInput(String(data.page ?? nextPage));
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat customer");
     }
+  }
+
+  async function applyCustomerDateFilter() {
+    if (customerFrom && customerTo && customerFrom > customerTo) {
+      setError("Tanggal mulai tidak boleh melebihi tanggal akhir");
+      return;
+    }
+    setError("");
+    setCustomerPage(1);
+    setCustomerPageInput("1");
+    setAppliedCustomerFrom(customerFrom);
+    setAppliedCustomerTo(customerTo);
+    try {
+      const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, customerSort, {
+        from: customerFrom,
+        to: customerTo,
+      });
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memfilter tanggal customer");
+    }
+  }
+
+  async function resetCustomerDateFilter() {
+    setCustomerFrom("");
+    setCustomerTo("");
+    setCustomerPage(1);
+    setCustomerPageInput("1");
+    setAppliedCustomerFrom("");
+    setAppliedCustomerTo("");
+    setError("");
+    try {
+      const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, customerSort);
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mereset filter customer");
+    }
+  }
+
+  async function changeCustomerLimit(limit: number) {
+    setCustomerLimit(limit);
+    setCustomerPage(1);
+    setCustomerPageInput("1");
+    setError("");
+    try {
+      const data = await adminApi.customers(appliedCustomerSearch, 1, limit, customerSort, {
+        from: appliedCustomerFrom,
+        to: appliedCustomerTo,
+      });
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal mengubah jumlah customer per halaman");
+    }
+  }
+
+  function jumpToCustomerPage() {
+    const requestedPage = Number(customerPageInput);
+    if (!Number.isInteger(requestedPage) || requestedPage < 1) {
+      setCustomerPageInput(String(customerPage));
+      return;
+    }
+    void loadCustomersPage(requestedPage);
   }
 
   const searchCatalog = useCallback(async () => {
@@ -1142,10 +1249,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         1,
         customerLimit,
         nextSort,
+        { from: appliedCustomerFrom, to: appliedCustomerTo },
       );
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
+      setCustomerPageInput("1");
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengurutkan customer");
     }
@@ -2280,6 +2390,30 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   Cari
                 </Button>
               </div>
+              <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+                <FormInput label="Daftar dari" type="date" value={customerFrom} onChange={setCustomerFrom} />
+                <FormInput label="Daftar hingga" type="date" value={customerTo} onChange={setCustomerTo} />
+                <Button type="button" onClick={applyCustomerDateFilter} className="mb-3 rounded-full font-bold">
+                  Terapkan
+                </Button>
+                <Button type="button" variant="outline" onClick={resetCustomerDateFilter} className="mb-3 rounded-full font-bold">
+                  Reset
+                </Button>
+              </div>
+              <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border p-3">
+                  <p className="text-xs font-bold text-muted-foreground">Customer ditemukan</p>
+                  <p className="text-lg font-black">{numberFormat(customerTotal)}</p>
+                </div>
+                <div className="rounded-2xl border border-border p-3">
+                  <p className="text-xs font-bold text-muted-foreground">Pendaftaran paling awal</p>
+                  <p className="text-lg font-black">{customerRegistrationRange.earliest ? dateFormat(customerRegistrationRange.earliest) : "-"}</p>
+                </div>
+                <div className="rounded-2xl border border-border p-3">
+                  <p className="text-xs font-bold text-muted-foreground">Pendaftaran paling akhir</p>
+                  <p className="text-lg font-black">{customerRegistrationRange.latest ? dateFormat(customerRegistrationRange.latest) : "-"}</p>
+                </div>
+              </div>
               <TableScrollArea>
                 <table className="min-w-[1280px] w-full text-sm">
                   <thead>
@@ -2467,11 +2601,22 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </table>
               </TableScrollArea>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <p className="font-semibold text-muted-foreground">
-                  Total {numberFormat(customerTotal)} customer · Halaman {customerPage} dari{" "}
-                  {customerTotalPages}
-                </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
+                  <span>
+                    Menampilkan {customerTotal === 0 ? 0 : (customerPage - 1) * customerLimit + 1}–{Math.min(customerPage * customerLimit, customerTotal)} dari {numberFormat(customerTotal)}
+                  </span>
+                  <label className="flex items-center gap-2">
+                    Per halaman
+                    <select
+                      value={customerLimit}
+                      onChange={(event) => void changeCustomerLimit(Number(event.target.value))}
+                      className="rounded-lg border border-border bg-card px-2 py-1"
+                    >
+                      {[25, 50, 100].map((limit) => <option key={limit} value={limit}>{limit}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -2481,6 +2626,24 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   >
                     Sebelumnya
                   </Button>
+                  {paginationItems(customerPage, customerTotalPages).map((item, index) =>
+                    item === "ellipsis" ? (
+                      <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={item}
+                        type="button"
+                        variant={item === customerPage ? "default" : "outline"}
+                        disabled={saving}
+                        onClick={() => loadCustomersPage(item)}
+                        className="h-9 min-w-9 rounded-full px-3 font-bold"
+                        aria-label={`Halaman ${item}`}
+                        aria-current={item === customerPage ? "page" : undefined}
+                      >
+                        {item}
+                      </Button>
+                    ),
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -2490,6 +2653,24 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   >
                     Berikutnya
                   </Button>
+                  <form
+                    className="ml-1 flex items-center gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      jumpToCustomerPage();
+                    }}
+                  >
+                    <input
+                      type="number"
+                      min={1}
+                      max={customerTotalPages}
+                      value={customerPageInput}
+                      onChange={(event) => setCustomerPageInput(event.target.value)}
+                      className="w-20 rounded-lg border border-border bg-card px-2 py-2"
+                      aria-label="Nomor halaman tujuan"
+                    />
+                    <Button type="submit" variant="outline" className="rounded-full font-bold">Pergi</Button>
+                  </form>
                 </div>
               </div>
             </Panel>
