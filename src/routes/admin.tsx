@@ -13,6 +13,7 @@ import {
   type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
+  type CustomerSalesTransactionReport,
   type AdminLocation,
   type AdminUser,
   type CatalogMenuCategory,
@@ -33,6 +34,7 @@ import {
   Mail,
   Pencil,
   RefreshCw,
+  ReceiptText,
   TicketCheck,
   Trash2,
   UserCheck,
@@ -63,7 +65,7 @@ export const Route = createFileRoute("/admin")({
   component: () => <AdminPage mode="admin" />,
 });
 
-type Tab = "report" | "users" | "customers" | "redeem" | "activity";
+type Tab = "report" | "sales-transactions" | "users" | "customers" | "redeem" | "activity";
 type ConsoleMode = "admin" | "marketing";
 type SortState<T extends string> = { sort_by: T; sort_order: SortOrder };
 type UserSortKey = "email" | "phone_number" | "role" | "created_at";
@@ -446,6 +448,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [customerTotalPages, setCustomerTotalPages] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
   const customerLimit = 20;
+  const [salesTransactions, setSalesTransactions] = useState<CustomerSalesTransactionReport[]>([]);
+  const [salesTransactionSearch, setSalesTransactionSearch] = useState("");
+  const [salesTransactionOutlet, setSalesTransactionOutlet] = useState("");
+  const [salesTransactionFrom, setSalesTransactionFrom] = useState("");
+  const [salesTransactionTo, setSalesTransactionTo] = useState("");
+  const [salesTransactionOutlets, setSalesTransactionOutlets] = useState<string[]>([]);
+  const [salesTransactionPage, setSalesTransactionPage] = useState(1);
+  const [salesTransactionTotalPages, setSalesTransactionTotalPages] = useState(1);
+  const [salesTransactionTotal, setSalesTransactionTotal] = useState(0);
+  const salesTransactionLimit = 20;
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
@@ -566,6 +578,40 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }, [appliedCustomerSearch, customerForm.brand_id, customerLimit, customerPage, customerSort]);
 
+  const loadSalesTransactions = useCallback(
+    async (page = salesTransactionPage) => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await adminApi.customerSalesTransactionReports({
+          search: salesTransactionSearch.trim(),
+          outlet: salesTransactionOutlet,
+          from: salesTransactionFrom,
+          to: salesTransactionTo,
+          page,
+          limit: salesTransactionLimit,
+        });
+        setSalesTransactions(data.items ?? []);
+        setSalesTransactionPage(data.page ?? page);
+        setSalesTransactionTotalPages(data.total_pages ?? 1);
+        setSalesTransactionTotal(data.total ?? 0);
+        setSalesTransactionOutlets(data.outlets ?? []);
+        loadedTabs.current["sales-transactions"] = true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat transaksi customer");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [
+      salesTransactionFrom,
+      salesTransactionOutlet,
+      salesTransactionPage,
+      salesTransactionSearch,
+      salesTransactionTo,
+    ],
+  );
+
   const loadRedeem = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -629,6 +675,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       if (canViewCustomers) await loadCustomers();
       return;
     }
+    if (tab === "sales-transactions") {
+      await loadSalesTransactions();
+      return;
+    }
     if (tab === "activity") {
       if (canViewActivityLogs) await loadActivityLogs();
       return;
@@ -641,6 +691,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     canViewCustomers,
     isMarketingConsole,
     loadCustomers,
+    loadSalesTransactions,
     loadRedeem,
     loadReport,
     loadUsers,
@@ -747,6 +798,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     if (
       isMarketingConsole &&
       tab !== "report" &&
+      tab !== "sales-transactions" &&
       tab !== "customers" &&
       tab !== "redeem"
     ) {
@@ -1488,7 +1540,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </Button>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <TabButton
             active={tab === "report"}
             onClick={() => setTab("report")}
@@ -1516,6 +1568,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             onClick={() => setTab("redeem")}
             icon={<ListChecks className="h-4 w-4" />}
             label="Menu Redeem"
+          />
+          <TabButton
+            active={tab === "sales-transactions"}
+            onClick={() => setTab("sales-transactions")}
+            icon={<ReceiptText className="h-4 w-4" />}
+            label="Transaksi Customer"
           />
           {canViewActivityLogs && (
             <TabButton
@@ -1649,6 +1707,136 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 ])}
                 emptyMessage="Belum ada data aktivasi akun per outlet."
               />
+            </Panel>
+          </section>
+        )}
+
+        {!loading && tab === "sales-transactions" && (
+          <section>
+            <Panel title="Customer Sales Transaction Report">
+              <div className="mb-4 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-end">
+                <FormInput
+                  label="Cari"
+                  value={salesTransactionSearch}
+                  onChange={setSalesTransactionSearch}
+                  placeholder="Nama, telepon, outlet, atau tipe order"
+                />
+                <Select
+                  label="Outlet"
+                  value={salesTransactionOutlet}
+                  onChange={setSalesTransactionOutlet}
+                  options={[
+                    { value: "", label: "Semua outlet" },
+                    ...salesTransactionOutlets.map((outlet) => ({ value: outlet, label: outlet })),
+                  ]}
+                />
+                <FormInput
+                  label="Dari tanggal"
+                  type="date"
+                  value={salesTransactionFrom}
+                  onChange={setSalesTransactionFrom}
+                />
+                <FormInput
+                  label="Hingga tanggal"
+                  type="date"
+                  value={salesTransactionTo}
+                  onChange={setSalesTransactionTo}
+                />
+                <Button
+                  onClick={() => loadSalesTransactions(1)}
+                  disabled={loading}
+                  className="mb-3 rounded-full font-bold"
+                >
+                  Terapkan
+                </Button>
+              </div>
+              <TableScrollArea>
+                <table className="min-w-[1450px] w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="p-2">ID Transaksi</th>
+                      <th className="p-2">Nama Pelanggan</th>
+                      <th className="p-2">No Telepon</th>
+                      <th className="p-2">Lokasi Dibuat</th>
+                      <th className="p-2">Pelanggan Sejak</th>
+                      <th className="p-2">Poin Pelanggan</th>
+                      <th className="p-2">Tanggal Transaksi</th>
+                      <th className="p-2">Nama Outlet</th>
+                      <th className="p-2">Tipe Order</th>
+                      <th className="p-2 text-right">Pembelian per Order</th>
+                      <th className="p-2 text-right">Penambahan Poin</th>
+                      <th className="p-2 text-right">Penggunaan Poin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salesTransactions.length === 0 && (
+                      <tr className="border-t border-border">
+                        <td colSpan={12} className="p-8 text-center font-bold">
+                          Belum ada data transaksi customer yang sesuai.
+                        </td>
+                      </tr>
+                    )}
+                    {salesTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-t border-border align-top">
+                        <td className="p-2 font-mono text-xs">
+                          {transaction.runchise_sales_transaction_id}
+                        </td>
+                        <td className="p-2 font-bold">{transaction.nama_pelanggan ?? "-"}</td>
+                        <td className="p-2">{transaction.no_telepon ?? "-"}</td>
+                        <td className="p-2">{transaction.lokasi_dibuat ?? "-"}</td>
+                        <td className="p-2">
+                          {transaction.pelanggan_sejak
+                            ? dateFormat(transaction.pelanggan_sejak)
+                            : "-"}
+                        </td>
+                        <td className="p-2">{numberFormat(transaction.poin_pelanggan)}</td>
+                        <td className="p-2">
+                          {transaction.tanggal_transaksi
+                            ? dateTimeFormat(transaction.tanggal_transaksi)
+                            : "-"}
+                        </td>
+                        <td className="p-2">{transaction.nama_outlet ?? "-"}</td>
+                        <td className="p-2">{transaction.tipe_order ?? "-"}</td>
+                        <td className="p-2 text-right">
+                          {currencyFormat(toNumber(transaction.pembelian_per_order))}
+                        </td>
+                        <td className="p-2 text-right">
+                          {numberFormat(transaction.penambahan_poin)}
+                        </td>
+                        <td className="p-2 text-right">
+                          {numberFormat(toNumber(transaction.penggunaan_poin))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableScrollArea>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <p className="font-semibold text-muted-foreground">
+                  Total {numberFormat(salesTransactionTotal)} transaksi · Halaman{" "}
+                  {salesTransactionPage} dari {salesTransactionTotalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={salesTransactionPage <= 1}
+                    onClick={() => loadSalesTransactions(salesTransactionPage - 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={salesTransactionPage >= salesTransactionTotalPages}
+                    onClick={() => loadSalesTransactions(salesTransactionPage + 1)}
+                    className="rounded-full font-bold"
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
+              </div>
             </Panel>
           </section>
         )}

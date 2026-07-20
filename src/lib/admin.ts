@@ -292,6 +292,36 @@ export type AdminActivityLogPage = {
   total_pages: number;
 };
 
+export type CustomerSalesTransactionReport = {
+  id: number;
+  runchise_sales_transaction_id: number;
+  runchise_customer_id: number | null;
+  customer_id: number | null;
+  runchise_location_id: number | null;
+  nama_pelanggan: string | null;
+  no_telepon: string | null;
+  lokasi_dibuat: string | null;
+  pelanggan_sejak: string | null;
+  poin_pelanggan: number;
+  tanggal_transaksi: string | null;
+  nama_outlet: string | null;
+  tipe_order: string | null;
+  pembelian_per_order: string | number;
+  penambahan_poin: number;
+  penggunaan_poin: string | number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerSalesTransactionReportPage = {
+  items: CustomerSalesTransactionReport[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  outlets: string[];
+};
+
 export type SortOrder = "asc" | "desc";
 
 export type AdminSort = {
@@ -300,6 +330,28 @@ export type AdminSort = {
 };
 
 export const adminApi = {
+  customerSalesTransactionReports: (
+    filters: {
+      search?: string;
+      outlet?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const params = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      limit: String(filters.limit ?? 20),
+    });
+    if (filters.search) params.set("search", filters.search);
+    if (filters.outlet) params.set("outlet", filters.outlet);
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
+    return adminRequest<CustomerSalesTransactionReportPage>(
+      `/customer-sales-transaction-reports?${params.toString()}`,
+    );
+  },
   activityLogs: (
     filters: {
       search?: string;
