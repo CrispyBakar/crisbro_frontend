@@ -16,10 +16,21 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
     },
   });
 
-  const data = await res.json().catch(() => null);
+  const responseText = await res.text();
+  let data: any = null;
+  try {
+    data = responseText ? JSON.parse(responseText) : null;
+  } catch {
+    data = null;
+  }
 
   if (!res.ok) {
-    throw new Error(data?.message || data?.error || "Request admin gagal");
+    const detail = data?.message || data?.error;
+    throw new Error(
+      detail
+        ? `HTTP ${res.status} — ${detail}`
+        : `HTTP ${res.status} — respons backend tidak valid`,
+    );
   }
 
   return data as T;
@@ -189,9 +200,12 @@ export type ActivationEmailResult = {
 
 export type AdminCustomer = {
   id: number;
-  user_id: number;
+  user_id?: number;
   name: string;
   runchise_id?: number | null;
+  runchise_created_at?: string | null;
+  runchise_updated_at?: string | null;
+  date_source?: "runchise" | "runchise_sync";
   runchise_location_id?: number | null;
   runchise_sync_status?: "pending" | "synced" | "failed" | "skipped" | string | null;
   runchise_sync_error?: string | null;
@@ -211,19 +225,20 @@ export type AdminCustomer = {
   balance: string | number;
   brand_id: number;
   owner_location_id: number | null;
+  location_ids?: number[];
   customer_locations?: Array<{
     location_id: number;
     location?: AdminLocation;
   }>;
   user: {
-    id: number;
+    id: number | null;
     email: string | null;
     phone_number: string | null;
     role: string;
     activation_status?: string;
     activated_at?: string | null;
   };
-  brand: AdminBrand;
+  brand?: AdminBrand;
   owner_location: AdminLocation | null;
   customer_point: {
     total_point: number;
@@ -265,6 +280,26 @@ export type AdminCustomerPage = {
     earliest: string | null;
     latest: string | null;
   };
+};
+
+export type CustomerTimestampSyncJob = {
+  id: number;
+  status: "queued" | "running" | "completed" | "failed";
+  current_location: number | null;
+  current_page: number;
+  target_total: number;
+  total_api: number;
+  processed: number;
+  updated: number;
+  unchanged: number;
+  unmatched: number;
+  invalid: number;
+  locations_total: number;
+  locations_completed: number;
+  error: string | null;
+  started_at: string;
+  heartbeat_at: string;
+  finished_at: string | null;
 };
 
 export type AdminActivityLog = {
@@ -412,6 +447,19 @@ export const adminApi = {
     if (filters.to) params.set("to", filters.to);
     return adminRequest<AdminCustomerPage>(`/customers?${params.toString()}`);
   },
+  syncCustomerTimestamps: () =>
+    adminRequest<{
+      message: string;
+      created: boolean;
+      job: CustomerTimestampSyncJob;
+    }>("/sync/customer-timestamps", { method: "POST" }),
+  customerTimestampSyncStatus: () =>
+    adminRequest<{ job: CustomerTimestampSyncJob | null }>("/sync/customer-timestamps/status"),
+  processCustomerTimestampSync: () =>
+    adminRequest<{
+      status: "idle" | "already_running" | "running" | "completed";
+      job: CustomerTimestampSyncJob | null;
+    }>("/sync/customer-timestamps/process", { method: "POST" }),
   createCustomer: (payload: AdminCustomerPayload) =>
     adminRequest<AdminCustomer>("/customers", { method: "POST", body: JSON.stringify(payload) }),
   updateCustomer: (id: number, payload: AdminCustomerPayload) =>

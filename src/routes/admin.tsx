@@ -13,6 +13,7 @@ import {
   type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
+  type CustomerTimestampSyncJob,
   type CustomerSalesTransactionReport,
   type AdminLocation,
   type AdminUser,
@@ -78,7 +79,8 @@ type CustomerSortKey =
   | "status"
   | "activation_status"
   | "runchise_sync_status"
-  | "created_at";
+  | "created_at"
+  | "updated_at";
 type RedeemSortKey = "menu" | "price" | "points" | "status" | "sort_order" | "created_at";
 
 const emptyUserForm = {
@@ -265,7 +267,8 @@ function actualCustomerChangedFields(log?: AdminActivityLog) {
 function metadataLabels(value: unknown, log?: AdminActivityLog) {
   if (!isRecord(value)) return [];
 
-  const labels: Array<{ label: string; value: string; tone?: "success" | "warning" | "danger" }> = [];
+  const labels: Array<{ label: string; value: string; tone?: "success" | "warning" | "danger" }> =
+    [];
   const sync = value.runchise_sync;
   if (isRecord(sync)) {
     const status = typeof sync.status === "string" ? sync.status : "";
@@ -372,6 +375,7 @@ function ActivityMetadata({ log }: { log: AdminActivityLog }) {
 }
 
 function accountStatusLabel(status?: string | null) {
+  if (status === "not_linked") return "Belum Terhubung";
   return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
 }
 
@@ -396,6 +400,7 @@ function isValidEmail(value: string) {
 }
 
 function runchiseSyncLabel(status?: string | null) {
+  if (status === "not_linked") return "Belum Terhubung";
   if (status === "synced") return "Runchise OK";
   if (status === "failed") return "Sync Gagal";
   if (status === "skipped") return "Belum Sync";
@@ -410,7 +415,7 @@ function runchiseSyncClassName(status?: string | null) {
 }
 
 function getCustomerSyncStatus(customer: AdminCustomer) {
-  return customer.runchise_sync?.status ?? customer.runchise_sync_status ?? "pending";
+  return customer.runchise_sync?.status ?? customer.runchise_sync_status ?? "not_linked";
 }
 
 function getCustomerSyncMessage(customer: AdminCustomer) {
@@ -433,6 +438,9 @@ function getCustomerSyncNotice(customer: AdminCustomer) {
   }
   if (status === "skipped") {
     return "Sync Runchise dilewati.";
+  }
+  if (status === "not_linked") {
+    return "Customer Runchise belum terhubung ke data lokal.";
   }
 
   return null;
@@ -470,6 +478,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     earliest: string | null;
     latest: string | null;
   }>({ earliest: null, latest: null });
+  const [customerTimestampJob, setCustomerTimestampJob] = useState<CustomerTimestampSyncJob | null>(
+    null,
+  );
   const [salesTransactions, setSalesTransactions] = useState<CustomerSalesTransactionReport[]>([]);
   const [salesTransactionSearch, setSalesTransactionSearch] = useState("");
   const [salesTransactionOutlet, setSalesTransactionOutlet] = useState("");
@@ -520,6 +531,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [activeMobileForm, setActiveMobileForm] = useState<MobileCrudForm | null>(null);
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
+  const timestampWorkerRunning = useRef(false);
+  const notifiedTimestampJob = useRef<number | null>(null);
 
   const currentUser = useMemo(() => getUser(), []);
   const canAccess =
@@ -527,6 +540,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       ? currentUser?.role === "admin" || currentUser?.role === "marketing"
       : currentUser?.role === "admin";
   const canManageUsers = currentUser?.role === "admin";
+  const canSyncCustomers = currentUser?.role === "admin" || currentUser?.role === "staff";
   const canViewCustomers = mode === "admin" || mode === "marketing";
   const canViewActivityLogs = currentUser?.role === "admin" && mode === "admin";
   const isMarketingConsole = mode === "marketing";
@@ -592,7 +606,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setCustomerTotal(customerData.total ?? 0);
       setCustomerPage(customerData.page ?? customerPage);
       setCustomerPageInput(String(customerData.page ?? customerPage));
-      setCustomerRegistrationRange(customerData.registration_range ?? { earliest: null, latest: null });
+      setCustomerRegistrationRange(
+        customerData.registration_range ?? { earliest: null, latest: null },
+      );
       setBrands(brandData);
       setLocations(locationData);
 
@@ -605,7 +621,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setLoading(false);
     }
-  }, [appliedCustomerFrom, appliedCustomerSearch, appliedCustomerTo, customerForm.brand_id, customerLimit, customerPage, customerSort]);
+  }, [
+    appliedCustomerFrom,
+    appliedCustomerSearch,
+    appliedCustomerTo,
+    customerForm.brand_id,
+    customerLimit,
+    customerPage,
+    customerSort,
+  ]);
 
   const loadSalesTransactions = useCallback(
     async (page = salesTransactionPage, limit = salesTransactionLimit) => {
@@ -755,6 +779,85 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     return () => window.clearTimeout(timer);
   }, [canViewCustomers, customerSearch, tab]);
 
+  useEffect(() => {
+    if (tab !== "customers" || !canSyncCustomers) return;
+
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const refreshCustomerTableAfterSync = async () => {
+      const data = await adminApi.customers(
+        appliedCustomerSearch,
+        customerPage,
+        customerLimit,
+        customerSort,
+        { from: appliedCustomerFrom, to: appliedCustomerTo },
+      );
+      if (cancelled) return;
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+    };
+
+    const poll = async () => {
+      try {
+        const statusResult = await adminApi.customerTimestampSyncStatus();
+        if (cancelled) return;
+        let job = statusResult.job;
+        setCustomerTimestampJob(job);
+
+        if (
+          job &&
+          (job.status === "queued" || job.status === "running") &&
+          !timestampWorkerRunning.current
+        ) {
+          timestampWorkerRunning.current = true;
+          try {
+            const workerResult = await adminApi.processCustomerTimestampSync();
+            if (!cancelled && workerResult.job) {
+              job = workerResult.job;
+              setCustomerTimestampJob(job);
+            }
+          } finally {
+            timestampWorkerRunning.current = false;
+          }
+        }
+
+        if (job?.status === "completed" && notifiedTimestampJob.current !== job.id) {
+          notifiedTimestampJob.current = job.id;
+          await refreshCustomerTableAfterSync();
+          if (!cancelled) {
+            toast.success(`Sinkronisasi selesai: ${numberFormat(job.updated)} customer diperbarui`);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Gagal membaca progres sinkronisasi tanggal",
+          );
+        }
+      } finally {
+        if (!cancelled) timer = window.setTimeout(poll, 5_000);
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [
+    appliedCustomerFrom,
+    appliedCustomerSearch,
+    appliedCustomerTo,
+    canSyncCustomers,
+    customerLimit,
+    customerPage,
+    customerSort,
+    tab,
+  ]);
+
   async function searchUsers() {
     const normalizedSearch = userSearch.trim();
     setError("");
@@ -816,6 +919,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat customer");
+    }
+  }
+
+  async function refreshCustomerTimestampsFromRunchise() {
+    setSaving(true);
+    setError("");
+    try {
+      const result = await adminApi.syncCustomerTimestamps();
+      setCustomerTimestampJob(result.job);
+      toast.success(
+        result.created
+          ? "Job sinkronisasi tanggal Runchise dimulai"
+          : "Sinkronisasi tanggal Runchise sedang berjalan",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gagal menyinkronkan customer Runchise";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -1074,7 +1197,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setUserForm(emptyUserForm);
       setActiveMobileForm(null);
       setUsers(await adminApi.users(appliedUserSearch, userSort));
-      toast.success(isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan");
+      toast.success(
+        isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan",
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyimpan user";
       setError(message);
@@ -1160,7 +1285,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           ? Number(customerForm.owner_location_id)
           : null,
         location_ids: customerForm.owner_location_id
-          ? Array.from(new Set([...customerForm.location_ids, Number(customerForm.owner_location_id)]))
+          ? Array.from(
+              new Set([...customerForm.location_ids, Number(customerForm.owner_location_id)]),
+            )
           : customerForm.location_ids,
         total_point: isEditing ? Number(customerForm.total_point) : 0,
         available_point: isEditing ? Number(customerForm.available_point) : 0,
@@ -1263,13 +1390,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setCustomerPage(1);
     setError("");
     try {
-      const data = await adminApi.customers(
-        appliedCustomerSearch,
-        1,
-        customerLimit,
-        nextSort,
-        { from: appliedCustomerFrom, to: appliedCustomerTo },
-      );
+      const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, nextSort, {
+        from: appliedCustomerFrom,
+        to: appliedCustomerTo,
+      });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
@@ -1359,7 +1483,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setActiveMobileForm(null);
       await loadRedeem();
       setSummary(await adminApi.summary(reportFilters));
-      toast.success(isEditing ? "Menu redeem berhasil diperbarui" : "Menu redeem berhasil ditambahkan");
+      toast.success(
+        isEditing ? "Menu redeem berhasil diperbarui" : "Menu redeem berhasil ditambahkan",
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyimpan menu redeem";
       setError(message);
@@ -1571,7 +1697,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       </CustomerFormGroup>
 
       {customerLoyaltyFields}
-      <Button onClick={saveCustomer} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+      <Button
+        onClick={saveCustomer}
+        disabled={saving}
+        className="mt-3 w-full rounded-full font-bold"
+      >
         Simpan Customer
       </Button>
     </>
@@ -1624,7 +1754,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         checked={redeemForm.is_active}
         onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
       />
-      <Button onClick={saveRedeemItem} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+      <Button
+        onClick={saveRedeemItem}
+        disabled={saving}
+        className="mt-3 w-full rounded-full font-bold"
+      >
         Simpan Item
       </Button>
     </>
@@ -1806,13 +1940,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <RedemptionHistoryChart data={summary.redemption_trend ?? []} />
               <div className="mt-5">
                 <DataTable
-                  headers={[
-                    "Tanggal",
-                    "Reward/Menu",
-                    "Outlet",
-                    "Poin",
-                    "Harga Jual",
-                  ]}
+                  headers={["Tanggal", "Reward/Menu", "Outlet", "Poin", "Harga Jual"]}
                   rows={(summary.redemption_history ?? []).map((item) => [
                     dateFormat(item.redeemed_at),
                     item.reward_name,
@@ -1943,7 +2071,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                 <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
                   <span>
-                    Menampilkan {salesTransactionTotal === 0 ? 0 : (salesTransactionPage - 1) * salesTransactionLimit + 1}–{Math.min(salesTransactionPage * salesTransactionLimit, salesTransactionTotal)} dari {numberFormat(salesTransactionTotal)} transaksi
+                    Menampilkan{" "}
+                    {salesTransactionTotal === 0
+                      ? 0
+                      : (salesTransactionPage - 1) * salesTransactionLimit + 1}
+                    –{Math.min(salesTransactionPage * salesTransactionLimit, salesTransactionTotal)}{" "}
+                    dari {numberFormat(salesTransactionTotal)} transaksi
                   </span>
                   <label className="flex items-center gap-2">
                     Per halaman
@@ -1952,7 +2085,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       onChange={(event) => changeSalesTransactionLimit(Number(event.target.value))}
                       className="rounded-lg border border-border bg-card px-2 py-1"
                     >
-                      {[25, 50, 100].map((limit) => <option key={limit} value={limit}>{limit}</option>)}
+                      {[25, 50, 100].map((limit) => (
+                        <option key={limit} value={limit}>
+                          {limit}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -1966,23 +2103,29 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   >
                     Sebelumnya
                   </Button>
-                  {paginationItems(salesTransactionPage, salesTransactionTotalPages).map((item, index) =>
-                    item === "ellipsis" ? (
-                      <span key={`sales-ellipsis-${index}`} className="px-1 text-muted-foreground">…</span>
-                    ) : (
-                      <Button
-                        key={item}
-                        type="button"
-                        variant={item === salesTransactionPage ? "default" : "outline"}
-                        disabled={loading}
-                        onClick={() => loadSalesTransactions(item)}
-                        className="h-9 min-w-9 rounded-full px-3 font-bold"
-                        aria-label={`Halaman transaksi ${item}`}
-                        aria-current={item === salesTransactionPage ? "page" : undefined}
-                      >
-                        {item}
-                      </Button>
-                    ),
+                  {paginationItems(salesTransactionPage, salesTransactionTotalPages).map(
+                    (item, index) =>
+                      item === "ellipsis" ? (
+                        <span
+                          key={`sales-ellipsis-${index}`}
+                          className="px-1 text-muted-foreground"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <Button
+                          key={item}
+                          type="button"
+                          variant={item === salesTransactionPage ? "default" : "outline"}
+                          disabled={loading}
+                          onClick={() => loadSalesTransactions(item)}
+                          className="h-9 min-w-9 rounded-full px-3 font-bold"
+                          aria-label={`Halaman transaksi ${item}`}
+                          aria-current={item === salesTransactionPage ? "page" : undefined}
+                        >
+                          {item}
+                        </Button>
+                      ),
                   )}
                   <Button
                     type="button"
@@ -2003,11 +2146,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           <section>
             <Panel title="Activity Log Admin & Marketing">
               <div className="mb-4 grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto] md:items-end">
-                <FormInput
-                  label="Search"
-                  value={activitySearch}
-                  onChange={setActivitySearch}
-                />
+                <FormInput label="Search" value={activitySearch} onChange={setActivitySearch} />
                 <FormInput
                   label="Action"
                   value={activityAction}
@@ -2026,12 +2165,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   value={activityFrom}
                   onChange={setActivityFrom}
                 />
-                <FormInput
-                  label="Hingga"
-                  type="date"
-                  value={activityTo}
-                  onChange={setActivityTo}
-                />
+                <FormInput label="Hingga" type="date" value={activityTo} onChange={setActivityTo} />
                 <Button
                   onClick={() => loadActivityLogs(1)}
                   disabled={loading}
@@ -2072,10 +2206,17 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       <tr key={log.id} className="border-t border-border align-top">
                         <td className="p-2 whitespace-nowrap">{dateTimeFormat(log.created_at)}</td>
                         <td className="p-2">
-                          <p className="truncate font-bold" title={log.actor?.email ?? log.actor?.phone_number ?? undefined}>
-                            {log.actor?.email ?? log.actor?.phone_number ?? `User #${log.actor_user_id ?? "-"}`}
+                          <p
+                            className="truncate font-bold"
+                            title={log.actor?.email ?? log.actor?.phone_number ?? undefined}
+                          >
+                            {log.actor?.email ??
+                              log.actor?.phone_number ??
+                              `User #${log.actor_user_id ?? "-"}`}
                           </p>
-                          <p className="text-xs text-muted-foreground">{log.actor_role ?? log.actor?.role ?? "-"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {log.actor_role ?? log.actor?.role ?? "-"}
+                          </p>
                         </td>
                         <td className="p-2 break-words font-bold">{log.action}</td>
                         <td className="p-2 whitespace-nowrap">
@@ -2085,7 +2226,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td className="p-2">
                           <ActivityMetadata log={log} />
                         </td>
-                        <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">{log.ip_address ?? "-"}</td>
+                        <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">
+                          {log.ip_address ?? "-"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -2093,7 +2236,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               </TableScrollArea>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                 <p className="font-semibold text-muted-foreground">
-                  Total {numberFormat(activityTotal)} log · Halaman {activityPage} dari {activityTotalPages}
+                  Total {numberFormat(activityTotal)} log · Halaman {activityPage} dari{" "}
+                  {activityTotalPages}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -2123,55 +2267,55 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "users" && canManageUsers && (
           <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
             <div className="hidden md:block">
-            <Panel title={userForm.id ? "Edit User" : "Tambah User"}>
-              <FormInput
-                label="Email"
-                type="email"
-                value={userForm.email}
-                onChange={(v) => setUserForm({ ...userForm, email: v })}
-              />
-              <FormInput
-                label="Nomor Telepon"
-                value={userForm.phone_number}
-                onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
-              />
-              <FormInput
-                label={userForm.id ? "Password Baru" : "Password"}
-                type="password"
-                required={!userForm.id}
-                value={userForm.password}
-                onChange={(v) => setUserForm({ ...userForm, password: v })}
-              />
-              <Select
-                label="Role"
-                required
-                value={userForm.role}
-                onChange={(v) => setUserForm({ ...userForm, role: v })}
-                options={[
-                  { value: "marketing", label: "Marketing" },
-                  { value: "admin", label: "Admin" },
-                ]}
-              />
-              <div className="mt-3 flex gap-2">
-                <Button
-                  onClick={saveUser}
-                  disabled={saving}
-                  className="flex-1 rounded-full font-bold"
-                >
-                  Simpan User
-                </Button>
-                {userForm.id > 0 && (
+              <Panel title={userForm.id ? "Edit User" : "Tambah User"}>
+                <FormInput
+                  label="Email"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(v) => setUserForm({ ...userForm, email: v })}
+                />
+                <FormInput
+                  label="Nomor Telepon"
+                  value={userForm.phone_number}
+                  onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
+                />
+                <FormInput
+                  label={userForm.id ? "Password Baru" : "Password"}
+                  type="password"
+                  required={!userForm.id}
+                  value={userForm.password}
+                  onChange={(v) => setUserForm({ ...userForm, password: v })}
+                />
+                <Select
+                  label="Role"
+                  required
+                  value={userForm.role}
+                  onChange={(v) => setUserForm({ ...userForm, role: v })}
+                  options={[
+                    { value: "marketing", label: "Marketing" },
+                    { value: "admin", label: "Admin" },
+                  ]}
+                />
+                <div className="mt-3 flex gap-2">
                   <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setUserForm(emptyUserForm)}
-                    className="rounded-full font-bold"
+                    onClick={saveUser}
+                    disabled={saving}
+                    className="flex-1 rounded-full font-bold"
                   >
-                    Batal
+                    Simpan User
                   </Button>
-                )}
-              </div>
-            </Panel>
+                  {userForm.id > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setUserForm(emptyUserForm)}
+                      className="rounded-full font-bold"
+                    >
+                      Batal
+                    </Button>
+                  )}
+                </div>
+              </Panel>
             </div>
             <Panel title="Daftar User Admin">
               <Button
@@ -2281,146 +2425,220 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "customers" && (
           <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
             <div className="hidden md:block">
-            <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
-              <CustomerFormGroup title="Identitas">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <FormInput
-                    label="Nama"
-                    required
-                    value={customerForm.name}
-                    onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
-                  />
-                  <FormInput
-                    label="Nomor Telepon"
-                    required
-                    value={customerForm.phone_number}
-                    onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
-                  />
-                  <FormInput
-                    label="Email"
-                    required
-                    type="email"
-                    value={customerForm.email}
-                    onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
-                  />
-                  <Select
-                    label="Gender"
-                    value={customerForm.gender}
-                    onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
-                    options={[
-                      { value: "unknown", label: "Unknown" },
-                      { value: "male", label: "Male" },
-                      { value: "female", label: "Female" },
-                    ]}
-                  />
-                  <FormInput
-                    label="Tanggal Lahir"
-                    type="date"
-                    value={customerForm.dob}
-                    onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
-                  />
-                </div>
-              </CustomerFormGroup>
+              <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
+                <CustomerFormGroup title="Identitas">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormInput
+                      label="Nama"
+                      required
+                      value={customerForm.name}
+                      onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
+                    />
+                    <FormInput
+                      label="Nomor Telepon"
+                      required
+                      value={customerForm.phone_number}
+                      onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
+                    />
+                    <FormInput
+                      label="Email"
+                      required
+                      type="email"
+                      value={customerForm.email}
+                      onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
+                    />
+                    <Select
+                      label="Gender"
+                      value={customerForm.gender}
+                      onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
+                      options={[
+                        { value: "unknown", label: "Unknown" },
+                        { value: "male", label: "Male" },
+                        { value: "female", label: "Female" },
+                      ]}
+                    />
+                    <FormInput
+                      label="Tanggal Lahir"
+                      type="date"
+                      value={customerForm.dob}
+                      onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
+                    />
+                  </div>
+                </CustomerFormGroup>
 
-              <CustomerFormGroup title="Lokasi">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Select
-                    label="Brand"
-                    required
-                    value={String(customerForm.brand_id)}
-                    onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
-                    options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
-                      (brand) => ({
-                        value: String(brand.id),
-                        label: brand.name,
-                      }),
-                    )}
-                  />
-                  <Select
-                    label="Owner Outlet"
-                    required
-                    value={String(customerForm.owner_location_id)}
-                    onChange={(v) => {
-                      const ownerId = Number(v);
-                      setCustomerForm({
-                        ...customerForm,
-                        owner_location_id: ownerId,
-                        location_ids:
-                          ownerId > 0
-                            ? Array.from(new Set([...customerForm.location_ids, ownerId]))
-                            : customerForm.location_ids,
-                      });
-                    }}
-                    options={[
-                      { value: "0", label: "Tanpa outlet" },
-                      ...(locations ?? []).map((location) => ({
-                        value: String(location.id),
-                        label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
-                      })),
-                    ]}
-                  />
-                </div>
-                <FormInput
-                  label="Alamat"
-                  value={customerForm.address}
-                  onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
-                />
-                <div className="grid gap-3 md:grid-cols-2">
+                <CustomerFormGroup title="Lokasi">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Select
+                      label="Brand"
+                      required
+                      value={String(customerForm.brand_id)}
+                      onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
+                      options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
+                        (brand) => ({
+                          value: String(brand.id),
+                          label: brand.name,
+                        }),
+                      )}
+                    />
+                    <Select
+                      label="Owner Outlet"
+                      required
+                      value={String(customerForm.owner_location_id)}
+                      onChange={(v) => {
+                        const ownerId = Number(v);
+                        setCustomerForm({
+                          ...customerForm,
+                          owner_location_id: ownerId,
+                          location_ids:
+                            ownerId > 0
+                              ? Array.from(new Set([...customerForm.location_ids, ownerId]))
+                              : customerForm.location_ids,
+                        });
+                      }}
+                      options={[
+                        { value: "0", label: "Tanpa outlet" },
+                        ...(locations ?? []).map((location) => ({
+                          value: String(location.id),
+                          label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
+                        })),
+                      ]}
+                    />
+                  </div>
                   <FormInput
-                    label="Kota"
-                    value={customerForm.city}
-                    onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
+                    label="Alamat"
+                    value={customerForm.address}
+                    onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
                   />
-                  <FormInput
-                    label="Provinsi"
-                    value={customerForm.province}
-                    onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
-                  />
-                  <FormInput
-                    label="Negara"
-                    value={customerForm.country}
-                    onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
-                  />
-                  <FormInput
-                    label="Kode Pos"
-                    value={customerForm.postal_code}
-                    onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
-                  />
-                </div>
-              </CustomerFormGroup>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <FormInput
+                      label="Kota"
+                      value={customerForm.city}
+                      onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
+                    />
+                    <FormInput
+                      label="Provinsi"
+                      value={customerForm.province}
+                      onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
+                    />
+                    <FormInput
+                      label="Negara"
+                      value={customerForm.country}
+                      onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
+                    />
+                    <FormInput
+                      label="Kode Pos"
+                      value={customerForm.postal_code}
+                      onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
+                    />
+                  </div>
+                </CustomerFormGroup>
 
-              {customerLoyaltyFields}
-              <div className="mt-3 flex gap-2">
+                {customerLoyaltyFields}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    onClick={saveCustomer}
+                    disabled={saving}
+                    className="flex-1 rounded-full font-bold"
+                  >
+                    Simpan Customer
+                  </Button>
+                  {customerForm.id > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 })
+                      }
+                      className="rounded-full font-bold"
+                    >
+                      Batal
+                    </Button>
+                  )}
+                </div>
+              </Panel>
+            </div>
+            <Panel title="Daftar Customer">
+              <div className="mb-4 flex gap-2">
                 <Button
-                  onClick={saveCustomer}
-                  disabled={saving}
-                  className="flex-1 rounded-full font-bold"
+                  type="button"
+                  onClick={openCreateCustomerForm}
+                  className="w-full rounded-full font-bold md:hidden"
                 >
-                  Simpan Customer
+                  Tambah Customer
                 </Button>
-                {customerForm.id > 0 && (
+                {canSyncCustomers && (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() =>
-                      setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 })
+                    disabled={
+                      saving ||
+                      customerTimestampJob?.status === "queued" ||
+                      customerTimestampJob?.status === "running"
                     }
-                    className="rounded-full font-bold"
+                    onClick={() => void refreshCustomerTimestampsFromRunchise()}
+                    className="ml-auto rounded-full font-bold"
                   >
-                    Batal
+                    <RefreshCw
+                      className={`mr-2 h-4 w-4 ${
+                        saving ||
+                        customerTimestampJob?.status === "queued" ||
+                        customerTimestampJob?.status === "running"
+                          ? "animate-spin"
+                          : ""
+                      }`}
+                    />
+                    Sinkronkan Tanggal Runchise
                   </Button>
                 )}
               </div>
-            </Panel>
-            </div>
-            <Panel title="Daftar Customer">
-              <Button
-                type="button"
-                onClick={openCreateCustomerForm}
-                className="mb-4 w-full rounded-full font-bold md:hidden"
-              >
-                Tambah Customer
-              </Button>
+              {customerTimestampJob && (
+                <div className="mb-4 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-black">
+                      {customerTimestampJob.status === "completed"
+                        ? "Sinkronisasi tanggal selesai"
+                        : customerTimestampJob.status === "running"
+                          ? "Sinkronisasi tanggal sedang berjalan"
+                          : "Sinkronisasi tanggal menunggu worker"}
+                    </p>
+                    <span className="font-semibold text-muted-foreground">
+                      Job #{customerTimestampJob.id}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          customerTimestampJob.locations_total > 0
+                            ? (customerTimestampJob.locations_completed /
+                                customerTimestampJob.locations_total) *
+                                100
+                            : 0,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
+                    <span>Diproses: {numberFormat(customerTimestampJob.processed)} record API</span>
+                    <span>Diperbarui: {numberFormat(customerTimestampJob.updated)} customer</span>
+                    <span>
+                      Outlet: {numberFormat(customerTimestampJob.locations_completed)}/
+                      {numberFormat(customerTimestampJob.locations_total)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Aktivitas terakhir: {dateTimeFormat(customerTimestampJob.heartbeat_at)}
+                  </p>
+                  {customerTimestampJob.error && (
+                    <p className="mt-2 text-xs font-semibold text-red-600">
+                      Percobaan terakhir gagal dan akan dilanjutkan dari cursor tersimpan:{" "}
+                      {customerTimestampJob.error}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="mb-4 flex gap-2">
                 <input
                   value={customerSearch}
@@ -2439,12 +2657,31 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </Button>
               </div>
               <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
-                <FormInput label="Daftar dari" type="date" value={customerFrom} onChange={setCustomerFrom} />
-                <FormInput label="Daftar hingga" type="date" value={customerTo} onChange={setCustomerTo} />
-                <Button type="button" onClick={applyCustomerDateFilter} className="mb-3 rounded-full font-bold">
+                <FormInput
+                  label="Daftar dari"
+                  type="date"
+                  value={customerFrom}
+                  onChange={setCustomerFrom}
+                />
+                <FormInput
+                  label="Daftar hingga"
+                  type="date"
+                  value={customerTo}
+                  onChange={setCustomerTo}
+                />
+                <Button
+                  type="button"
+                  onClick={applyCustomerDateFilter}
+                  className="mb-3 rounded-full font-bold"
+                >
                   Terapkan
                 </Button>
-                <Button type="button" variant="outline" onClick={resetCustomerDateFilter} className="mb-3 rounded-full font-bold">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resetCustomerDateFilter}
+                  className="mb-3 rounded-full font-bold"
+                >
                   Reset
                 </Button>
               </div>
@@ -2455,17 +2692,28 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </div>
                 <div className="rounded-2xl border border-border p-3">
                   <p className="text-xs font-bold text-muted-foreground">Pendaftaran paling awal</p>
-                  <p className="text-lg font-black">{customerRegistrationRange.earliest ? dateFormat(customerRegistrationRange.earliest) : "-"}</p>
+                  <p className="text-lg font-black">
+                    {customerRegistrationRange.earliest
+                      ? dateFormat(customerRegistrationRange.earliest)
+                      : "-"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-border p-3">
-                  <p className="text-xs font-bold text-muted-foreground">Pendaftaran paling akhir</p>
-                  <p className="text-lg font-black">{customerRegistrationRange.latest ? dateFormat(customerRegistrationRange.latest) : "-"}</p>
+                  <p className="text-xs font-bold text-muted-foreground">
+                    Pendaftaran paling akhir
+                  </p>
+                  <p className="text-lg font-black">
+                    {customerRegistrationRange.latest
+                      ? dateFormat(customerRegistrationRange.latest)
+                      : "-"}
+                  </p>
                 </div>
               </div>
               <TableScrollArea>
-                <table className="min-w-[1280px] w-full text-sm">
+                <table className="min-w-[1540px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
+                      <th className="p-2 whitespace-nowrap">ID Runchise</th>
                       <SortableHeader
                         label="Nama"
                         sortKey="name"
@@ -2514,13 +2762,19 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         sort={customerSort}
                         onSort={sortCustomers}
                       />
+                      <SortableHeader
+                        label="Diperbarui di Runchise"
+                        sortKey="updated_at"
+                        sort={customerSort}
+                        onSort={sortCustomers}
+                      />
                       <th className="p-2">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {customers.length === 0 && (
                       <tr className="border-t border-border">
-                        <td colSpan={9} className="p-8 text-center">
+                        <td colSpan={11} className="p-8 text-center">
                           <p className="font-bold text-foreground">
                             {appliedCustomerSearch
                               ? "Kata kunci yang Anda cari tidak ditemukan"
@@ -2535,7 +2789,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       </tr>
                     )}
                     {customers.map((customer) => (
-                      <tr key={customer.id} className="border-t border-border">
+                      <tr
+                        key={customer.runchise_id ?? customer.id}
+                        className="border-t border-border"
+                      >
+                        <td className="p-2 font-mono">{customer.runchise_id ?? "-"}</td>
                         <td className="p-2 font-bold">{customer.name}</td>
                         <td className="p-2">
                           {customer.phone_number ?? "-"}
@@ -2550,6 +2808,18 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                           <span className="text-xs text-muted-foreground">
                             {customer.owner_location?.city ?? customer.city ?? "-"}
                           </span>
+                          {(customer.location_ids?.length ?? 0) > 1 && (
+                            <div
+                              className="mt-1 text-xs text-muted-foreground"
+                              title={customer.customer_locations
+                                ?.map(
+                                  (item) => item.location?.name ?? `Outlet ID ${item.location_id}`,
+                                )
+                                .join(", ")}
+                            >
+                              +{(customer.location_ids?.length ?? 1) - 1} outlet lainnya
+                            </div>
+                          )}
                         </td>
                         <td className="p-2">
                           {numberFormat(customer.customer_point?.available_point ?? 0)}
@@ -2560,7 +2830,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             className={`inline-flex min-w-[104px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
                               customer.user.activation_status === "pending_activation"
                                 ? "bg-amber-500/10 text-amber-700"
-                                : "bg-emerald-500/10 text-emerald-700"
+                                : customer.user.activation_status === "not_linked"
+                                  ? "bg-slate-500/10 text-slate-700"
+                                  : "bg-emerald-500/10 text-emerald-700"
                             }`}
                           >
                             {accountStatusLabel(customer.user.activation_status)}
@@ -2588,7 +2860,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             {getCustomerSyncStatus(customer) !== "synced" && (
                               <button
                                 className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
-                                disabled={saving}
+                                disabled={saving || customer.id <= 0}
                                 onClick={() => retryCustomerRunchiseSync(customer)}
                               >
                                 <RefreshCw className="h-3.5 w-3.5" /> Retry
@@ -2600,47 +2872,59 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                           {customer.created_at ? dateFormat(customer.created_at) : "-"}
                         </td>
                         <td className="p-2">
+                          {customer.runchise_updated_at
+                            ? dateFormat(customer.runchise_updated_at)
+                            : "-"}
+                        </td>
+                        <td className="p-2">
                           <div className="flex items-center gap-3">
-                            {customer.user.activation_status === "pending_activation" && (
-                              <span
-                                className="inline-flex min-w-[130px] flex-col items-start gap-1"
-                                title={
-                                  customer.user.email
-                                    ? "Kirim ulang email aktivasi"
-                                    : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
-                                }
-                              >
-                                <button
-                                  className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                                  disabled={saving || !customer.user.email}
-                                  onClick={() => resendActivation(customer)}
+                            {customer.id > 0 &&
+                              customer.user.activation_status === "pending_activation" && (
+                                <span
+                                  className="inline-flex min-w-[130px] flex-col items-start gap-1"
+                                  title={
+                                    customer.user.email
+                                      ? "Kirim ulang email aktivasi"
+                                      : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
+                                  }
                                 >
-                                  <Mail className="h-4 w-4" /> Aktivasi
-                                </button>
-                                {!customer.user.email && (
                                   <button
-                                    type="button"
-                                    className="inline-flex max-w-[150px] items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
-                                    onClick={() => editCustomer(customer)}
+                                    className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={saving || !customer.user.email}
+                                    onClick={() => resendActivation(customer)}
                                   >
-                                    Tambah email dulu
+                                    <Mail className="h-4 w-4" /> Aktivasi
                                   </button>
-                                )}
-                              </span>
-                            )}
+                                  {!customer.user.email && (
+                                    <button
+                                      type="button"
+                                      className="inline-flex max-w-[150px] items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
+                                      onClick={() => editCustomer(customer)}
+                                    >
+                                      Tambah email dulu
+                                    </button>
+                                  )}
+                                </span>
+                              )}
                             <button
-                              className="inline-flex items-center gap-1 font-bold text-primary"
+                              className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
+                              disabled={customer.id <= 0}
                               onClick={() => editCustomer(customer)}
                             >
                               <Pencil className="h-4 w-4" /> Edit
                             </button>
                             <button
                               className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
-                              disabled={saving}
+                              disabled={saving || customer.id <= 0}
                               onClick={() => requestDeleteCustomer(customer)}
                             >
                               <Trash2 className="h-4 w-4" /> Hapus
                             </button>
+                            {customer.id <= 0 && (
+                              <span className="text-xs font-semibold text-muted-foreground">
+                                Belum terhubung lokal
+                              </span>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -2651,7 +2935,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                 <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
                   <span>
-                    Menampilkan {customerTotal === 0 ? 0 : (customerPage - 1) * customerLimit + 1}–{Math.min(customerPage * customerLimit, customerTotal)} dari {numberFormat(customerTotal)}
+                    Menampilkan {customerTotal === 0 ? 0 : (customerPage - 1) * customerLimit + 1}–
+                    {Math.min(customerPage * customerLimit, customerTotal)} dari{" "}
+                    {numberFormat(customerTotal)}
                   </span>
                   <label className="flex items-center gap-2">
                     Per halaman
@@ -2660,7 +2946,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       onChange={(event) => void changeCustomerLimit(Number(event.target.value))}
                       className="rounded-lg border border-border bg-card px-2 py-1"
                     >
-                      {[25, 50, 100].map((limit) => <option key={limit} value={limit}>{limit}</option>)}
+                      {[25, 50, 100].map((limit) => (
+                        <option key={limit} value={limit}>
+                          {limit}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -2676,7 +2966,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   </Button>
                   {paginationItems(customerPage, customerTotalPages).map((item, index) =>
                     item === "ellipsis" ? (
-                      <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">…</span>
+                      <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">
+                        …
+                      </span>
                     ) : (
                       <Button
                         key={item}
@@ -2717,7 +3009,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       className="w-20 rounded-lg border border-border bg-card px-2 py-2"
                       aria-label="Nomor halaman transaksi tujuan"
                     />
-                    <Button type="submit" variant="outline" className="rounded-full font-bold">Pergi</Button>
+                    <Button type="submit" variant="outline" className="rounded-full font-bold">
+                      Pergi
+                    </Button>
                   </form>
                   <form
                     className="ml-1 flex items-center gap-2"
@@ -2735,7 +3029,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       className="w-20 rounded-lg border border-border bg-card px-2 py-2"
                       aria-label="Nomor halaman tujuan"
                     />
-                    <Button type="submit" variant="outline" className="rounded-full font-bold">Pergi</Button>
+                    <Button type="submit" variant="outline" className="rounded-full font-bold">
+                      Pergi
+                    </Button>
                   </form>
                 </div>
               </div>
@@ -2746,60 +3042,60 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "redeem" && (
           <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
             <div className="hidden md:block">
-            <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
-              <div className="mb-3 flex gap-2">
-                <input
-                  value={catalogSearch}
-                  onChange={(e) => setCatalogSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") searchCatalog();
-                  }}
-                  placeholder="Cari menu..."
-                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                />
-                <Button onClick={searchCatalog} variant="outline">
-                  Cari
-                </Button>
-                {appliedCatalogSearch && (
-                  <Button onClick={resetCatalogSearch} variant="outline">
-                    Reset
+              <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
+                <div className="mb-3 flex gap-2">
+                  <input
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") searchCatalog();
+                    }}
+                    placeholder="Cari menu..."
+                    className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                  />
+                  <Button onClick={searchCatalog} variant="outline">
+                    Cari
                   </Button>
-                )}
-              </div>
-              <CategoryMenuPicker
-                categories={catalogCategories}
-                items={catalogItems}
-                searchQuery={appliedCatalogSearch}
-                selectedItem={selectedCatalogItem}
-                selectedItemId={redeemForm.menu_item_id}
-                onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
-              />
-              <FormInput
-                label="Poin Redeem"
-                type="number"
-                required
-                value={String(redeemForm.points_required)}
-                onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
-              />
-              <FormInput
-                label="Urutan"
-                type="number"
-                value={String(redeemForm.sort_order)}
-                onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
-              />
-              <Toggle
-                label="Aktif"
-                checked={redeemForm.is_active}
-                onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
-              />
-              <Button
-                onClick={saveRedeemItem}
-                disabled={saving}
-                className="mt-3 w-full rounded-full font-bold"
-              >
-                Simpan Item
-              </Button>
-            </Panel>
+                  {appliedCatalogSearch && (
+                    <Button onClick={resetCatalogSearch} variant="outline">
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                <CategoryMenuPicker
+                  categories={catalogCategories}
+                  items={catalogItems}
+                  searchQuery={appliedCatalogSearch}
+                  selectedItem={selectedCatalogItem}
+                  selectedItemId={redeemForm.menu_item_id}
+                  onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
+                />
+                <FormInput
+                  label="Poin Redeem"
+                  type="number"
+                  required
+                  value={String(redeemForm.points_required)}
+                  onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
+                />
+                <FormInput
+                  label="Urutan"
+                  type="number"
+                  value={String(redeemForm.sort_order)}
+                  onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
+                />
+                <Toggle
+                  label="Aktif"
+                  checked={redeemForm.is_active}
+                  onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
+                />
+                <Button
+                  onClick={saveRedeemItem}
+                  disabled={saving}
+                  className="mt-3 w-full rounded-full font-bold"
+                >
+                  Simpan Item
+                </Button>
+              </Panel>
             </div>
             <Panel title="Menu Redeem Aktif dan Draft">
               <Button
@@ -2880,7 +3176,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         <td className="p-2">{numberFormat(item.points_required)}</td>
                         <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
                         <td className="p-2">{numberFormat(item.sort_order)}</td>
-                        <td className="p-2">{item.created_at ? dateFormat(item.created_at) : "-"}</td>
+                        <td className="p-2">
+                          {item.created_at ? dateFormat(item.created_at) : "-"}
+                        </td>
                         <td className="p-2">
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -3538,13 +3836,9 @@ function RedemptionHistoryChart({
               formatter={(value, name) => (
                 <div className="flex min-w-[170px] items-center justify-between gap-4">
                   <span className="text-muted-foreground">
-                    {name === "redemption_count"
-                      ? "Jumlah Redeem"
-                      : "Poin Ditukar"}
+                    {name === "redemption_count" ? "Jumlah Redeem" : "Poin Ditukar"}
                   </span>
-                  <span className="font-mono font-bold">
-                    {numberFormat(Number(value))}
-                  </span>
+                  <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
                 </div>
               )}
             />
@@ -3771,18 +4065,10 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function CustomerFormGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function CustomerFormGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="mb-5 border-t border-border pt-4 first:border-t-0 first:pt-0">
-      <legend className="mb-3 text-sm font-black uppercase text-muted-foreground">
-        {title}
-      </legend>
+      <legend className="mb-3 text-sm font-black uppercase text-muted-foreground">{title}</legend>
       {children}
     </fieldset>
   );
@@ -3867,9 +4153,7 @@ function FormInput({
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-3 block text-sm font-bold">
-      <span className="block">
-        {label}
-      </span>
+      <span className="block">{label}</span>
       <div className="mt-1 w-full rounded-xl border border-border bg-muted/40 px-3 py-2 font-medium text-muted-foreground">
         {value}
       </div>
@@ -3933,10 +4217,7 @@ function Select({
     const left = Math.min(Math.max(rect.left, edgePadding), viewportWidth - width - edgePadding);
     const top = rect.bottom + gap;
     const spaceBelow = viewportHeight - top - edgePadding;
-    const maxHeight = Math.max(
-      72,
-      Math.min(preferredMaxHeight, Math.max(72, spaceBelow)),
-    );
+    const maxHeight = Math.max(72, Math.min(preferredMaxHeight, Math.max(72, spaceBelow)));
 
     setDropdownStyle({ left, top, width, maxHeight });
   }, []);
@@ -4010,33 +4291,32 @@ function Select({
                 className="overflow-y-auto p-1"
                 style={{ maxHeight: dropdownStyle.maxHeight }}
               >
-              {(options ?? []).map((option) => {
-                const selected = option.value === value;
+                {(options ?? []).map((option) => {
+                  const selected = option.value === value;
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      onChange(option.value);
-                      setOpen(false);
-                    }}
-                    className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors ${
-                      selected
-                        ? "bg-primary text-primary-foreground"
-                        : "text-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    <span className="block truncate">{option.label}</span>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        onChange(option.value);
+                        setOpen(false);
+                      }}
+                      className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors ${
+                        selected
+                          ? "bg-primary text-primary-foreground"
+                          : "text-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <span className="block truncate">{option.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-            ,
+            </div>,
             document.body,
           )}
       </span>
@@ -4134,7 +4414,10 @@ function compareTableCell(a = "", b = "") {
 }
 
 function parseTableNumber(value: string) {
-  const normalized = value.replace(/[^\d,-]/g, "").replace(/\./g, "").replace(",", ".");
+  const normalized = value
+    .replace(/[^\d,-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
   if (!normalized || normalized === "-") return null;
   const number = Number(normalized);
   return Number.isFinite(number) ? number : null;
