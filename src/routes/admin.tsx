@@ -13,7 +13,7 @@ import {
   type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
-  type CustomerTimestampSyncJob,
+  type CustomerImportSyncJob,
   type CustomerSalesTransactionReport,
   type AdminLocation,
   type AdminUser,
@@ -478,7 +478,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     earliest: string | null;
     latest: string | null;
   }>({ earliest: null, latest: null });
-  const [customerTimestampJob, setCustomerTimestampJob] = useState<CustomerTimestampSyncJob | null>(
+  const [customerImportJob, setCustomerImportJob] = useState<CustomerImportSyncJob | null>(
     null,
   );
   const [salesTransactions, setSalesTransactions] = useState<CustomerSalesTransactionReport[]>([]);
@@ -531,8 +531,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [activeMobileForm, setActiveMobileForm] = useState<MobileCrudForm | null>(null);
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
-  const timestampWorkerRunning = useRef(false);
-  const notifiedTimestampJob = useRef<number | null>(null);
+  const customerImportWorkerRunning = useRef(false);
+  const notifiedCustomerImportJob = useRef<number | null>(null);
 
   const currentUser = useMemo(() => getUser(), []);
   const canAccess =
@@ -802,39 +802,44 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
     const poll = async () => {
       try {
-        const statusResult = await adminApi.customerTimestampSyncStatus();
+        const statusResult = await adminApi.customerImportSyncStatus();
         if (cancelled) return;
         let job = statusResult.job;
-        setCustomerTimestampJob(job);
+        setCustomerImportJob(job);
 
         if (
           job &&
           (job.status === "queued" || job.status === "running") &&
-          !timestampWorkerRunning.current
+          !customerImportWorkerRunning.current
         ) {
-          timestampWorkerRunning.current = true;
+          customerImportWorkerRunning.current = true;
           try {
-            const workerResult = await adminApi.processCustomerTimestampSync();
+            const workerResult = await adminApi.processCustomerImportSync();
             if (!cancelled && workerResult.job) {
               job = workerResult.job;
-              setCustomerTimestampJob(job);
+              setCustomerImportJob(job);
             }
           } finally {
-            timestampWorkerRunning.current = false;
+            customerImportWorkerRunning.current = false;
           }
         }
 
-        if (job?.status === "completed" && notifiedTimestampJob.current !== job.id) {
-          notifiedTimestampJob.current = job.id;
+        if (
+          (job?.status === "completed" || job?.status === "completed_with_errors") &&
+          notifiedCustomerImportJob.current !== job.id
+        ) {
+          notifiedCustomerImportJob.current = job.id;
           await refreshCustomerTableAfterSync();
           if (!cancelled) {
-            toast.success(`Sinkronisasi selesai: ${numberFormat(job.updated)} customer diperbarui`);
+            toast.success(
+              `Sinkronisasi customer selesai: ${numberFormat(job.created)} dibuat, ${numberFormat(job.updated)} diperbarui`,
+            );
           }
         }
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Gagal membaca progres sinkronisasi tanggal",
+            err instanceof Error ? err.message : "Gagal membaca progres sinkronisasi customer",
           );
         }
       } finally {
@@ -922,16 +927,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }
 
-  async function refreshCustomerTimestampsFromRunchise() {
+  async function startCustomerImportFromRunchise() {
     setSaving(true);
     setError("");
     try {
-      const result = await adminApi.syncCustomerTimestamps();
-      setCustomerTimestampJob(result.job);
+      const result = await adminApi.syncCustomers();
+      setCustomerImportJob(result.job);
       toast.success(
         result.created
-          ? "Job sinkronisasi tanggal Runchise dimulai"
-          : "Sinkronisasi tanggal Runchise sedang berjalan",
+          ? "Job sinkronisasi customer Runchise dimulai"
+          : "Sinkronisasi customer Runchise sedang berjalan",
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Gagal menyinkronkan customer Runchise";
@@ -2572,37 +2577,38 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     variant="outline"
                     disabled={
                       saving ||
-                      customerTimestampJob?.status === "queued" ||
-                      customerTimestampJob?.status === "running"
+                      customerImportJob?.status === "queued" ||
+                      customerImportJob?.status === "running"
                     }
-                    onClick={() => void refreshCustomerTimestampsFromRunchise()}
+                    onClick={() => void startCustomerImportFromRunchise()}
                     className="ml-auto rounded-full font-bold"
                   >
                     <RefreshCw
                       className={`mr-2 h-4 w-4 ${
                         saving ||
-                        customerTimestampJob?.status === "queued" ||
-                        customerTimestampJob?.status === "running"
+                        customerImportJob?.status === "queued" ||
+                        customerImportJob?.status === "running"
                           ? "animate-spin"
                           : ""
                       }`}
                     />
-                    Sinkronkan Tanggal Runchise
+                    Sinkronkan Customer Runchise
                   </Button>
                 )}
               </div>
-              {customerTimestampJob && (
+              {customerImportJob && (
                 <div className="mb-4 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-black">
-                      {customerTimestampJob.status === "completed"
-                        ? "Sinkronisasi tanggal selesai"
-                        : customerTimestampJob.status === "running"
-                          ? "Sinkronisasi tanggal sedang berjalan"
-                          : "Sinkronisasi tanggal menunggu worker"}
+                      {customerImportJob.status === "completed" ||
+                      customerImportJob.status === "completed_with_errors"
+                        ? "Sinkronisasi customer selesai"
+                        : customerImportJob.status === "running"
+                          ? "Sinkronisasi customer sedang berjalan"
+                          : "Sinkronisasi customer menunggu worker"}
                     </p>
                     <span className="font-semibold text-muted-foreground">
-                      Job #{customerTimestampJob.id}
+                      Job #{customerImportJob.id}
                     </span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
@@ -2611,9 +2617,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       style={{
                         width: `${Math.min(
                           100,
-                          customerTimestampJob.locations_total > 0
-                            ? (customerTimestampJob.locations_completed /
-                                customerTimestampJob.locations_total) *
+                          customerImportJob.locations_total > 0
+                            ? (customerImportJob.locations_completed /
+                                customerImportJob.locations_total) *
                                 100
                             : 0,
                         )}%`,
@@ -2621,20 +2627,35 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     />
                   </div>
                   <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
-                    <span>Diproses: {numberFormat(customerTimestampJob.processed)} record API</span>
-                    <span>Diperbarui: {numberFormat(customerTimestampJob.updated)} customer</span>
+                    <span>Diproses: {numberFormat(customerImportJob.processed)} record API</span>
+                    <span>Dibuat: {numberFormat(customerImportJob.created)} customer</span>
+                    <span>Diperbarui: {numberFormat(customerImportJob.updated)} customer</span>
                     <span>
-                      Outlet: {numberFormat(customerTimestampJob.locations_completed)}/
-                      {numberFormat(customerTimestampJob.locations_total)}
+                      Outlet: {numberFormat(customerImportJob.locations_completed)}/
+                      {numberFormat(customerImportJob.locations_total)}
+                    </span>
+                    <span>Fase: {customerImportJob.phase}</span>
+                    <span>Halaman: {numberFormat(customerImportJob.current_page)}</span>
+                    <span>Gagal: {numberFormat(customerImportJob.failed)}</span>
+                    <span>Konflik: {numberFormat(customerImportJob.skipped_conflicts)}</span>
+                    <span>
+                      Terbaru Runchise: {customerImportJob.latest_runchise_created_at
+                        ? dateTimeFormat(customerImportJob.latest_runchise_created_at)
+                        : "-"}
+                    </span>
+                    <span>
+                      Terbaru lokal: {customerImportJob.latest_local_created_at
+                        ? dateTimeFormat(customerImportJob.latest_local_created_at)
+                        : "-"}
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Aktivitas terakhir: {dateTimeFormat(customerTimestampJob.heartbeat_at)}
+                    Aktivitas terakhir: {dateTimeFormat(customerImportJob.heartbeat_at)}
                   </p>
-                  {customerTimestampJob.error && (
+                  {customerImportJob.error && (
                     <p className="mt-2 text-xs font-semibold text-red-600">
                       Percobaan terakhir gagal dan akan dilanjutkan dari cursor tersimpan:{" "}
-                      {customerTimestampJob.error}
+                      {customerImportJob.error}
                     </p>
                   )}
                 </div>

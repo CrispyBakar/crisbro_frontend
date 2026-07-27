@@ -302,6 +302,30 @@ export type CustomerTimestampSyncJob = {
   finished_at: string | null;
 };
 
+export type CustomerImportSyncJob = {
+  id: number;
+  status: "queued" | "running" | "completed" | "completed_with_errors" | "failed";
+  source: string;
+  phase: "recent" | "backfill" | "completed";
+  current_location: number | null;
+  current_page: number;
+  total_api: number;
+  processed: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped_conflicts: number;
+  failed: number;
+  latest_runchise_created_at: string | null;
+  latest_local_created_at: string | null;
+  locations_total: number;
+  locations_completed: number;
+  error: string | null;
+  started_at: string;
+  heartbeat_at: string;
+  finished_at: string | null;
+};
+
 export type AdminActivityLog = {
   id: number;
   actor_user_id: number | null;
@@ -447,6 +471,18 @@ export const adminApi = {
     if (filters.to) params.set("to", filters.to);
     return adminRequest<AdminCustomerPage>(`/customers?${params.toString()}`);
   },
+  syncCustomers: () =>
+    adminRequest<{ message: string; created: boolean; job: CustomerImportSyncJob }>(
+      "/sync/customers",
+      { method: "POST" },
+    ),
+  customerImportSyncStatus: () =>
+    adminRequest<{ job: CustomerImportSyncJob | null }>("/sync/customers/status"),
+  processCustomerImportSync: () =>
+    adminRequest<{
+      status: "idle" | "already_running" | "running" | "completed" | "completed_with_errors";
+      job: CustomerImportSyncJob | null;
+    }>("/sync/customers/process", { method: "POST" }),
   syncCustomerTimestamps: () =>
     adminRequest<{
       message: string;
