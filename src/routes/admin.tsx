@@ -1975,7 +1975,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "sales-transactions" && (
           <section>
-            <Panel title="Customer Sales Transaction Report">
+            <Panel title="Crisbro Transaction Report">
               <div className="mb-4 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-end">
                 <FormInput
                   label="Cari"
