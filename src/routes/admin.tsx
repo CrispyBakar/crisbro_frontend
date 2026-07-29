@@ -1911,7 +1911,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   "Source ID",
                   "Kota",
                   "Customer Tersimpan",
-                  "Memiliki Poin",
+                  "Customer Berpoin",
                   "Snapshot Terakhir",
                   "Status",
                 ]}
@@ -1931,6 +1931,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         : "Tersedia",
                 ])}
                 emptyMessage="Belum ada outlet Runchise yang terdaftar."
+                maxHeight={440}
               />
             </Panel>
             <div className="grid min-w-0 gap-5 lg:grid-cols-2">
@@ -4380,9 +4381,20 @@ function Select({
   );
 }
 
-function TableScrollArea({ children }: { children: ReactNode }) {
+function TableScrollArea({
+  children,
+  maxHeight,
+}: {
+  children: ReactNode;
+  maxHeight?: number;
+}) {
   return (
-    <div className="table-scroll-area -mx-1 min-w-0 max-w-full overflow-x-scroll overflow-y-hidden overscroll-x-contain px-1 pb-3">
+    <div
+      className={`table-scroll-area -mx-1 min-w-0 max-w-full overscroll-contain px-1 pb-3 ${
+        maxHeight ? "overflow-auto" : "overflow-x-scroll overflow-y-hidden"
+      }`}
+      style={maxHeight ? { maxHeight } : undefined}
+    >
       {children}
     </div>
   );
@@ -4393,11 +4405,13 @@ function DataTable({
   rows,
   emptyMessage = "Belum ada data.",
   minWidth,
+  maxHeight,
 }: {
   headers: string[];
   rows?: string[][];
   emptyMessage?: string;
   minWidth?: number;
+  maxHeight?: number;
 }) {
   const [sort, setSort] = useState<SortState<string>>({ sort_by: "", sort_order: "asc" });
   const hasRows = (rows ?? []).length > 0;
@@ -4414,7 +4428,7 @@ function DataTable({
   }, [rows, sort]);
 
   return (
-    <TableScrollArea>
+    <TableScrollArea maxHeight={maxHeight}>
       <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
         <thead>
           <tr className="text-left text-muted-foreground">
@@ -4425,6 +4439,7 @@ function DataTable({
                 sortKey={String(index)}
                 sort={sort}
                 onSort={(sortKey) => setSort((current) => nextSortState(current, sortKey))}
+                className={maxHeight ? "sticky top-0 z-10 bg-background p-2 shadow-sm" : "p-2"}
               />
             ))}
           </tr>
