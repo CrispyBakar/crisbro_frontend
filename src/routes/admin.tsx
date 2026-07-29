@@ -478,9 +478,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     earliest: string | null;
     latest: string | null;
   }>({ earliest: null, latest: null });
-  const [customerImportJob, setCustomerImportJob] = useState<CustomerImportSyncJob | null>(
-    null,
-  );
+  const [customerImportJob, setCustomerImportJob] = useState<CustomerImportSyncJob | null>(null);
   const [salesTransactions, setSalesTransactions] = useState<CustomerSalesTransactionReport[]>([]);
   const [salesTransactionSearch, setSalesTransactionSearch] = useState("");
   const [salesTransactionOutlet, setSalesTransactionOutlet] = useState("");
@@ -1862,7 +1860,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "report" && summary && (
           <section className="space-y-6">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-7">
               <Metric
                 title="Total Member"
                 value={numberFormat(summary.total_members)}
@@ -1874,6 +1872,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 value={numberFormat(summary.active_members)}
                 icon={<UserCheck className="h-4 w-4" />}
                 tone="success"
+              />
+              <Metric
+                title="Customer Tersimpan"
+                value={numberFormat(summary.runchise_customers_stored ?? 0)}
+                icon={<Users className="h-4 w-4" />}
+                tone="info"
               />
               <Metric
                 title="Poin Diberikan"
@@ -1900,6 +1904,35 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 tone="danger"
               />
             </div>
+            <Panel title="Jumlah customer Runchise per outlet">
+              <DataTable
+                headers={[
+                  "Outlet",
+                  "Source ID",
+                  "Kota",
+                  "Customer Tersimpan",
+                  "Memiliki Poin",
+                  "Snapshot Terakhir",
+                  "Status",
+                ]}
+                rows={(summary.runchise_customers_by_outlet ?? []).map((outlet) => [
+                  outlet.outlet_name,
+                  String(outlet.source_location_id),
+                  outlet.city ?? "-",
+                  numberFormat(outlet.stored_customers),
+                  numberFormat(outlet.customers_with_points),
+                  outlet.last_snapshot_at ? dateFormat(outlet.last_snapshot_at) : "-",
+                  outlet.status === "capped"
+                    ? "Dibatasi API"
+                    : outlet.status === "mismatch"
+                      ? "Mismatch"
+                      : outlet.status === "empty"
+                        ? "Belum ada data"
+                        : "Tersedia",
+                ])}
+                emptyMessage="Belum ada outlet Runchise yang terdaftar."
+              />
+            </Panel>
             <div className="grid min-w-0 gap-5 lg:grid-cols-2">
               <Panel title="Reward paling sering ditukar">
                 <TopRewardsChart rewards={summary.top_rewards ?? []} />
@@ -2639,12 +2672,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     <span>Gagal: {numberFormat(customerImportJob.failed)}</span>
                     <span>Konflik: {numberFormat(customerImportJob.skipped_conflicts)}</span>
                     <span>
-                      Terbaru Runchise: {customerImportJob.latest_runchise_created_at
+                      Terbaru Runchise:{" "}
+                      {customerImportJob.latest_runchise_created_at
                         ? dateTimeFormat(customerImportJob.latest_runchise_created_at)
                         : "-"}
                     </span>
                     <span>
-                      Terbaru lokal: {customerImportJob.latest_local_created_at
+                      Terbaru lokal:{" "}
+                      {customerImportJob.latest_local_created_at
                         ? dateTimeFormat(customerImportJob.latest_local_created_at)
                         : "-"}
                     </span>

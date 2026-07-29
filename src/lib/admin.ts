@@ -44,6 +44,18 @@ export type LoyaltySummary = {
   points_earned: number;
   points_redeemed: number;
   redemption_count: number;
+  runchise_customers_stored: number;
+  runchise_customers_by_outlet: Array<{
+    outlet_id: number;
+    source_location_id: number;
+    outlet_name: string;
+    city: string | null;
+    stored_customers: number;
+    customers_with_points: number;
+    api_reported_total: number | null;
+    last_snapshot_at: string | null;
+    status: "completed" | "complete" | "available" | "empty" | "capped" | "mismatch" | string;
+  }>;
   top_rewards: Array<{
     reward_id: number;
     reward_name: string;
