@@ -1875,7 +1875,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               />
               <Metric
                 title="Customer Tersimpan"
-                value={numberFormat(summary.runchise_customers_stored ?? 0)}
+                value={numberFormat(
+                  summary.runchise_customers_unique ?? summary.runchise_customers_stored,
+                )}
                 icon={<Users className="h-4 w-4" />}
                 tone="info"
               />
@@ -1904,13 +1906,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 tone="danger"
               />
             </div>
-            <Panel title="Jumlah customer Runchise per outlet">
+            {/* Kolom "Customer di Outlet" tidak menjumlah ke kartu "Customer
+                Tersimpan": kartu menghitung customer unik, sedangkan satu
+                customer dapat terdaftar di beberapa outlet sekaligus. */}
+            <Panel title="Jumlah customer Runchise per outlet (satu customer dapat terdaftar di beberapa outlet)">
               <DataTable
                 headers={[
                   "Outlet",
                   "Source ID",
                   "Kota",
-                  "Customer Tersimpan",
+                  "Customer di Outlet",
                   "Customer Berpoin",
                   "Snapshot Terakhir",
                   "Status",
@@ -2914,7 +2919,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                                 {getCustomerSyncMessage(customer)}
                               </p>
                             )}
-                            {getCustomerSyncStatus(customer) !== "synced" && (
+                            {customer.id > 0 && getCustomerSyncStatus(customer) !== "synced" && (
                               <button
                                 className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
                                 disabled={saving || customer.id <= 0}
@@ -2963,20 +2968,23 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                                   )}
                                 </span>
                               )}
-                            <button
-                              className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
-                              disabled={customer.id <= 0}
-                              onClick={() => editCustomer(customer)}
-                            >
-                              <Pencil className="h-4 w-4" /> Edit
-                            </button>
-                            <button
-                              className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
-                              disabled={saving || customer.id <= 0}
-                              onClick={() => requestDeleteCustomer(customer)}
-                            >
-                              <Trash2 className="h-4 w-4" /> Hapus
-                            </button>
+                            {customer.id > 0 && (
+                              <>
+                                <button
+                                  className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
+                                  onClick={() => editCustomer(customer)}
+                                >
+                                  <Pencil className="h-4 w-4" /> Edit
+                                </button>
+                                <button
+                                  className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
+                                  disabled={saving}
+                                  onClick={() => requestDeleteCustomer(customer)}
+                                >
+                                  <Trash2 className="h-4 w-4" /> Hapus
+                                </button>
+                              </>
+                            )}
                             {customer.id <= 0 && (
                               <span className="text-xs font-semibold text-muted-foreground">
                                 Belum terhubung lokal

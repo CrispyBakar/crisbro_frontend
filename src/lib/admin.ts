@@ -42,9 +42,15 @@ export type LoyaltySummary = {
   total_points_given: number;
   total_points_available: number;
   points_earned: number;
+  /** Diturunkan dari total_points_given - total_points_available. */
   points_redeemed: number;
+  /** Versi PointHistory; selalu 0 karena penukaran terjadi di POS Runchise. */
+  points_redeemed_from_history?: number;
   redemption_count: number;
+  /** Jumlah baris customer-per-outlet; satu orang bisa terhitung berulang. */
   runchise_customers_stored: number;
+  /** Customer unik, angka yang ditampilkan di kartu ringkasan. */
+  runchise_customers_unique?: number;
   runchise_customers_by_outlet: Array<{
     outlet_id: number;
     source_location_id: number;
