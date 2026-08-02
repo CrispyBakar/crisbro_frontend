@@ -1860,7 +1860,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "report" && summary && (
           <section className="space-y-6">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-7">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
               <Metric
                 title="Total Member"
                 value={numberFormat(summary.total_members)}
@@ -1872,14 +1872,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 value={numberFormat(summary.active_members)}
                 icon={<UserCheck className="h-4 w-4" />}
                 tone="success"
-              />
-              <Metric
-                title="Customer Tersimpan"
-                value={numberFormat(
-                  summary.runchise_customers_unique ?? summary.runchise_customers_stored,
-                )}
-                icon={<Users className="h-4 w-4" />}
-                tone="info"
               />
               <Metric
                 title="Poin Diberikan"
@@ -3214,8 +3206,18 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {redeemItems.map((item) => (
-                      <tr key={item.id} className="border-t border-border">
+                    {redeemItems.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="border-t border-border p-6 text-center font-semibold text-muted-foreground"
+                        >
+                          Belum ada data menu redeem.
+                        </td>
+                      </tr>
+                    ) : (
+                      redeemItems.map((item) => (
+                        <tr key={item.id} className="border-t border-border">
                         <td className="p-2 font-bold">
                           {item.menu_item.name}
                           {!item.menu_item.is_active && (
@@ -3261,8 +3263,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                             </button>
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </TableScrollArea>

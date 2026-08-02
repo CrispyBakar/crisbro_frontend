@@ -223,7 +223,7 @@ export type AdminCustomer = {
   runchise_id?: number | null;
   runchise_created_at?: string | null;
   runchise_updated_at?: string | null;
-  date_source?: "runchise" | "runchise_sync";
+  date_source?: "runchise" | "runchise_sync" | "local";
   runchise_location_id?: number | null;
   runchise_sync_status?: "pending" | "synced" | "failed" | "skipped" | string | null;
   runchise_sync_error?: string | null;
