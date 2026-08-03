@@ -390,6 +390,16 @@ export type CustomerSalesTransactionReport = {
   pembelian_per_order: string | number;
   penambahan_poin: number;
   penggunaan_poin: string | number;
+  redeemed_rewards: Array<{
+    id: string;
+    runchise_product_id: number;
+    redeem_menu_item_id: number | null;
+    product_name: string;
+    quantity: number;
+    point_per_item: number;
+    points_spent: number;
+    is_managed_reward: boolean;
+  }>;
   created_at: string;
   updated_at: string;
 };

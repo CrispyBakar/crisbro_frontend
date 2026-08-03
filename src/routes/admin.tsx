@@ -2044,7 +2044,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </Button>
               </div>
               <TableScrollArea>
-                <table className="min-w-[1450px] w-full text-sm">
+                <table className="min-w-[1650px] w-full text-sm">
                   <thead>
                     <tr className="text-left text-muted-foreground">
                       <th className="p-2">ID Transaksi</th>
@@ -2059,12 +2059,13 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       <th className="p-2 text-right">Pembelian per Order</th>
                       <th className="p-2 text-right">Penambahan Poin</th>
                       <th className="p-2 text-right">Penggunaan Poin</th>
+                      <th className="p-2">Reward/Menu Ditukar</th>
                     </tr>
                   </thead>
                   <tbody>
                     {salesTransactions.length === 0 && (
                       <tr className="border-t border-border">
-                        <td colSpan={12} className="p-8 text-center font-bold">
+                        <td colSpan={13} className="p-8 text-center font-bold">
                           Belum ada data transaksi customer yang sesuai.
                         </td>
                       </tr>
@@ -2098,6 +2099,25 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                         </td>
                         <td className="p-2 text-right">
                           {numberFormat(toNumber(transaction.penggunaan_poin))}
+                        </td>
+                        <td className="min-w-[280px] p-2">
+                          {(transaction.redeemed_rewards ?? []).length === 0 ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {(transaction.redeemed_rewards ?? []).map((reward) => (
+                                <div key={reward.id}>
+                                  <div className="font-bold">
+                                    {numberFormat(reward.quantity)}× {reward.product_name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {numberFormat(reward.points_spent)} poin
+                                    {reward.is_managed_reward ? " · Dikelola" : ""}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
