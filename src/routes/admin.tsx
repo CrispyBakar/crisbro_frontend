@@ -4421,8 +4421,8 @@ function TableScrollArea({
 }) {
   return (
     <div
-      className={`table-scroll-area -mx-1 min-w-0 max-w-full overscroll-contain px-1 pb-3 ${
-        maxHeight ? "overflow-auto" : "overflow-x-scroll overflow-y-hidden"
+      className={`table-scroll-area -mx-1 min-w-0 max-w-full overflow-auto overscroll-x-contain overscroll-y-auto px-1 pb-3 ${
+        maxHeight ? "" : "max-h-[70dvh]"
       }`}
       style={maxHeight ? { maxHeight } : undefined}
     >
