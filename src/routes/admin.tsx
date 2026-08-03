@@ -1864,7 +1864,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "report" && summary && (
           <section className="space-y-6">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6 lg:gap-4">
               <Metric
                 title="Total Member"
                 value={numberFormat(summary.total_members)}
@@ -3520,18 +3520,18 @@ function Metric({
       className={`relative flex min-h-[104px] min-w-0 flex-col overflow-hidden rounded-xl border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px] ${classes.border}`}
     >
       <span className={`absolute inset-x-0 top-0 h-1 ${classes.accent}`} />
-      <div className="flex min-h-[32px] items-center gap-2 sm:min-h-[36px] sm:gap-2.5">
+      <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 text-center sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start lg:text-left">
         <span
           className={`grid h-7 w-7 shrink-0 place-items-center rounded-full [&>svg]:h-3.5 [&>svg]:w-3.5 sm:h-8 sm:w-8 sm:[&>svg]:h-4 sm:[&>svg]:w-4 ${classes.icon}`}
         >
           {icon}
         </span>
-        <p className="min-w-0 text-[11px] font-black uppercase leading-tight text-muted-foreground sm:text-xs">
+        <p className="min-w-0 text-[9px] font-black uppercase leading-tight text-muted-foreground sm:text-[11px] lg:text-xs">
           {title}
         </p>
       </div>
       <div className="flex flex-1 items-center justify-center px-1 pt-1.5">
-        <p className="max-w-full truncate text-[1.45rem] font-black leading-none tracking-normal tabular-nums sm:text-[1.65rem] lg:text-2xl">
+        <p className="max-w-full truncate text-lg font-black leading-none tracking-normal tabular-nums sm:text-[1.4rem] lg:text-2xl">
           {value}
         </p>
       </div>
@@ -3543,18 +3543,18 @@ function AdminPageSkeleton({ tab }: { tab: Tab }) {
   if (tab === "report") {
     return (
       <section className="space-y-6">
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6 lg:gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
               className="flex min-h-[104px] flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px]"
             >
-              <div className="flex min-h-[32px] items-center gap-2 sm:min-h-[36px] sm:gap-2.5">
+              <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start">
                 <Skeleton className="h-7 w-7 rounded-full sm:h-8 sm:w-8" />
-                <Skeleton className="h-3 w-20 sm:w-24" />
+                <Skeleton className="h-3 w-12 sm:w-16 lg:w-24" />
               </div>
               <div className="flex flex-1 items-center justify-center pt-1.5">
-                <Skeleton className="h-7 w-24 sm:h-8 sm:w-28" />
+                <Skeleton className="h-6 w-14 sm:h-7 sm:w-20 lg:h-8 lg:w-28" />
               </div>
             </div>
           ))}
