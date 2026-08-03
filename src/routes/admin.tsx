@@ -1806,7 +1806,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </Button>
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <nav
+          aria-label="Menu dashboard admin"
+          className="scrollbar-none mb-5 flex snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain border-b border-border"
+          role="tablist"
+        >
           <TabButton
             active={tab === "report"}
             onClick={() => setTab("report")}
@@ -1849,7 +1853,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               label="Activity Log"
             />
           )}
-        </div>
+        </nav>
 
         {error && (
           <div className="mb-4 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive">
@@ -3449,11 +3453,18 @@ function TabButton({
 }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      className={`inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border px-3 py-2 text-center text-sm font-bold ${active ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-secondary"}`}
+      className={`relative inline-flex min-h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-center text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset lg:min-w-0 lg:flex-1 ${
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
     >
       <span className="shrink-0">{icon}</span>
-      <span className="truncate">{label}</span>
+      <span>{label}</span>
     </button>
   );
 }
