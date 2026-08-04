@@ -49,6 +49,8 @@ export type LoyaltySummary = {
   redemption_count: number;
   /** Jumlah baris customer-per-outlet; satu orang bisa terhitung berulang. */
   runchise_customers_stored: number;
+  /** Penjumlahan kolom Customer Berpoin pada tabel per outlet. */
+  runchise_customers_with_points: number;
   /** Customer unik, angka yang ditampilkan di kartu ringkasan. */
   runchise_customers_unique?: number;
   runchise_customers_by_outlet: Array<{

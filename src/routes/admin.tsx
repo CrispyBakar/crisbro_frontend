@@ -1872,8 +1872,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 tone="primary"
               />
               <Metric
-                title="Member Aktif"
-                value={numberFormat(summary.active_members)}
+                title="Customer Berpoin"
+                value={numberFormat(summary.runchise_customers_with_points)}
                 icon={<UserCheck className="h-4 w-4" />}
                 tone="success"
               />
