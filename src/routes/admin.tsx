@@ -1913,6 +1913,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   "Kota",
                   "Customer di Outlet",
                   "Customer Berpoin",
+                  "Jumlah Poin yang Diredeem",
                   "Snapshot Terakhir",
                   "Status",
                 ]}
@@ -1922,6 +1923,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   outlet.city ?? "-",
                   numberFormat(outlet.stored_customers),
                   numberFormat(outlet.customers_with_points),
+                  numberFormat(outlet.points_redeemed ?? 0),
                   outlet.last_snapshot_at ? dateFormat(outlet.last_snapshot_at) : "-",
                   outlet.status === "capped"
                     ? "Dibatasi API"
@@ -2105,7 +2107,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     {numberFormat(reward.points_spent)} poin
-                                    {reward.is_managed_reward ? " · Dikelola" : ""}
+                                    {reward.is_managed_reward ? "" : ""}
                                   </div>
                                 </div>
                               ))}

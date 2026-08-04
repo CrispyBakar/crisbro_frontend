@@ -60,6 +60,7 @@ export type LoyaltySummary = {
     city: string | null;
     stored_customers: number;
     customers_with_points: number;
+    points_redeemed?: number;
     api_reported_total: number | null;
     last_snapshot_at: string | null;
     status: "completed" | "complete" | "available" | "empty" | "capped" | "mismatch" | string;
