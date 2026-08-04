@@ -296,65 +296,69 @@ function DashboardPage() {
               {pointHistoryTotal.toLocaleString("id-ID")} transaksi
             </span>
           </div>
-          {pointHistory.length === 0 ? (
-            <div className="rounded-3xl bg-card border border-border shadow-(--shadow-soft) p-8 text-center text-muted-foreground">
-              <p className="font-semibold">Belum ada riwayat transaksi poin.</p>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft)">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-140 border-collapse text-left">
-                  <thead className="bg-secondary text-secondary-foreground">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-soft)">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-140 border-collapse text-left">
+                <thead className="bg-secondary text-secondary-foreground">
+                  <tr>
+                    <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
+                      Tanggal
+                    </th>
+                    <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
+                      Nama Reward
+                    </th>
+                    <th className="px-5 py-4 text-right text-xs font-black uppercase tracking-wide">
+                      Poin
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pointHistory.length === 0 && (
                     <tr>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
-                        Tanggal
-                      </th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wide">
-                        Nama Reward
-                      </th>
-                      <th className="px-5 py-4 text-right text-xs font-black uppercase tracking-wide">
-                        Poin
-                      </th>
+                      <td
+                        colSpan={3}
+                        className="px-5 py-8 text-center font-semibold text-muted-foreground"
+                      >
+                        Belum ada riwayat transaksi poin.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {pointHistory.map((history) => {
-                      const isRedeem = history.points_change < 0;
-                      const rewardName =
-                        history.redemption?.reward.name ??
-                        history.description ??
-                        (isRedeem ? "Penukaran reward" : "Penambahan poin");
-                      const formattedPoint = `${history.points_change > 0 ? "+" : ""}${history.points_change.toLocaleString("id-ID")}`;
-                      const PointIcon = isRedeem ? ArrowDownLeft : ArrowUpRight;
+                  )}
+                  {pointHistory.map((history) => {
+                    const isRedeem = history.points_change < 0;
+                    const rewardName =
+                      history.redemption?.reward.name ??
+                      history.description ??
+                      (isRedeem ? "Penukaran reward" : "Penambahan poin");
+                    const formattedPoint = `${history.points_change > 0 ? "+" : ""}${history.points_change.toLocaleString("id-ID")}`;
+                    const PointIcon = isRedeem ? ArrowDownLeft : ArrowUpRight;
 
-                      return (
-                        <tr key={history.id} className="border-b border-border last:border-b-0">
-                          <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-muted-foreground">
-                            {formatHistoryDate(history.created_at)}
-                          </td>
-                          <td className="px-5 py-4">
-                            <p className="font-extrabold text-foreground">{rewardName}</p>
-                          </td>
-                          <td className="px-5 py-4 text-right">
-                            <span
-                              className={`inline-flex items-center justify-end gap-2 rounded-full px-3 py-1 text-sm font-black ${
-                                isRedeem
-                                  ? "bg-destructive/10 text-destructive"
-                                  : "bg-primary/10 text-primary"
-                              }`}
-                            >
-                              <PointIcon className="h-4 w-4" />
-                              {formattedPoint}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                    return (
+                      <tr key={history.id} className="border-b border-border last:border-b-0">
+                        <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-muted-foreground">
+                          {formatHistoryDate(history.created_at)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <p className="font-extrabold text-foreground">{rewardName}</p>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <span
+                            className={`inline-flex items-center justify-end gap-2 rounded-full px-3 py-1 text-sm font-black ${
+                              isRedeem
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-primary/10 text-primary"
+                            }`}
+                          >
+                            <PointIcon className="h-4 w-4" />
+                            {formattedPoint}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
         </section>
       </section>
     </main>
