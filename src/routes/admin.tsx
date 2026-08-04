@@ -1994,17 +1994,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 />
               </div>
             </Panel>
-            <Panel title="Aktivasi akun per outlet">
-              <DataTable
-                headers={["Outlet", "Kota", "Jumlah Aktivasi"]}
-                rows={(summary.activation_by_outlet ?? []).map((outlet) => [
-                  outlet.outlet_name,
-                  outlet.city ?? "-",
-                  numberFormat(outlet.activated_count),
-                ])}
-                emptyMessage="Belum ada data aktivasi akun per outlet."
-              />
-            </Panel>
           </section>
         )}
 
