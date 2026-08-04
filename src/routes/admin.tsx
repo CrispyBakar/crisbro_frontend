@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
@@ -3888,11 +3894,13 @@ function RedemptionHistoryChart({
     <ChartContainer
       config={{
         redemption_count: {
-          label: "Jumlah Redeem",
+          // Keterangan sumbu ikut ditulis karena grafik memakai dua sumbu Y
+          // dengan skala berbeda.
+          label: "Jumlah Redeem (sumbu kiri)",
           color: "#E11D48",
         },
         points_spent: {
-          label: "Poin Ditukar",
+          label: "Poin Ditukar (sumbu kanan)",
           color: "#0EA5E9",
         },
       }}
@@ -3952,6 +3960,7 @@ function RedemptionHistoryChart({
           dot={{ r: 3 }}
           activeDot={{ r: 5 }}
         />
+        <ChartLegend content={<ChartLegendContent />} />
       </LineChart>
     </ChartContainer>
   );
