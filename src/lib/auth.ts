@@ -27,6 +27,15 @@ export type AuthUser = {
       available_point: number;
       next_reward_threshold: number;
     };
+    // Hanya dikirim oleh GET /profile, tidak oleh login/register.
+    next_reward?: {
+      id: number;
+      name: string;
+      image_url: string | null;
+      points_required: number;
+      points_remaining: number;
+    } | null;
+    redeemable_reward_count?: number;
   } | null;
 };
 

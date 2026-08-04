@@ -18,8 +18,6 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-const REWARD_THRESHOLD = 2000;
-
 type PointHistoryItem = {
   id: number;
   points_change: number;
@@ -170,9 +168,20 @@ function DashboardPage() {
   const customerName = user.customer?.name ?? "Sahabat Crispy";
   const availablePoint = user.customer?.customer_point?.available_point ?? 0;
   const totalPoint = user.customer?.customer_point?.total_point ?? 0;
-  const progress = Math.min(100, Math.round((availablePoint / REWARD_THRESHOLD) * 100));
-  const remaining = Math.max(0, REWARD_THRESHOLD - availablePoint);
   const formattedPoints = availablePoint.toLocaleString("id-ID");
+  // Target reward berikutnya datang dari backend (reward termurah yang belum
+  // terjangkau), bukan ambang tetap. next_reward null berarti seluruh reward
+  // sudah terjangkau, atau katalognya sedang kosong.
+  const nextReward = user.customer?.next_reward ?? null;
+  // Login/register tidak mengirim info reward, jadi user hasil cache bisa saja
+  // belum punya datanya. Dibedakan agar tidak salah bilang "tidak ada reward".
+  const rewardInfoReady = user.customer?.redeemable_reward_count !== undefined;
+  const redeemableRewardCount = user.customer?.redeemable_reward_count ?? 0;
+  const progress = nextReward
+    ? Math.min(100, Math.round((availablePoint / nextReward.points_required) * 100))
+    : rewardInfoReady && redeemableRewardCount > 0
+      ? 100
+      : 0;
 
   const handleLogout = () => {
     logout();
@@ -248,7 +257,9 @@ function DashboardPage() {
                 <Gift className="h-4 w-4" /> Reward berikutnya
               </span>
               <span className="font-bold text-[#3a240e]">
-                {formattedPoints} / {REWARD_THRESHOLD.toLocaleString("id-ID")}
+                {nextReward
+                  ? `${formattedPoints} / ${nextReward.points_required.toLocaleString("id-ID")}`
+                  : formattedPoints}
               </span>
             </div>
             <div className="h-3 w-full rounded-full bg-white/45 overflow-hidden">
@@ -258,9 +269,13 @@ function DashboardPage() {
               />
             </div>
             <p className="text-xs mt-2 font-semibold text-[#3a240e]">
-              {remaining > 0
-                ? `Tinggal ${remaining.toLocaleString("id-ID")} poin lagi untuk dapat reward gratis 🎁`
-                : "Yeay! Kamu sudah bisa tukar reward 🎉"}
+              {nextReward
+                ? `Tinggal ${nextReward.points_remaining.toLocaleString("id-ID")} poin lagi untuk ${nextReward.name} 🎁`
+                : !rewardInfoReady
+                  ? "Kumpulkan poin untuk tukar reward 🎁"
+                  : redeemableRewardCount > 0
+                    ? "Yeay! Semua reward sudah bisa kamu tukar 🎉"
+                    : "Belum ada reward yang bisa ditukar saat ini."}
             </p>
           </div>
 
