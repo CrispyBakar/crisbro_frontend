@@ -136,9 +136,8 @@ function RegisterPage() {
           </label>
 
           <p className="rounded-2xl bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
-            Password dibuat lewat tautan aktivasi yang dikirim ke email pada akun Anda, bukan di
-            halaman ini. Ini menjaga akun member tidak bisa diklaim orang lain yang mengetahui nomor
-            telepon Anda.
+            Buat password melalui tautan aktivasi di email agar akun tidak diklaim orang lain yang
+            tahu nomor Anda.
           </p>
 
           {notice && (
