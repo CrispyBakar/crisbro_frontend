@@ -58,10 +58,56 @@ export function getUser(): AuthUser | null {
   }
 }
 
-export function logout() {
+function clearLocalAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("auth-change"));
+}
+
+// Mencabut sesi di server lebih dulu, baru menghapus jejak di browser.
+//
+// Menghapus localStorage saja tidak membuat token berhenti berlaku: server
+// memvalidasi token terhadap tabel Session, jadi token yang sempat tersalin
+// tetap diterima sampai kedaluwarsa (7 hari) walaupun pengguna sudah keluar.
+//
+// Penghapusan lokal tetap dijalankan meski permintaan ke server gagal, supaya
+// pengguna tidak terjebak dalam keadaan seolah masih login saat jaringan mati.
+export async function logout() {
+  const token = getToken();
+
+  if (token) {
+    try {
+      await fetch(apiUrl("/logout"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Diabaikan dengan sengaja; sesi tetap dicabut saat token kedaluwarsa
+      // atau lewat "keluar dari semua perangkat".
+    }
+  }
+
+  clearLocalAuth();
+}
+
+// Mencabut seluruh sesi milik user ini, dipakai bila akun diduga dipakai orang
+// lain.
+export async function logoutAllDevices() {
+  const token = getToken();
+
+  if (token) {
+    try {
+      await fetch(apiUrl("/logout-all"), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Sama seperti logout biasa: kegagalan jaringan tidak boleh menahan
+      // pembersihan sesi lokal.
+    }
+  }
+
+  clearLocalAuth();
 }
 
 async function readJsonResponse(res: Response, fallbackMessage: string): Promise<unknown> {

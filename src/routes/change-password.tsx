@@ -59,8 +59,7 @@ function ChangePasswordPage() {
       setNewPassword("");
       setConfirmPassword("");
       setTimeout(() => {
-        logout();
-        navigate({ to: "/login" });
+        void logout().then(() => navigate({ to: "/login" }));
       }, 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal mengganti password.");

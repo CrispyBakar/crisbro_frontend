@@ -120,7 +120,7 @@ function DashboardPage() {
         if (cancelled) return;
 
         if (err instanceof Error && err.message.toLowerCase().includes("token")) {
-          logout();
+          await logout();
           navigate({ to: "/login" });
           return;
         }
@@ -183,8 +183,8 @@ function DashboardPage() {
       ? 100
       : 0;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate({ to: "/" });
   };
 
