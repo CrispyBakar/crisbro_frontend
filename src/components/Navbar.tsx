@@ -44,14 +44,14 @@ export function Navbar() {
 
   const customerName =
     user?.customer?.name ??
-    (user?.role === "admin" || user?.role === "staff"
+    (user?.role === "admin"
       ? "Admin"
       : user?.role === "marketing"
         ? "Marketing"
         : "");
   const initial = customerName.charAt(0).toUpperCase() || "?";
   const phoneNumber = user?.phone_number ?? "-";
-  const isAdmin = user?.role === "admin" || user?.role === "staff";
+  const isAdmin = user?.role === "admin";
   const isMarketing = user?.role === "marketing";
   const dashboardPath = isAdmin ? "/admin" : isMarketing ? "/marketing" : "/dashboard";
   const dashboardLabel = isAdmin ? "Admin" : isMarketing ? "Marketing" : "Dashboard";
