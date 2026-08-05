@@ -549,7 +549,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       ? currentUser?.role === "admin" || currentUser?.role === "marketing"
       : currentUser?.role === "admin";
   const canManageUsers = currentUser?.role === "admin";
-  const canSyncCustomers = currentUser?.role === "admin" || currentUser?.role === "staff";
+  // Marketing ikut diizinkan, selaras dengan hak kelola customer penuh yang
+  // sudah mereka miliki. Backend membatasi hal yang sama pada rute
+  // /admin/sync/customers dan /admin/sync/customer-timestamps.
+  const canSyncCustomers =
+    currentUser?.role === "admin" || currentUser?.role === "marketing";
   const canViewCustomers = mode === "admin" || mode === "marketing";
   const canViewActivityLogs = currentUser?.role === "admin" && mode === "admin";
   const isMarketingConsole = mode === "marketing";
@@ -2767,7 +2771,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   placeholder="Cari nama, nomor, email, atau outlet..."
                   className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
                 />
-                <Button onClick={searchCustomers} variant="outline">
+                <Button onClick={() => void searchCustomers()} variant="outline">
                   Cari
                 </Button>
               </div>
