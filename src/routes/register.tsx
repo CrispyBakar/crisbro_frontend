@@ -1,9 +1,9 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, UserPlus, Eye, EyeOff } from "lucide-react";
-import { apiRegister } from "@/lib/auth";
+import { Sparkles, UserPlus } from "lucide-react";
+import { apiRequestActivation } from "@/lib/auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -34,18 +34,17 @@ function requiredFieldsMessage(fields: string[]) {
 }
 
 function RegisterPage() {
-  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [tel, setTel] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setNotice("");
     setWhatsappUrl("");
 
     const normalized = normalizePhone(tel);
@@ -53,7 +52,6 @@ function RegisterPage() {
 
     if (!name.trim()) missingFields.push("Nama Lengkap");
     if (!tel.trim()) missingFields.push("Nomor Telepon");
-    if (!password) missingFields.push("Password");
 
     if (missingFields.length > 0) {
       setError(requiredFieldsMessage(missingFields));
@@ -64,15 +62,12 @@ function RegisterPage() {
       setError("Nomor telepon harus diawali 8 (tanpa 0 atau +62).");
       return;
     }
-    if (password.length < 4) {
-      setError("Password minimal 4 karakter.");
-      return;
-    }
 
     setLoading(true);
     try {
-      await apiRegister(name.trim(), normalized, password);
-      navigate({ to: "/login" });
+      const result = await apiRequestActivation(name.trim(), normalized);
+      setNotice(result.message);
+      setWhatsappUrl(result.whatsappUrl);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -80,7 +75,7 @@ function RegisterPage() {
         const registerError = err as RegisterError;
         setWhatsappUrl(registerError.whatsappUrl || "");
       } else {
-        setError("Registrasi gagal, coba lagi.");
+        setError("Permintaan aktivasi gagal, coba lagi.");
         setWhatsappUrl("");
       }
     } finally {
@@ -99,7 +94,7 @@ function RegisterPage() {
             Gabung <span className="text-primary">Crispy Club!</span> 🍗
           </h1>
           <p className="text-muted-foreground mt-3">
-            Daftar gratis sekarang dan kumpulkan reward makan katsu gratisan!
+            Sudah jadi member di outlet? Minta tautan aktivasi untuk membuat password akunmu.
           </p>
         </div>
 
@@ -140,29 +135,28 @@ function RegisterPage() {
             </div>
           </label>
 
-          <label className="block">
-            <span className="text-sm font-bold text-foreground/80">
-              Password <span className="text-destructive">*</span>
-            </span>
-            <div className="relative mt-2">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="buat password minimal 4 karakter"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="rounded-2xl h-12 bg-background border-2 text-base pr-12"
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
+          <p className="rounded-2xl bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
+            Password dibuat lewat tautan aktivasi yang dikirim ke email pada akun Anda, bukan di
+            halaman ini. Ini menjaga akun member tidak bisa diklaim orang lain yang mengetahui nomor
+            telepon Anda.
+          </p>
+
+          {notice && (
+            <div className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm font-medium text-secondary-foreground">
+              <p>{notice}</p>
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block font-bold underline text-primary"
+                >
+                  Hubungi Admin via WhatsApp
+                </a>
+              )}
             </div>
-          </label>
+          )}
 
           {error && (
             <div className="rounded-2xl bg-destructive/10 text-destructive text-sm font-medium px-4 py-3">
@@ -186,7 +180,7 @@ function RegisterPage() {
             disabled={loading}
             className="w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop)"
           >
-            <UserPlus className="h-5 w-5" /> {loading ? "Memproses..." : "Daftar Sekarang"}
+            <UserPlus className="h-5 w-5" /> {loading ? "Memproses..." : "Kirim Tautan Aktivasi"}
           </Button>
         </form>
 

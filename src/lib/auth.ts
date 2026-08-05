@@ -233,17 +233,26 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return data as { message: string };
 }
 
-export async function apiRegister(name: string, phone_number: string, password: string) {
+// Meminta tautan aktivasi, bukan membuat password.
+//
+// Password sengaja tidak dikirim: akun hanya boleh diaktifkan lewat token
+// aktivasi yang dikirim ke email pada akun. Balasan server selalu sama untuk
+// nomor yang terdaftar maupun tidak, jadi jangan pernah menyimpulkan status
+// sebuah nomor dari respons ini.
+export async function apiRequestActivation(name: string, phone_number: string) {
   const res = await fetch(apiUrl("/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, phone_number, password }),
+    body: JSON.stringify({ name, phone_number }),
   });
-  const data = await readJsonResponse(res, "Registrasi gagal");
+  const data = await readJsonResponse(res, "Permintaan aktivasi gagal");
 
-  if (!isAuthUser(data)) {
-    throw new Error("Format data registrasi tidak valid");
+  if (!isRecord(data) || typeof data.message !== "string") {
+    throw new Error("Format data permintaan aktivasi tidak valid");
   }
 
-  return data;
+  return {
+    message: data.message,
+    whatsappUrl: typeof data.whatsappUrl === "string" ? data.whatsappUrl : "",
+  };
 }

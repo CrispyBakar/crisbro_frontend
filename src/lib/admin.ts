@@ -423,6 +423,11 @@ export type AdminSort = {
   sort_order?: SortOrder;
 };
 
+// Penyaring daftar customer berdasarkan ketersediaan email. Customer tanpa
+// email tidak bisa dikirimi tautan aktivasi, jadi daftar ini yang dikejar
+// petugas outlet.
+export type CustomerEmailStatus = "all" | "missing" | "present";
+
 export const adminApi = {
   customerSalesTransactionReports: (
     filters: {
@@ -489,7 +494,7 @@ export const adminApi = {
     page = 1,
     limit = 20,
     sort: AdminSort = {},
-    filters: { from?: string; to?: string } = {},
+    filters: { from?: string; to?: string; email_status?: CustomerEmailStatus } = {},
   ) => {
     const params = new URLSearchParams({
       page: String(page),
@@ -500,6 +505,9 @@ export const adminApi = {
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
+    if (filters.email_status && filters.email_status !== "all") {
+      params.set("email_status", filters.email_status);
+    }
     return adminRequest<AdminCustomerPage>(`/customers?${params.toString()}`);
   },
   syncCustomers: () =>

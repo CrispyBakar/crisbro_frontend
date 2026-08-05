@@ -19,6 +19,7 @@ import {
   type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
+  type CustomerEmailStatus,
   type CustomerImportSyncJob,
   type CustomerSalesTransactionReport,
   type AdminLocation,
@@ -479,6 +480,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [customerTo, setCustomerTo] = useState("");
   const [appliedCustomerFrom, setAppliedCustomerFrom] = useState("");
   const [appliedCustomerTo, setAppliedCustomerTo] = useState("");
+  // Berlaku langsung saat dipilih, tanpa tombol terapkan, karena hanya satu
+  // pilihan dan petugas outlet memakainya berulang kali.
+  const [customerEmailStatus, setCustomerEmailStatus] =
+    useState<CustomerEmailStatus>("all");
   const [customerPageInput, setCustomerPageInput] = useState("1");
   const [customerRegistrationRange, setCustomerRegistrationRange] = useState<{
     earliest: string | null;
@@ -601,6 +606,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         adminApi.customers(appliedCustomerSearch, customerPage, customerLimit, customerSort, {
           from: appliedCustomerFrom,
           to: appliedCustomerTo,
+          email_status: customerEmailStatus,
         }),
         adminApi.brands(),
         adminApi.locations(),
@@ -795,7 +801,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         customerPage,
         customerLimit,
         customerSort,
-        { from: appliedCustomerFrom, to: appliedCustomerTo },
+        { from: appliedCustomerFrom, to: appliedCustomerTo, email_status: customerEmailStatus },
       );
       if (cancelled) return;
       setCustomers(data.items ?? []);
@@ -898,6 +904,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort, {
         from: appliedCustomerFrom,
         to: appliedCustomerTo,
+        email_status: customerEmailStatus,
       });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -918,7 +925,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         nextPage,
         customerLimit,
         customerSort,
-        { from: appliedCustomerFrom, to: appliedCustomerTo },
+        { from: appliedCustomerFrom, to: appliedCustomerTo, email_status: customerEmailStatus },
       );
       setCustomers(data.items ?? []);
       setCustomerPage(data.page ?? nextPage);
@@ -965,6 +972,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, customerSort, {
         from: customerFrom,
         to: customerTo,
+        email_status: customerEmailStatus,
       });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -984,13 +992,43 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setAppliedCustomerTo("");
     setError("");
     try {
-      const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, customerSort);
+      const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, customerSort, {
+        email_status: customerEmailStatus,
+      });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
       setCustomerTotal(data.total ?? 0);
       setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mereset filter customer");
+    }
+  }
+
+  // Filter email diterapkan seketika saat dropdown berubah. Halaman dikembalikan
+  // ke 1 karena jumlah hasilnya berubah drastis.
+  async function applyCustomerEmailStatus(status: CustomerEmailStatus) {
+    setCustomerEmailStatus(status);
+    setCustomerPage(1);
+    setCustomerPageInput("1");
+    setError("");
+    try {
+      const data = await adminApi.customers(
+        appliedCustomerSearch,
+        1,
+        customerLimit,
+        customerSort,
+        {
+          from: appliedCustomerFrom,
+          to: appliedCustomerTo,
+          email_status: status,
+        },
+      );
+      setCustomers(data.items ?? []);
+      setCustomerTotalPages(data.total_pages ?? 1);
+      setCustomerTotal(data.total ?? 0);
+      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memfilter status email customer");
     }
   }
 
@@ -1003,6 +1041,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       const data = await adminApi.customers(appliedCustomerSearch, 1, limit, customerSort, {
         from: appliedCustomerFrom,
         to: appliedCustomerTo,
+        email_status: customerEmailStatus,
       });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -1402,6 +1441,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       const data = await adminApi.customers(appliedCustomerSearch, 1, customerLimit, nextSort, {
         from: appliedCustomerFrom,
         to: appliedCustomerTo,
+        email_status: customerEmailStatus,
       });
       setCustomers(data.items ?? []);
       setCustomerTotalPages(data.total_pages ?? 1);
@@ -2759,6 +2799,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 >
                   Reset
                 </Button>
+              </div>
+              <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:grid-cols-[minmax(0,20rem)_1fr] md:items-center">
+                <Select
+                  label="Status Email"
+                  value={customerEmailStatus}
+                  onChange={(value) =>
+                    void applyCustomerEmailStatus(value as CustomerEmailStatus)
+                  }
+                  options={[
+                    { value: "all", label: "Semua customer" },
+                    { value: "missing", label: "Belum punya email" },
+                    { value: "present", label: "Sudah punya email" },
+                  ]}
+                />
+                <p className="mb-3 text-xs font-semibold text-muted-foreground">
+                  Tautan aktivasi hanya bisa dikirim lewat email. Pilih{" "}
+                  <span className="font-bold text-foreground">Belum punya email</span> untuk
+                  melihat customer mana saja yang emailnya masih perlu ditanyakan saat mereka
+                  datang ke outlet.
+                </p>
               </div>
               <div className="mb-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl border border-border p-3">
