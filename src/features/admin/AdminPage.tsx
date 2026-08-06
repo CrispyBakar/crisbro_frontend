@@ -547,6 +547,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [activeMobileForm, setActiveMobileForm] = useState<MobileCrudForm | null>(null);
   const loadedTabs = useRef<Partial<Record<Tab, boolean>>>({});
+  // M-8: daftar outlet untuk dropdown filter dulu ikut terhitung ulang di
+  // setiap loadSalesTransactions (distinct scan atas tabel terbesar di
+  // database). Sekarang dimuat sekali lewat endpoint terpisah, dijaga flag
+  // ini supaya tidak diulang di setiap page/filter change.
+  const salesTransactionOutletsLoaded = useRef(false);
   const customerImportWorkerRunning = useRef(false);
   const notifiedCustomerImportJob = useRef<number | null>(null);
 
@@ -651,6 +656,21 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     customerSort,
   ]);
 
+  // M-8: dipanggil sekali (dijaga salesTransactionOutletsLoaded), bukan di
+  // setiap page/filter change seperti sebelumnya.
+  const loadSalesTransactionOutlets = useCallback(async () => {
+    if (salesTransactionOutletsLoaded.current) return;
+    try {
+      const outlets = await adminApi.customerSalesTransactionReportOutlets();
+      setSalesTransactionOutlets(outlets ?? []);
+      salesTransactionOutletsLoaded.current = true;
+    } catch (err) {
+      // Kegagalan memuat daftar outlet tidak boleh menghalangi tabel
+      // transaksi tampil -- dropdown filter outlet cukup kosong.
+      console.error("Gagal memuat daftar outlet:", err);
+    }
+  }, []);
+
   const loadSalesTransactions = useCallback(
     async (page = salesTransactionPage, limit = salesTransactionLimit) => {
       setLoading(true);
@@ -669,7 +689,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         setSalesTransactionPageInput(String(data.page ?? page));
         setSalesTransactionTotalPages(data.total_pages ?? 1);
         setSalesTransactionTotal(data.total ?? 0);
-        setSalesTransactionOutlets(data.outlets ?? []);
         loadedTabs.current["sales-transactions"] = true;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat transaksi customer");
@@ -767,7 +786,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       return;
     }
     if (tab === "sales-transactions") {
-      await loadSalesTransactions();
+      await Promise.all([loadSalesTransactions(), loadSalesTransactionOutlets()]);
       return;
     }
     if (tab === "activity") {
@@ -783,6 +802,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     isMarketingConsole,
     loadCustomers,
     loadSalesTransactions,
+    loadSalesTransactionOutlets,
     loadRedeem,
     loadReport,
     loadUsers,

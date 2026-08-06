@@ -181,6 +181,19 @@ export type Redemption = {
   };
 };
 
+// M-8: GET /admin/redemptions dulu memakai take:200 tanpa skip, jadi
+// redemption ke-201+ tidak akan pernah terlihat. Sekarang dipaginasi
+// sungguhan, jadi responsnya berupa amplop halaman (sama seperti
+// CustomerSalesTransactionReportPage/AdminActivityLogPage), bukan array
+// polos lagi.
+export type RedemptionPage = {
+  items: Redemption[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
 export type AdminUser = {
   id: number;
   email: string | null;
@@ -421,7 +434,6 @@ export type CustomerSalesTransactionReportPage = {
   limit: number;
   total: number;
   total_pages: number;
-  outlets: string[];
 };
 
 export type SortOrder = "asc" | "desc";
@@ -459,6 +471,12 @@ export const adminApi = {
       `/customer-sales-transaction-reports?${params.toString()}`,
     );
   },
+  // M-8: dulu daftar outlet ikut dikirim di setiap respons
+  // customerSalesTransactionReports (field `outlets`), dihitung ulang lewat
+  // distinct scan di setiap page/filter change. Sekarang endpoint sendiri,
+  // dipanggil sekali oleh caller (bukan di setiap loadSalesTransactions).
+  customerSalesTransactionReportOutlets: () =>
+    adminRequest<string[]>("/customer-sales-transaction-reports/outlets"),
   activityLogs: (
     filters: {
       search?: string;
@@ -611,8 +629,17 @@ export const adminApi = {
     }),
   deleteRedeemItem: (id: number) =>
     adminRequest<{ message: string }>(`/redeem-menu/items/${id}`, { method: "DELETE" }),
-  redemptions: (status = "") =>
-    adminRequest<Redemption[]>(`/redemptions${status ? `?status=${status}` : ""}`),
+  // M-8: dulu backend selalu mengembalikan take:200 tanpa skip (redemption
+  // ke-201+ tidak pernah terlihat). Sekarang dipaginasi sungguhan lewat
+  // page/limit, responsnya jadi amplop RedemptionPage (bukan array polos).
+  redemptions: (filters: { status?: string; page?: number; limit?: number } = {}) => {
+    const params = new URLSearchParams({
+      page: String(filters.page ?? 1),
+      limit: String(filters.limit ?? 50),
+    });
+    if (filters.status) params.set("status", filters.status);
+    return adminRequest<RedemptionPage>(`/redemptions?${params.toString()}`);
+  },
   updateRedemptionStatus: (id: number, status: string) =>
     adminRequest<Redemption>(`/redemptions/${id}/status`, {
       method: "PUT",
