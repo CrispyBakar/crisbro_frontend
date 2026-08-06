@@ -1,8 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Select as SelectRoot,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
@@ -27,7 +33,6 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronDown,
   Coins,
   Gift,
   History,
@@ -4377,6 +4382,29 @@ function Toggle({
   );
 }
 
+// M-10: sebelumnya komponen ini adalah dropdown buatan sendiri (bukan
+// primitive Radix, walau @radix-ui/react-select sudah jadi dependency) --
+// opsi cuma menembak onMouseDown, tanpa onClick, tanpa navigasi panah,
+// tanpa Enter/Space/Escape, tanpa aria-activedescendant, tanpa typeahead.
+// Pengguna keyboard/screen-reader bisa MEMBUKA dropdown-nya (tombol trigger
+// native, bisa difokus & di-Enter/Space) tapi tidak bisa MEMILIH opsi
+// apa pun di dalamnya. Sekarang jadi pembungkus tipis di atas primitive
+// Radix Select (SelectRoot/SelectTrigger/SelectContent/SelectItem di
+// src/components/ui/select.tsx) yang sudah menangani seluruh interaksi
+// keyboard/ARIA itu bawaan -- bukan ditulis ulang manual di sini.
+//
+// Kontrak prop (label/value/onChange/options/required) SENGAJA dibuat
+// identik dengan versi lama supaya ke-12 pemanggil komponen ini di file ini
+// (filter role, outlet, status, dst) tidak perlu diubah sama sekali.
+//
+// Satu penyesuaian: Radix Select.Item tidak mengizinkan value="" (dipakai
+// Radix sendiri sebagai penanda "belum ada yang dipilih"). Filter "Semua
+// outlet" di halaman ini memang memakai value="" untuk berarti "tanpa
+// filter", jadi dipetakan bolak-balik ke SELECT_EMPTY_VALUE secara
+// transparan di dalam wrapper ini -- pemanggil tetap bekerja dengan string
+// kosong seperti sebelumnya.
+const SELECT_EMPTY_VALUE = "__crisbar_select_empty__";
+
 function Select({
   label,
   value,
@@ -4390,135 +4418,29 @@ function Select({
   options: Array<{ value: string; label: string }>;
   required?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const selectRef = useRef<HTMLLabelElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    maxHeight: number;
-  } | null>(null);
-  const selectedOption = options.find((option) => option.value === value);
-
-  const updateDropdownStyle = useCallback(() => {
-    const button = buttonRef.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const gap = 6;
-    const edgePadding = 12;
-    const preferredMaxHeight = 208;
-    const width = Math.min(rect.width, viewportWidth - edgePadding * 2);
-    const left = Math.min(Math.max(rect.left, edgePadding), viewportWidth - width - edgePadding);
-    const top = rect.bottom + gap;
-    const spaceBelow = viewportHeight - top - edgePadding;
-    const maxHeight = Math.max(72, Math.min(preferredMaxHeight, Math.max(72, spaceBelow)));
-
-    setDropdownStyle({ left, top, width, maxHeight });
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (
-        selectRef.current &&
-        !selectRef.current.contains(target) &&
-        !dropdownRef.current?.contains(target)
-      ) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-
-    updateDropdownStyle();
-    window.addEventListener("resize", updateDropdownStyle);
-    window.addEventListener("scroll", updateDropdownStyle, true);
-
-    return () => {
-      window.removeEventListener("resize", updateDropdownStyle);
-      window.removeEventListener("scroll", updateDropdownStyle, true);
-    };
-  }, [open, updateDropdownStyle]);
-
   return (
-    <label ref={selectRef} className="relative mb-3 block text-sm font-bold text-foreground">
+    <label className="mb-3 block text-sm font-bold text-foreground">
       <span className="mb-1.5 block text-xs font-black uppercase text-muted-foreground">
         <RequiredLabel label={label} required={required} />
       </span>
-      <span className="relative block">
-        <button
-          ref={buttonRef}
-          type="button"
-          onClick={() => {
-            updateDropdownStyle();
-            setOpen((current) => !current);
-          }}
-          className="flex h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5 text-left text-sm font-bold text-foreground shadow-sm outline-none transition-colors hover:border-primary/40 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-required={required}
-        >
-          <span className="min-w-0 truncate">{selectedOption?.label ?? "Pilih opsi"}</span>
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 text-primary transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-        {open &&
-          dropdownStyle &&
-          createPortal(
-            <div
-              ref={dropdownRef}
-              className="fixed z-[220] overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft)"
-              style={{
-                left: dropdownStyle.left,
-                top: dropdownStyle.top,
-                width: dropdownStyle.width,
-              }}
+      <SelectRoot
+        value={value === "" ? SELECT_EMPTY_VALUE : value}
+        onValueChange={(next) => onChange(next === SELECT_EMPTY_VALUE ? "" : next)}
+      >
+        <SelectTrigger aria-required={required}>
+          <SelectValue placeholder="Pilih opsi" />
+        </SelectTrigger>
+        <SelectContent>
+          {(options ?? []).map((option) => (
+            <SelectItem
+              key={option.value === "" ? SELECT_EMPTY_VALUE : option.value}
+              value={option.value === "" ? SELECT_EMPTY_VALUE : option.value}
             >
-              <div
-                role="listbox"
-                className="overflow-y-auto p-1"
-                style={{ maxHeight: dropdownStyle.maxHeight }}
-              >
-                {(options ?? []).map((option) => {
-                  const selected = option.value === value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        onChange(option.value);
-                        setOpen(false);
-                      }}
-                      className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors ${
-                        selected
-                          ? "bg-primary text-primary-foreground"
-                          : "text-foreground hover:bg-secondary"
-                      }`}
-                    >
-                      <span className="block truncate">{option.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>,
-            document.body,
-          )}
-      </span>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </SelectRoot>
     </label>
   );
 }
