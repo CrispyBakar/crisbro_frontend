@@ -1,23 +1,19 @@
-import { getToken } from "./auth";
 import { apiUrl } from "./api";
 
 const ADMIN_PATH = "/admin";
 
 async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  if (!token) throw new Error("Token admin tidak ditemukan");
-
   const res = await fetch(apiUrl(`${ADMIN_PATH}${path}`), {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       ...(options.headers ?? {}),
     },
   });
 
   const responseText = await res.text();
-  let data: any = null;
+  let data: unknown = null;
   try {
     data = responseText ? JSON.parse(responseText) : null;
   } catch {
@@ -25,7 +21,13 @@ async function adminRequest<T>(path: string, options: RequestInit = {}): Promise
   }
 
   if (!res.ok) {
-    const detail = data?.message || data?.error;
+    const errorBody = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+    const detail =
+      typeof errorBody?.message === "string"
+        ? errorBody.message
+        : typeof errorBody?.error === "string"
+          ? errorBody.error
+          : null;
     throw new Error(
       detail
         ? `HTTP ${res.status} — ${detail}`

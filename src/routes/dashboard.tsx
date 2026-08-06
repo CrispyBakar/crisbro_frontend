@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownLeft, ArrowUpRight, Sparkles, LogOut, Gift } from "lucide-react";
 import { apiUrl } from "@/lib/api";
-import { apiProfile, getToken, getUser, logout, type AuthUser } from "@/lib/auth";
+import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
 import coinMembershipCard from "@/assets/coin-membership-card.png";
 import membershipCardBg from "@/assets/membership-card-bg.png";
 
@@ -381,11 +381,8 @@ function DashboardPage() {
 }
 
 async function fetchPointHistory() {
-  const token = getToken();
-  if (!token) throw new Error("Token tidak ditemukan");
-
   const response = await fetch(apiUrl("/points/history"), {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   const data = await response.json().catch(() => null);
 

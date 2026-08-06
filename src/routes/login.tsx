@@ -61,8 +61,8 @@ function LoginPage() {
 
     setLoading(true);
     try {
-      const { token, user } = await apiLogin(normalized, password);
-      saveAuth(token, user);
+      const { user } = await apiLogin(normalized, password);
+      saveAuth(user);
       navigate({
         to:
           user.role === "admin"

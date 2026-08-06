@@ -1,7 +1,13 @@
 import { apiUrl } from "./api";
 
-const TOKEN_KEY = "crisbar_token";
+const LEGACY_TOKEN_KEY = "crisbar_token";
 const USER_KEY = "crisbar_user";
+
+// Deployment ini sengaja mengakhiri sesi browser versi lama: kredensial yang
+// pernah dapat dibaca JavaScript tidak boleh dibiarkan hidup di localStorage.
+if (typeof window !== "undefined") {
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+}
 
 type RegisterError = Error & {
   whatsappUrl?: string;
@@ -39,14 +45,10 @@ export type AuthUser = {
   } | null;
 };
 
-export function saveAuth(token: string, user: AuthUser) {
-  localStorage.setItem(TOKEN_KEY, token);
+export function saveAuth(user: AuthUser) {
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("auth-change"));
-}
-
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function getUser(): AuthUser | null {
@@ -59,32 +61,20 @@ export function getUser(): AuthUser | null {
 }
 
 function clearLocalAuth() {
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("auth-change"));
 }
 
 // Mencabut sesi di server lebih dulu, baru menghapus jejak di browser.
 //
-// Menghapus localStorage saja tidak membuat token berhenti berlaku: server
-// memvalidasi token terhadap tabel Session, jadi token yang sempat tersalin
-// tetap diterima sampai kedaluwarsa (7 hari) walaupun pengguna sudah keluar.
-//
 // Penghapusan lokal tetap dijalankan meski permintaan ke server gagal, supaya
 // pengguna tidak terjebak dalam keadaan seolah masih login saat jaringan mati.
 export async function logout() {
-  const token = getToken();
-
-  if (token) {
-    try {
-      await fetch(apiUrl("/logout"), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {
-      // Diabaikan dengan sengaja; sesi tetap dicabut saat token kedaluwarsa
-      // atau lewat "keluar dari semua perangkat".
-    }
+  try {
+    await fetch(apiUrl("/logout"), { method: "POST", credentials: "include" });
+  } catch {
+    // State UI lokal tetap dibersihkan saat jaringan gagal.
   }
 
   clearLocalAuth();
@@ -93,18 +83,10 @@ export async function logout() {
 // Mencabut seluruh sesi milik user ini, dipakai bila akun diduga dipakai orang
 // lain.
 export async function logoutAllDevices() {
-  const token = getToken();
-
-  if (token) {
-    try {
-      await fetch(apiUrl("/logout-all"), {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {
-      // Sama seperti logout biasa: kegagalan jaringan tidak boleh menahan
-      // pembersihan sesi lokal.
-    }
+  try {
+    await fetch(apiUrl("/logout-all"), { method: "POST", credentials: "include" });
+  } catch {
+    // State UI lokal tetap dibersihkan saat jaringan gagal.
   }
 
   clearLocalAuth();
@@ -168,7 +150,9 @@ function isAuthCustomer(value: unknown): value is AuthUser["customer"] {
   );
 }
 
-function isCustomerPoint(value: unknown): value is NonNullable<AuthUser["customer"]>["customer_point"] {
+function isCustomerPoint(
+  value: unknown,
+): value is NonNullable<AuthUser["customer"]>["customer_point"] {
   if (!isRecord(value)) return false;
 
   return (
@@ -178,25 +162,15 @@ function isCustomerPoint(value: unknown): value is NonNullable<AuthUser["custome
   );
 }
 
-function isLoginResponse(
-  value: unknown,
-): value is { token: string; expiresIn: string; user: AuthUser } {
+function isLoginResponse(value: unknown): value is { expiresIn: string; user: AuthUser } {
   if (!isRecord(value)) return false;
 
-  return (
-    typeof value.token === "string" &&
-    value.token.length > 0 &&
-    typeof value.expiresIn === "string" &&
-    isAuthUser(value.user)
-  );
+  return typeof value.expiresIn === "string" && isAuthUser(value.user);
 }
 
 export async function apiProfile() {
-  const token = getToken();
-  if (!token) throw new Error("Token tidak ditemukan");
-
   const res = await fetch(apiUrl("/profile"), {
-    headers: { Authorization: `Bearer ${token}` },
+    credentials: "include",
   });
   const data = await readJsonResponse(res, "Gagal mengambil profil");
 
@@ -213,6 +187,7 @@ export async function apiProfile() {
 export async function apiLogin(phone_number: string, password: string) {
   const res = await fetch(apiUrl("/login"), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone_number, password }),
   });
@@ -256,14 +231,11 @@ export async function apiActivateAccount(token: string, password: string) {
 }
 
 export async function apiChangePassword(currentPassword: string, newPassword: string) {
-  const token = getToken();
-  if (!token) throw new Error("Token tidak ditemukan");
-
   const res = await fetch(apiUrl("/change-password"), {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       current_password: currentPassword,
