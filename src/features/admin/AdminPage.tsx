@@ -3,6 +3,15 @@ import type { ReactNode } from "react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select as SelectRoot,
   SelectContent,
   SelectItem,
@@ -3405,6 +3414,47 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   );
 }
 
+// M-11: Radix Dialog memindahkan fokus ke dalam dialog saat dibuka,
+// menjebak Tab di dalamnya, dan mendukung Escape secara bawaan -- tapi
+// PENGEMBALIAN fokus ke elemen pemicu saat ditutup andalannya adalah
+// Dialog.Trigger sebagai penanda "elemen mana yang harus difokus balik".
+// Kedua dialog di file ini dibuka dari banyak tombol pemicu yang tersebar
+// (tiap baris tabel punya tombol Edit/Hapus sendiri) lewat state
+// eksternal (activeMobileForm/confirmDialog), bukan dibungkus satu
+// Dialog.Trigger -- diverifikasi lewat pengujian browser sungguhan bahwa
+// fallback restorasi fokus Radix TIDAK konsisten mengembalikan fokus ke
+// pemicu yang benar dalam pola ini (kadang jatuh ke <body>, bukan tombol
+// yang tadi diklik). Hook ini mengingat elemen yang fokus tepat sebelum
+// dialog dibuka, lalu mengembalikannya secara eksplisit lewat
+// onCloseAutoFocus saat dialog ditutup.
+function useDialogCloseFocusRestore(open: boolean) {
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (open) lastFocusedRef.current = document.activeElement as HTMLElement | null;
+  }, [open]);
+
+  return useCallback((event: Event) => {
+    event.preventDefault();
+    lastFocusedRef.current?.focus();
+  }, []);
+}
+
+// Sebelumnya <div role="dialog" aria-modal="true"> ditulis manual --
+// atribut ARIA-nya BENAR, tapi tidak ada satu pun perilaku di baliknya:
+// tidak ada focus trap (Tab bisa "bocor" ke konten di belakang overlay),
+// tidak ada pemindahan fokus ke dialog saat dibuka, tidak ada pengembalian
+// fokus ke elemen pemicu saat ditutup, dan tidak ada handler Escape sama
+// sekali. Sekarang dibungkus Radix Dialog (Root/Content), yang menyediakan
+// focus trap, focus-on-open, dan Escape bawaan lewat FocusScope +
+// DismissableLayer internal Radix -- bukan ditulis ulang manual. Restorasi
+// fokus saat tutup memakai useDialogCloseFocusRestore di atas (lihat
+// komentarnya untuk alasan tidak memakai default Radix apa adanya).
+//
+// Kontrak prop (open/title/saving/children/onClose) dipertahankan identik
+// dengan versi lama supaya pemanggilnya di bawah tidak perlu berubah.
+// "saving" tetap mencegah dialog ditutup lewat Escape/klik-di-luar SELAMA
+// proses simpan berjalan, sama seperti closeDialog() versi lama.
 function MobileCrudDialog({
   open,
   title,
@@ -3418,45 +3468,58 @@ function MobileCrudDialog({
   children: ReactNode;
   onClose: () => void;
 }) {
-  if (!open) return null;
-
-  const closeDialog = () => {
-    if (!saving) onClose();
-  };
+  const restoreFocusOnClose = useDialogCloseFocusRestore(open);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/35 p-3 backdrop-blur-sm md:hidden"
-      onClick={closeDialog}
-      role="presentation"
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !saving) onClose();
+      }}
     >
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mobile-crud-title"
-        onClick={(event) => event.stopPropagation()}
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg cursor-default flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-(--shadow-pop)"
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3">
-          <h2 id="mobile-crud-title" className="text-lg font-black">
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={closeDialog}
-            disabled={saving}
-            aria-label="Tutup form"
-            className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">{children}</div>
-      </section>
-    </div>
+      <DialogPortal>
+        <DialogOverlay className="md:hidden" />
+        <DialogContent
+          onEscapeKeyDown={(event) => {
+            if (saving) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (saving) event.preventDefault();
+          }}
+          onCloseAutoFocus={restoreFocusOnClose}
+          aria-describedby={undefined}
+          className="flex max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-(--shadow-pop) md:hidden"
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3">
+            <DialogTitle asChild>
+              <h2 className="text-lg font-black">{title}</h2>
+            </DialogTitle>
+            <DialogClose asChild>
+              <button
+                type="button"
+                disabled={saving}
+                aria-label="Tutup form"
+                className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogClose>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">{children}</div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   );
 }
 
+// M-11: sama seperti MobileCrudDialog di atas -- role="alertdialog"
+// aria-modal="true" dulu ditulis manual tanpa focus trap/focus
+// management/Escape di baliknya. Dibungkus Radix Dialog untuk perilaku
+// yang sama (focus trap, focus-on-open, restore focus, Escape). Role
+// "alertdialog" (bukan "dialog" default Radix) dipertahankan eksplisit
+// lewat prop -- Radix meneruskan prop yang di-spread ke elemen DOM
+// sehingga override ini sah, dan tetap sesuai kontrak ARIA
+// alertdialog+aria-describedby yang sudah benar sejak versi lama.
 function ConfirmDeleteDialog({
   dialog,
   saving,
@@ -3468,65 +3531,73 @@ function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  if (!dialog) return null;
-
-  const closeDialog = () => {
-    if (!saving) onCancel();
-  };
+  const restoreFocusOnClose = useDialogCloseFocusRestore(Boolean(dialog));
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid cursor-pointer place-items-center bg-foreground/35 px-4 backdrop-blur-sm"
-      onClick={closeDialog}
-      role="presentation"
+    <Dialog
+      open={Boolean(dialog)}
+      onOpenChange={(next) => {
+        if (!next && !saving) onCancel();
+      }}
     >
-      <section
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-delete-title"
-        aria-describedby="confirm-delete-description"
-        onClick={(event) => event.stopPropagation()}
-        className="relative w-full max-w-md cursor-default rounded-xl border border-border bg-card p-6 shadow-(--shadow-pop)"
-      >
-        <button
-          type="button"
-          onClick={closeDialog}
-          disabled={saving}
-          aria-label="Tutup dialog konfirmasi"
-          className="absolute right-4 top-4 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      <DialogPortal>
+        <DialogOverlay className="z-50" />
+        <DialogContent
+          role="alertdialog"
+          aria-describedby="confirm-delete-description"
+          onEscapeKeyDown={(event) => {
+            if (saving) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (saving) event.preventDefault();
+          }}
+          onCloseAutoFocus={restoreFocusOnClose}
+          className="z-50 max-w-md rounded-xl border border-border bg-card p-6 shadow-(--shadow-pop)"
         >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="mb-4 grid h-12 w-12 place-items-center rounded-lg bg-destructive/10 text-destructive">
-          <Trash2 className="h-6 w-6" />
-        </div>
-        <h2 id="confirm-delete-title" className="text-xl font-black tracking-tight">
-          {dialog.title}
-        </h2>
-        <p id="confirm-delete-description" className="mt-2 text-sm leading-6 text-muted-foreground">
-          {dialog.description}
-        </p>
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={saving}
-            className="font-bold"
+          <DialogClose asChild>
+            <button
+              type="button"
+              disabled={saving}
+              aria-label="Tutup dialog konfirmasi"
+              className="absolute right-4 top-4 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </DialogClose>
+          <div className="mb-4 grid h-12 w-12 place-items-center rounded-lg bg-destructive/10 text-destructive">
+            <Trash2 className="h-6 w-6" />
+          </div>
+          <DialogTitle asChild>
+            <h2 className="text-xl font-black tracking-tight">{dialog?.title}</h2>
+          </DialogTitle>
+          <DialogDescription
+            id="confirm-delete-description"
+            className="mt-2 text-sm leading-6 text-muted-foreground"
           >
-            Tidak, batal
-          </Button>
-          <Button
-            type="button"
-            onClick={onConfirm}
-            disabled={saving}
-            className="bg-destructive font-bold text-destructive-foreground hover:bg-destructive/90"
-          >
-            {saving ? "Menghapus..." : dialog.confirmLabel}
-          </Button>
-        </div>
-      </section>
-    </div>
+            {dialog?.description}
+          </DialogDescription>
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={saving}
+              className="font-bold"
+            >
+              Tidak, batal
+            </Button>
+            <Button
+              type="button"
+              onClick={onConfirm}
+              disabled={saving}
+              className="bg-destructive font-bold text-destructive-foreground hover:bg-destructive/90"
+            >
+              {saving ? "Menghapus..." : (dialog?.confirmLabel ?? "Hapus")}
+            </Button>
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   );
 }
 
