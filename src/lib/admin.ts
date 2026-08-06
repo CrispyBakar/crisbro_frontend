@@ -102,6 +102,12 @@ export type LoyaltySummary = {
     outlet_city: string | null;
     redeemed_at: string;
   }>;
+  redemption_history_pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
 };
 
 export type Reward = {
@@ -556,12 +562,24 @@ export const adminApi = {
   brands: () => adminRequest<AdminBrand[]>("/brands"),
   locations: () => adminRequest<AdminLocation[]>("/locations"),
   summary: (
-    filters: { redemption_from?: string; redemption_to?: string; outlet_id?: number } = {},
+    filters: {
+      redemption_from?: string;
+      redemption_to?: string;
+      outlet_id?: number;
+      redemption_history_page?: number;
+      redemption_history_limit?: number;
+    } = {},
   ) => {
     const params = new URLSearchParams();
     if (filters.redemption_from) params.set("redemption_from", filters.redemption_from);
     if (filters.redemption_to) params.set("redemption_to", filters.redemption_to);
     if (filters.outlet_id) params.set("outlet_id", String(filters.outlet_id));
+    if (filters.redemption_history_page) {
+      params.set("redemption_history_page", String(filters.redemption_history_page));
+    }
+    if (filters.redemption_history_limit) {
+      params.set("redemption_history_limit", String(filters.redemption_history_limit));
+    }
     const query = params.toString();
     return adminRequest<LoyaltySummary>(`/loyalty-summary${query ? `?${query}` : ""}`);
   },
