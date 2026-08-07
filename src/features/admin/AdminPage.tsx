@@ -1,6 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -668,6 +678,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     customerLimit,
     customerPage,
     customerSort,
+    customerEmailStatus,
   ]);
 
   // M-8: dipanggil sekali (dijaga salesTransactionOutletsLoaded), bukan di
@@ -747,7 +758,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [redeemSort]);
 
   const loadActivityLogs = useCallback(
     async (page = activityPage) => {
@@ -823,15 +834,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     tab,
   ]);
 
-  useEffect(() => {
-    if (tab !== "customers" || !canViewCustomers) return;
-
-    const timer = window.setTimeout(() => {
-      void searchCustomers(customerSearch);
-    }, 400);
-
-    return () => window.clearTimeout(timer);
-  }, [canViewCustomers, customerSearch, tab]);
+  // Effect Event selalu melihat loader/filter terbaru tanpa menjadikan setiap
+  // perubahan input filter sebagai pemicu auto-fetch. Filter tetap diterapkan
+  // lewat tombolnya, sedangkan effect di bawah hanya bereaksi pada akses/tab.
+  const loadActiveTab = useEffectEvent(() => {
+    void refreshCurrentTab();
+  });
 
   useEffect(() => {
     if (tab !== "customers" || !canSyncCustomers) return;
@@ -914,6 +922,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     customerLimit,
     customerPage,
     customerSort,
+    customerEmailStatus,
     tab,
   ]);
 
@@ -939,26 +948,46 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }
 
-  async function searchCustomers(searchTerm = customerSearch) {
-    const normalizedSearch = searchTerm.trim();
-    setError("");
-    try {
-      setCustomerPage(1);
-      setAppliedCustomerSearch(normalizedSearch);
-      const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort, {
-        from: appliedCustomerFrom,
-        to: appliedCustomerTo,
-        email_status: customerEmailStatus,
-      });
-      setCustomers(data.items ?? []);
-      setCustomerTotalPages(data.total_pages ?? 1);
-      setCustomerTotal(data.total ?? 0);
-      setCustomerPageInput("1");
-      setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mencari customer");
-    }
-  }
+  const searchCustomers = useCallback(
+    async (searchTerm = customerSearch) => {
+      const normalizedSearch = searchTerm.trim();
+      setError("");
+      try {
+        setCustomerPage(1);
+        setAppliedCustomerSearch(normalizedSearch);
+        const data = await adminApi.customers(normalizedSearch, 1, customerLimit, customerSort, {
+          from: appliedCustomerFrom,
+          to: appliedCustomerTo,
+          email_status: customerEmailStatus,
+        });
+        setCustomers(data.items ?? []);
+        setCustomerTotalPages(data.total_pages ?? 1);
+        setCustomerTotal(data.total ?? 0);
+        setCustomerPageInput("1");
+        setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal mencari customer");
+      }
+    },
+    [
+      appliedCustomerFrom,
+      appliedCustomerTo,
+      customerEmailStatus,
+      customerLimit,
+      customerSearch,
+      customerSort,
+    ],
+  );
+
+  useEffect(() => {
+    if (tab !== "customers" || !canViewCustomers) return;
+
+    const timer = window.setTimeout(() => {
+      void searchCustomers(customerSearch);
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [canViewCustomers, customerSearch, searchCustomers, tab]);
 
   async function loadCustomersPage(page: number) {
     const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
@@ -1148,10 +1177,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setLoading(false);
       return;
     }
-    refreshCurrentTab();
+    loadActiveTab();
     // Run only when access or the active tab changes. Filter/search inputs fetch via their buttons.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccess, canViewActivityLogs, isMarketingConsole, navigate, tab]);
+  }, [canAccess, canViewActivityLogs, isMarketingConsole, loadActiveTab, navigate, tab]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
