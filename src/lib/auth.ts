@@ -66,18 +66,20 @@ function clearLocalAuth() {
   window.dispatchEvent(new Event("auth-change"));
 }
 
-// Mencabut sesi di server lebih dulu, baru menghapus jejak di browser.
-//
-// Penghapusan lokal tetap dijalankan meski permintaan ke server gagal, supaya
-// pengguna tidak terjebak dalam keadaan seolah masih login saat jaringan mati.
-export async function logout() {
-  try {
-    await fetch(apiUrl("/logout"), { method: "POST", credentials: "include" });
-  } catch {
-    // State UI lokal tetap dibersihkan saat jaringan gagal.
-  }
-
+// Logout normal dibuat optimistic: state lokal dibersihkan segera agar
+// navigasi tidak menunggu latency database/serverless. Request pencabutan sesi
+// tetap dikirim dengan keepalive sehingga browser dapat menyelesaikannya saat
+// halaman segera berpindah atau ditutup.
+export function logout() {
   clearLocalAuth();
+  void fetch(apiUrl("/logout"), {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  }).catch(() => {
+    // Pencabutan lokal sudah selesai; sesi server tetap akan kedaluwarsa sesuai
+    // TTL dan request ini tidak boleh menghambat pengguna keluar.
+  });
 }
 
 // Mencabut seluruh sesi milik user ini, dipakai bila akun diduga dipakai orang
