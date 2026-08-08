@@ -292,6 +292,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   // ini supaya tidak diulang di setiap page/filter change.
   const salesTransactionOutletsLoaded = useRef(false);
   const customerImportWorkerRunning = useRef(false);
+  // Saklar server (RUNCHISE_CUSTOMER_SYNC_ENABLED). Default true supaya UI
+  // tidak berkedip "dijeda" sebelum status pertama diterima.
+  const [customerSyncEnabled, setCustomerSyncEnabled] = useState(true);
   const notifiedCustomerImportJob = useRef<number | null>(null);
 
   const currentUser = useMemo(() => getUser(), []);
@@ -561,6 +564,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
     let cancelled = false;
     let timer: number | undefined;
+    // Dibedakan dari `cancelled`: ini berarti "server menjeda sinkronisasi",
+    // bukan "komponen unmount". Keduanya sama-sama menghentikan penjadwalan
+    // ulang di blok finally.
+    let stopped = false;
 
     const refreshCustomerTableAfterSync = async () => {
       const data = await adminApi.customers(
@@ -583,6 +590,18 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         if (cancelled) return;
         let job = statusResult.job;
         setCustomerImportJob(job);
+        setCustomerSyncEnabled(statusResult.sync_enabled !== false);
+
+        // Sinkronisasi customer dijeda di server: dashboard TIDAK boleh
+        // menggerakkan worker. Sebelumnya tab Customers yang terbuka-lah yang
+        // memajukan impor halaman demi halaman setiap 5 detik, jadi tanpa
+        // penjagaan ini impor tetap berjalan walau cron sudah dimatikan.
+        // Polling dihentikan sekalian supaya tidak ada request berulang
+        // yang percuma.
+        if (statusResult.sync_enabled === false) {
+          stopped = true;
+          return;
+        }
 
         if (
           job &&
@@ -620,7 +639,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           );
         }
       } finally {
-        if (!cancelled) timer = window.setTimeout(poll, 5_000);
+        if (!cancelled && !stopped) timer = window.setTimeout(poll, 5_000);
       }
     };
 
@@ -2078,18 +2097,25 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     type="button"
                     variant="outline"
                     disabled={
+                      !customerSyncEnabled ||
                       saving ||
                       customerImportJob?.status === "queued" ||
                       customerImportJob?.status === "running"
+                    }
+                    title={
+                      customerSyncEnabled
+                        ? undefined
+                        : "Sinkronisasi customer Runchise sedang dijeda sementara"
                     }
                     onClick={() => void startCustomerImportFromRunchise()}
                     className="ml-auto rounded-full font-bold"
                   >
                     <RefreshCw
                       className={`mr-2 h-4 w-4 ${
-                        saving ||
-                        customerImportJob?.status === "queued" ||
-                        customerImportJob?.status === "running"
+                        customerSyncEnabled &&
+                        (saving ||
+                          customerImportJob?.status === "queued" ||
+                          customerImportJob?.status === "running")
                           ? "animate-spin"
                           : ""
                       }`}
@@ -2105,14 +2131,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                       {customerImportJob.status === "completed" ||
                       customerImportJob.status === "completed_with_errors"
                         ? "Sinkronisasi customer selesai"
-                        : customerImportJob.status === "running"
-                          ? "Sinkronisasi customer sedang berjalan"
-                          : "Sinkronisasi customer menunggu worker"}
+                        : !customerSyncEnabled
+                          ? "Sinkronisasi customer dijeda sementara"
+                          : customerImportJob.status === "running"
+                            ? "Sinkronisasi customer sedang berjalan"
+                            : "Sinkronisasi customer menunggu worker"}
                     </p>
                     <span className="font-semibold text-muted-foreground">
                       Job #{customerImportJob.id}
                     </span>
                   </div>
+                  {!customerSyncEnabled &&
+                    customerImportJob.status !== "completed" &&
+                    customerImportJob.status !== "completed_with_errors" && (
+                      <p className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">
+                        Impor customer baru dihentikan sementara untuk menghemat kapasitas database;
+                        dashboard memakai data customer yang sudah tersimpan. Progres job ini
+                        tersimpan dan akan dilanjutkan dari halaman terakhir begitu sinkronisasi
+                        diaktifkan kembali.
+                      </p>
+                    )}
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-primary transition-all"

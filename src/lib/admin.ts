@@ -190,11 +190,21 @@ export const adminApi = {
       "/sync/customers",
       { method: "POST" },
     ),
+  // sync_enabled: saklar server (RUNCHISE_CUSTOMER_SYNC_ENABLED). Saat false,
+  // dashboard tidak boleh menggerakkan worker import sama sekali.
   customerImportSyncStatus: () =>
-    adminRequest<{ job: CustomerImportSyncJob | null }>("/sync/customers/status"),
+    adminRequest<{ job: CustomerImportSyncJob | null; sync_enabled: boolean }>(
+      "/sync/customers/status",
+    ),
   processCustomerImportSync: () =>
     adminRequest<{
-      status: "idle" | "already_running" | "running" | "completed" | "completed_with_errors";
+      status:
+        | "idle"
+        | "already_running"
+        | "running"
+        | "completed"
+        | "completed_with_errors"
+        | "disabled";
       job: CustomerImportSyncJob | null;
     }>("/sync/customers/process", { method: "POST" }),
   syncCustomerTimestamps: () =>
