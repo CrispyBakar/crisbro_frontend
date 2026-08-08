@@ -2,7 +2,6 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   lazy,
-  memo,
   Suspense,
   useCallback,
   useEffect,
@@ -21,19 +20,11 @@ import {
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select as SelectRoot,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
 import {
   adminApi,
-  type SortOrder,
   type AdminActivityLog,
   type AdminBrand,
   type AdminCustomer,
@@ -49,65 +40,44 @@ import {
 } from "@/lib/admin";
 import {
   BarChart3,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Coins,
-  Gift,
   History,
   ListChecks,
   Mail,
   Pencil,
   RefreshCw,
   ReceiptText,
-  TicketCheck,
   Trash2,
-  UserCheck,
   Users,
-  WalletCards,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  currencyFormat,
+  dateFormat,
+  dateTimeFormat,
+  nextSortState,
+  numberFormat,
+  paginationItems,
+  type SortState,
+  toNumber,
+} from "./adminFormatters";
+import {
+  FormInput,
+  Panel,
+  RequiredLabel,
+  Select,
+  SortableHeader,
+  TableScrollArea,
+} from "./adminUiPrimitives";
 
-const ChartContainer = lazy(() =>
-  import("@/components/ui/chart").then((module) => ({ default: module.ChartContainer })),
-);
-const ChartLegend = lazy(() =>
-  import("@/components/ui/chart").then((module) => ({ default: module.ChartLegend })),
-);
-const ChartLegendContent = lazy(() =>
-  import("@/components/ui/chart").then((module) => ({ default: module.ChartLegendContent })),
-);
-const ChartTooltip = lazy(() =>
-  import("@/components/ui/chart").then((module) => ({ default: module.ChartTooltip })),
-);
-const ChartTooltipContent = lazy(() =>
-  import("@/components/ui/chart").then((module) => ({ default: module.ChartTooltipContent })),
-);
-const Bar = lazy(() => import("recharts").then((module) => ({ default: module.Bar })));
-const BarChart = lazy(() => import("recharts").then((module) => ({ default: module.BarChart })));
-const CartesianGrid = lazy(() =>
-  import("recharts").then((module) => ({ default: module.CartesianGrid })),
-);
-const Cell = lazy(() => import("recharts").then((module) => ({ default: module.Cell })));
-const LabelList = lazy(() => import("recharts").then((module) => ({ default: module.LabelList })));
-const Line = lazy(() => import("recharts").then((module) => ({ default: module.Line })));
-const LineChart = lazy(() => import("recharts").then((module) => ({ default: module.LineChart })));
-const XAxis = lazy(() => import("recharts").then((module) => ({ default: module.XAxis })));
-const YAxis = lazy(() => import("recharts").then((module) => ({ default: module.YAxis })));
-const ReportTopRewardsChart = lazy(() =>
-  import("./AdminReportCharts").then((module) => ({ default: module.TopRewardsChart })),
-);
-const ReportTopRedeemOutletsChart = lazy(() =>
-  import("./AdminReportCharts").then((module) => ({ default: module.TopRedeemOutletsChart })),
-);
-const ReportRedemptionHistoryChart = lazy(() =>
-  import("./AdminReportCharts").then((module) => ({ default: module.RedemptionHistoryChart })),
-);
+// H-5: tab read-only dipecah jadi modul lazy tersendiri, jadi kode &
+// helper-nya hanya diunduh browser saat tab itu benar-benar dibuka.
+const AdminActivityTab = lazy(() => import("./AdminActivityTab"));
+const AdminReportTab = lazy(() => import("./AdminReportTab"));
+const AdminSalesTransactionsTab = lazy(() => import("./AdminSalesTransactionsTab"));
 
 type Tab = "report" | "sales-transactions" | "users" | "customers" | "redeem" | "activity";
 type ConsoleMode = "admin" | "marketing";
-type SortState<T extends string> = { sort_by: T; sort_order: SortOrder };
 type UserSortKey = "email" | "phone_number" | "role" | "created_at";
 type CustomerSortKey =
   | "name"
@@ -170,264 +140,9 @@ type ConfirmDialogState = {
 
 type MobileCrudForm = "user" | "customer" | "redeem";
 
-function paginationItems(current: number, total: number): Array<number | "ellipsis"> {
-  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
-
-  const pages = new Set([1, total, current - 1, current, current + 1]);
-  const sorted = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
-  const result: Array<number | "ellipsis"> = [];
-  sorted.forEach((page, index) => {
-    if (index > 0 && page - sorted[index - 1] > 1) result.push("ellipsis");
-    result.push(page);
-  });
-  return result;
-}
-
-function numberFormat(value: number) {
-  return value.toLocaleString("id-ID");
-}
-
-function currencyFormat(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function toNumber(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === "") return 0;
-  const number = Number(value);
-  return Number.isNaN(number) ? 0 : number;
-}
-
-function dateFormat(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function dateTimeFormat(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function compactJson(value: unknown) {
-  if (value === null || value === undefined) return "-";
-  const text = JSON.stringify(value);
-  if (!text) return "-";
-  return text.length > 140 ? `${text.slice(0, 140)}...` : text;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function normalizeAuditValue(value: unknown) {
-  return value === undefined || value === "" ? null : value;
-}
-
-function auditValuesEqual(before: unknown, after: unknown) {
-  return JSON.stringify(normalizeAuditValue(before)) === JSON.stringify(normalizeAuditValue(after));
-}
-
-function sortedAuditLocationIds(value: unknown) {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((item) => (isRecord(item) ? Number(item.location_id) : Number(item)))
-    .filter((locationId) => Number.isInteger(locationId))
-    .sort((a, b) => a - b);
-}
-
-function isNoisyLegacyCustomerChangedFields(value: unknown) {
-  return Array.isArray(value) && value.map(String).includes("last_updated_by_id");
-}
-
-function actualCustomerChangedFields(log?: AdminActivityLog) {
-  if (log?.action !== "update_customer" || log.entity_type !== "customer") return [];
-  if (!isRecord(log.before) || !isRecord(log.after)) return [];
-
-  const customerFields = [
-    "name",
-    "phone_number",
-    "phone_number_country_code",
-    "address",
-    "province",
-    "city",
-    "country",
-    "postal_code",
-    "dob",
-    "gender",
-    "status",
-    "balance",
-    "brand_id",
-    "owner_location_id",
-  ];
-  const changedFields = customerFields.filter(
-    (field) => !auditValuesEqual(log.before[field], log.after[field]),
-  );
-
-  const beforeUser = isRecord(log.before.user) ? log.before.user : {};
-  const afterUser = isRecord(log.after.user) ? log.after.user : {};
-  for (const field of ["phone_number", "email"]) {
-    if (!auditValuesEqual(beforeUser[field], afterUser[field])) {
-      changedFields.push(`user.${field}`);
-    }
-  }
-
-  const beforePoint = isRecord(log.before.customer_point) ? log.before.customer_point : {};
-  const afterPoint = isRecord(log.after.customer_point) ? log.after.customer_point : {};
-  for (const field of ["total_point", "available_point"]) {
-    if (!auditValuesEqual(beforePoint[field], afterPoint[field])) {
-      changedFields.push(`point.${field}`);
-    }
-  }
-
-  if (
-    !auditValuesEqual(
-      sortedAuditLocationIds(log.before.customer_locations),
-      sortedAuditLocationIds(log.after.customer_locations),
-    )
-  ) {
-    changedFields.push("location_ids");
-  }
-
-  return changedFields;
-}
-
-function metadataLabels(value: unknown, log?: AdminActivityLog) {
-  if (!isRecord(value)) return [];
-
-  const labels: Array<{ label: string; value: string; tone?: "success" | "warning" | "danger" }> =
-    [];
-  const sync = value.runchise_sync;
-  if (isRecord(sync)) {
-    const status = typeof sync.status === "string" ? sync.status : "";
-    labels.push({
-      label: "Sync Runchise",
-      value:
-        status === "synced"
-          ? "Berhasil"
-          : status === "failed"
-            ? "Gagal"
-            : status === "skipped"
-              ? "Dilewati"
-              : status || "-",
-      tone: status === "synced" ? "success" : status === "failed" ? "danger" : "warning",
-    });
-
-    if (typeof sync.runchise_customer_id === "number") {
-      labels.push({ label: "ID Runchise", value: String(sync.runchise_customer_id) });
-    }
-    if (sync.updated_existing === true) {
-      labels.push({ label: "Aksi Runchise", value: "Update data yang sudah ada" });
-    } else if (sync.matched_existing === true) {
-      labels.push({ label: "Aksi Runchise", value: "Cocokkan data yang sudah ada" });
-    }
-    if (typeof sync.error === "string") {
-      labels.push({ label: "Error Sync", value: sync.error, tone: "danger" });
-    }
-  }
-
-  const activationEmail = value.activation_email;
-  if (isRecord(activationEmail)) {
-    const sent = activationEmail.sent === true;
-    const skipped = activationEmail.skipped === true;
-    labels.push({
-      label: "Email Aktivasi",
-      value: sent ? "Terkirim" : skipped ? "Dilewati" : "Gagal/belum terkirim",
-      tone: sent ? "success" : skipped ? "warning" : "danger",
-    });
-    if (typeof activationEmail.error === "string") {
-      labels.push({ label: "Error Email", value: activationEmail.error, tone: "danger" });
-    }
-    if (typeof activationEmail.reason === "string") {
-      labels.push({ label: "Alasan Email", value: activationEmail.reason });
-    }
-  }
-
-  const actualChangedFields = actualCustomerChangedFields(log);
-  const metadataChangedFields = value.changed_fields;
-  if (isNoisyLegacyCustomerChangedFields(metadataChangedFields)) {
-    labels.push({
-      label: "Field Berubah",
-      value: actualChangedFields.length
-        ? actualChangedFields.join(", ")
-        : "Log lama sebelum perbaikan metadata, daftar field belum akurat",
-      tone: "warning",
-    });
-  } else if (Array.isArray(metadataChangedFields) && metadataChangedFields.length > 0) {
-    labels.push({
-      label: "Field Berubah",
-      value: metadataChangedFields.map(String).join(", "),
-    });
-  }
-
-  return labels;
-}
-
-function metadataToneClass(tone?: "success" | "warning" | "danger") {
-  if (tone === "success") return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700";
-  if (tone === "danger") return "border-red-500/20 bg-red-500/10 text-red-700";
-  if (tone === "warning") return "border-amber-500/20 bg-amber-500/10 text-amber-700";
-  return "border-border bg-muted text-muted-foreground";
-}
-
-function ActivityMetadata({ log }: { log: AdminActivityLog }) {
-  const value = log.metadata;
-  const labels = metadataLabels(value, log);
-
-  if (labels.length === 0) {
-    return (
-      <code
-        className="block max-h-24 overflow-auto rounded-md bg-muted px-2 py-1 font-mono text-[11px] leading-relaxed text-muted-foreground whitespace-pre-wrap break-words"
-        title={compactJson(value)}
-      >
-        {compactJson(value)}
-      </code>
-    );
-  }
-
-  return (
-    <div className="flex max-h-28 flex-col gap-1 overflow-auto pr-1">
-      {labels.map((item) => (
-        <span
-          key={`${item.label}:${item.value}`}
-          className={`rounded-md border px-2 py-1 text-[11px] font-semibold leading-snug ${metadataToneClass(
-            item.tone,
-          )}`}
-          title={`${item.label}: ${item.value}`}
-        >
-          <span className="font-black">{item.label}:</span> {item.value}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function accountStatusLabel(status?: string | null) {
   if (status === "not_linked") return "Belum Terhubung";
   return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
-}
-
-function nextSortState<T extends string>(
-  current: SortState<T>,
-  sortBy: T,
-  defaultOrder: SortOrder = "asc",
-): SortState<T> {
-  if (current.sort_by !== sortBy) {
-    return { sort_by: sortBy, sort_order: defaultOrder };
-  }
-
-  return { sort_by: sortBy, sort_order: current.sort_order === "asc" ? "desc" : "asc" };
 }
 
 function requiredFieldsMessage(fields: string[]) {
@@ -1975,462 +1690,85 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {loading && <AdminPageSkeleton tab={tab} />}
 
         {!loading && tab === "report" && summary && (
-          <section className="space-y-6">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6 lg:gap-4">
-              <Metric
-                title="Total Member"
-                value={numberFormat(summary.total_members)}
-                icon={<Users className="h-4 w-4" />}
-                tone="primary"
-              />
-              <Metric
-                title="Customer Berpoin"
-                value={numberFormat(summary.runchise_customers_with_points)}
-                icon={<UserCheck className="h-4 w-4" />}
-                tone="success"
-              />
-              <Metric
-                title="Poin Diberikan"
-                value={numberFormat(summary.total_points_given)}
-                icon={<Coins className="h-4 w-4" />}
-                tone="gold"
-              />
-              <Metric
-                title="Poin Ditukar"
-                value={numberFormat(summary.points_redeemed)}
-                icon={<TicketCheck className="h-4 w-4" />}
-                tone="info"
-              />
-              <Metric
-                title="Poin Tersedia"
-                value={numberFormat(summary.total_points_available)}
-                icon={<WalletCards className="h-4 w-4" />}
-                tone="muted"
-              />
-              <Metric
-                title="Total Redeem"
-                value={numberFormat(summary.redemption_count)}
-                icon={<Gift className="h-4 w-4" />}
-                tone="danger"
-              />
-            </div>
-            {/* Kolom "Customer di Outlet" tidak menjumlah ke kartu "Customer
-                Tersimpan": kartu menghitung customer unik, sedangkan satu
-                customer dapat terdaftar di beberapa outlet sekaligus. */}
-            <Panel title="Jumlah customer Runchise per outlet (satu customer dapat terdaftar di beberapa outlet)">
-              <DataTable
-                headers={[
-                  "Outlet",
-                  "Source ID",
-                  "Kota",
-                  "Customer di Outlet",
-                  "Customer Berpoin",
-                  "Jumlah Poin yang Diredeem",
-                  "Snapshot Terakhir",
-                  "Status",
-                ]}
-                rows={(summary.runchise_customers_by_outlet ?? []).map((outlet) => [
-                  outlet.outlet_name,
-                  String(outlet.source_location_id),
-                  outlet.city ?? "-",
-                  numberFormat(outlet.stored_customers),
-                  numberFormat(outlet.customers_with_points),
-                  numberFormat(outlet.points_redeemed ?? 0),
-                  outlet.last_snapshot_at ? dateFormat(outlet.last_snapshot_at) : "-",
-                  outlet.status === "capped"
-                    ? "Dibatasi API"
-                    : outlet.status === "mismatch"
-                      ? "Mismatch"
-                      : outlet.status === "empty"
-                        ? "Belum ada data"
-                        : "Tersedia",
-                ])}
-                emptyMessage="Belum ada outlet Runchise yang terdaftar."
-                maxHeight={440}
-              />
-            </Panel>
-            <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-              <Panel title="Reward paling sering ditukar">
-                <ReportChartBoundary>
-                  <ReportTopRewardsChart rewards={summary.top_rewards ?? []} />
-                </ReportChartBoundary>
-              </Panel>
-              <Panel title="5 outlet paling sering redeem">
-                <ReportChartBoundary>
-                  <ReportTopRedeemOutletsChart outlets={summary.top_redeem_outlets ?? []} />
-                </ReportChartBoundary>
-              </Panel>
-            </div>
-            <Panel title="Riwayat semua reward yang ditukar">
-              <div className="mb-4 grid gap-3 md:grid-cols-[1fr_1fr_1.2fr_auto] md:items-end">
-                <FormInput
-                  label="Dari tanggal"
-                  type="date"
-                  value={reportRedemptionFrom}
-                  onChange={setReportRedemptionFrom}
-                />
-                <FormInput
-                  label="Hingga tanggal"
-                  type="date"
-                  value={reportRedemptionTo}
-                  onChange={setReportRedemptionTo}
-                />
-                <Select
-                  label="Outlet"
-                  value={reportOutletId}
-                  onChange={setReportOutletId}
-                  options={[
-                    { value: "0", label: "Semua outlet" },
-                    ...(locations ?? []).map((location) => ({
-                      value: String(location.id),
-                      label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
-                    })),
-                  ]}
-                />
-                <Button
-                  onClick={loadReport}
-                  disabled={loading}
-                  className="mb-3 rounded-full font-bold"
-                >
-                  Terapkan Filter
-                </Button>
-              </div>
-              <ReportChartBoundary>
-                <ReportRedemptionHistoryChart data={summary.redemption_trend ?? []} />
-              </ReportChartBoundary>
-              <div className="mt-5">
-                <DataTable
-                  headers={["Tanggal", "Reward/Menu", "Outlet", "Poin", "Harga Jual"]}
-                  rows={(summary.redemption_history ?? []).map((item) => [
-                    dateFormat(item.redeemed_at),
-                    item.reward_name,
-                    item.outlet_city
-                      ? `${item.outlet_name} (${item.outlet_city})`
-                      : item.outlet_name,
-                    numberFormat(item.points_spent),
-                    item.menu_price !== null ? currencyFormat(item.menu_price) : "-",
-                  ])}
-                  emptyMessage="Belum ada riwayat reward yang ditukar pada rentang tanggal ini."
-                />
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat laporan" />
+            }
+          >
+            <AdminReportTab
+              summary={summary}
+              locations={locations}
+              redemptionFrom={reportRedemptionFrom}
+              onRedemptionFromChange={setReportRedemptionFrom}
+              redemptionTo={reportRedemptionTo}
+              onRedemptionToChange={setReportRedemptionTo}
+              outletId={reportOutletId}
+              onOutletIdChange={setReportOutletId}
+              loading={loading}
+              onApplyFilter={() => void loadReport()}
+            />
+          </Suspense>
         )}
 
         {!loading && tab === "sales-transactions" && (
-          <section>
-            <Panel title="Crisbro Transaction Report">
-              <div className="mb-4 grid gap-3 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto] md:items-end">
-                <FormInput
-                  label="Cari"
-                  value={salesTransactionSearch}
-                  onChange={setSalesTransactionSearch}
-                  placeholder="Nama, telepon, outlet, atau tipe order"
-                />
-                <Select
-                  label="Outlet"
-                  value={salesTransactionOutlet}
-                  onChange={setSalesTransactionOutlet}
-                  options={[
-                    { value: "", label: "Semua outlet" },
-                    ...salesTransactionOutlets.map((outlet) => ({ value: outlet, label: outlet })),
-                  ]}
-                />
-                <FormInput
-                  label="Dari tanggal"
-                  type="date"
-                  value={salesTransactionFrom}
-                  onChange={setSalesTransactionFrom}
-                />
-                <FormInput
-                  label="Hingga tanggal"
-                  type="date"
-                  value={salesTransactionTo}
-                  onChange={setSalesTransactionTo}
-                />
-                <Button
-                  onClick={() => loadSalesTransactions(1)}
-                  disabled={loading}
-                  className="mb-3 rounded-full font-bold"
-                >
-                  Terapkan
-                </Button>
-              </div>
-              <TableScrollArea>
-                <table className="min-w-[1650px] w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="p-2">ID Transaksi</th>
-                      <th className="p-2">Nama Pelanggan</th>
-                      <th className="p-2">No Telepon</th>
-                      <th className="p-2">Lokasi Dibuat</th>
-                      <th className="p-2">Pelanggan Sejak</th>
-                      <th className="p-2">Poin Pelanggan</th>
-                      <th className="p-2">Tanggal Transaksi</th>
-                      <th className="p-2">Nama Outlet</th>
-                      <th className="p-2">Tipe Order</th>
-                      <th className="p-2 text-right">Pembelian per Order</th>
-                      <th className="p-2 text-right">Penambahan Poin</th>
-                      <th className="p-2 text-right">Penggunaan Poin</th>
-                      <th className="p-2">Reward/Menu Ditukar</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salesTransactions.length === 0 && (
-                      <tr className="border-t border-border">
-                        <td colSpan={13} className="p-8 text-center font-bold">
-                          Belum ada data transaksi customer yang sesuai.
-                        </td>
-                      </tr>
-                    )}
-                    {salesTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="border-t border-border align-top">
-                        <td className="p-2 font-mono text-xs">
-                          {transaction.runchise_sales_transaction_id}
-                        </td>
-                        <td className="p-2 font-bold">{transaction.nama_pelanggan ?? "-"}</td>
-                        <td className="p-2">{transaction.no_telepon ?? "-"}</td>
-                        <td className="p-2">{transaction.lokasi_dibuat ?? "-"}</td>
-                        <td className="p-2">
-                          {transaction.pelanggan_sejak
-                            ? dateFormat(transaction.pelanggan_sejak)
-                            : "-"}
-                        </td>
-                        <td className="p-2">{numberFormat(transaction.poin_pelanggan)}</td>
-                        <td className="p-2">
-                          {transaction.tanggal_transaksi
-                            ? dateTimeFormat(transaction.tanggal_transaksi)
-                            : "-"}
-                        </td>
-                        <td className="p-2">{transaction.nama_outlet ?? "-"}</td>
-                        <td className="p-2">{transaction.tipe_order ?? "-"}</td>
-                        <td className="p-2 text-right">
-                          {currencyFormat(toNumber(transaction.pembelian_per_order))}
-                        </td>
-                        <td className="p-2 text-right">
-                          {numberFormat(transaction.penambahan_poin)}
-                        </td>
-                        <td className="p-2 text-right">
-                          {numberFormat(toNumber(transaction.penggunaan_poin))}
-                        </td>
-                        <td className="min-w-[280px] p-2">
-                          {(transaction.redeemed_rewards ?? []).length === 0 ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {(transaction.redeemed_rewards ?? []).map((reward) => (
-                                <div key={reward.id}>
-                                  <div className="font-bold">
-                                    {numberFormat(reward.quantity)}× {reward.product_name}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {numberFormat(reward.points_spent)} poin
-                                    {reward.is_managed_reward ? "" : ""}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScrollArea>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
-                  <span>
-                    Menampilkan{" "}
-                    {salesTransactionTotal === 0
-                      ? 0
-                      : (salesTransactionPage - 1) * salesTransactionLimit + 1}
-                    –{Math.min(salesTransactionPage * salesTransactionLimit, salesTransactionTotal)}{" "}
-                    dari {numberFormat(salesTransactionTotal)} transaksi
-                  </span>
-                  <label className="flex items-center gap-2">
-                    Per halaman
-                    <select
-                      value={salesTransactionLimit}
-                      onChange={(event) => changeSalesTransactionLimit(Number(event.target.value))}
-                      className="rounded-lg border border-border bg-card px-2 py-1"
-                    >
-                      {[25, 50, 100].map((limit) => (
-                        <option key={limit} value={limit}>
-                          {limit}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={salesTransactionPage <= 1}
-                    onClick={() => loadSalesTransactions(salesTransactionPage - 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Sebelumnya
-                  </Button>
-                  {paginationItems(salesTransactionPage, salesTransactionTotalPages).map(
-                    (item, index) =>
-                      item === "ellipsis" ? (
-                        <span
-                          key={`sales-ellipsis-${index}`}
-                          className="px-1 text-muted-foreground"
-                        >
-                          …
-                        </span>
-                      ) : (
-                        <Button
-                          key={item}
-                          type="button"
-                          variant={item === salesTransactionPage ? "default" : "outline"}
-                          disabled={loading}
-                          onClick={() => loadSalesTransactions(item)}
-                          className="h-9 min-w-9 rounded-full px-3 font-bold"
-                          aria-label={`Halaman transaksi ${item}`}
-                          aria-current={item === salesTransactionPage ? "page" : undefined}
-                        >
-                          {item}
-                        </Button>
-                      ),
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={salesTransactionPage >= salesTransactionTotalPages}
-                    onClick={() => loadSalesTransactions(salesTransactionPage + 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton
+                className="h-[420px] w-full rounded-2xl"
+                aria-label="Memuat laporan transaksi"
+              />
+            }
+          >
+            <AdminSalesTransactionsTab
+              transactions={salesTransactions}
+              search={salesTransactionSearch}
+              onSearchChange={setSalesTransactionSearch}
+              outlet={salesTransactionOutlet}
+              onOutletChange={setSalesTransactionOutlet}
+              outletOptions={salesTransactionOutlets}
+              from={salesTransactionFrom}
+              onFromChange={setSalesTransactionFrom}
+              to={salesTransactionTo}
+              onToChange={setSalesTransactionTo}
+              page={salesTransactionPage}
+              totalPages={salesTransactionTotalPages}
+              total={salesTransactionTotal}
+              limit={salesTransactionLimit}
+              onLimitChange={changeSalesTransactionLimit}
+              pageInput={salesTransactionPageInput}
+              onPageInputChange={setSalesTransactionPageInput}
+              onJumpToPage={jumpToSalesTransactionPage}
+              loading={loading}
+              onLoadPage={(page) => void loadSalesTransactions(page)}
+            />
+          </Suspense>
         )}
 
         {!loading && tab === "activity" && canViewActivityLogs && (
-          <section>
-            <Panel title="Activity Log Admin & Marketing">
-              <div className="mb-4 grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto] md:items-end">
-                <FormInput label="Search" value={activitySearch} onChange={setActivitySearch} />
-                <FormInput
-                  label="Action"
-                  value={activityAction}
-                  onChange={setActivityAction}
-                  placeholder="update_customer"
-                />
-                <FormInput
-                  label="Entity"
-                  value={activityEntityType}
-                  onChange={setActivityEntityType}
-                  placeholder="customer"
-                />
-                <FormInput
-                  label="Dari"
-                  type="date"
-                  value={activityFrom}
-                  onChange={setActivityFrom}
-                />
-                <FormInput label="Hingga" type="date" value={activityTo} onChange={setActivityTo} />
-                <Button
-                  onClick={() => loadActivityLogs(1)}
-                  disabled={loading}
-                  className="mb-3 rounded-full font-bold"
-                >
-                  Filter
-                </Button>
-              </div>
-              <TableScrollArea>
-                <table className="min-w-[1180px] w-full table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[150px]" />
-                    <col className="w-[220px]" />
-                    <col className="w-[190px]" />
-                    <col className="w-[150px]" />
-                    <col className="w-[360px]" />
-                    <col className="w-[110px]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="p-2">Waktu</th>
-                      <th className="p-2">Actor</th>
-                      <th className="p-2">Action</th>
-                      <th className="p-2">Entity</th>
-                      <th className="p-2">Metadata</th>
-                      <th className="p-2">IP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activityLogs.length === 0 && (
-                      <tr className="border-t border-border">
-                        <td colSpan={6} className="p-8 text-center font-bold">
-                          Belum ada activity log
-                        </td>
-                      </tr>
-                    )}
-                    {activityLogs.map((log) => (
-                      <tr key={log.id} className="border-t border-border align-top">
-                        <td className="p-2 whitespace-nowrap">{dateTimeFormat(log.created_at)}</td>
-                        <td className="p-2">
-                          <p
-                            className="truncate font-bold"
-                            title={log.actor?.email ?? log.actor?.phone_number ?? undefined}
-                          >
-                            {log.actor?.email ??
-                              log.actor?.phone_number ??
-                              `User #${log.actor_user_id ?? "-"}`}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {log.actor_role ?? log.actor?.role ?? "-"}
-                          </p>
-                        </td>
-                        <td className="p-2 break-words font-bold">{log.action}</td>
-                        <td className="p-2 whitespace-nowrap">
-                          {log.entity_type}
-                          {log.entity_id ? ` #${log.entity_id}` : ""}
-                        </td>
-                        <td className="p-2">
-                          <ActivityMetadata log={log} />
-                        </td>
-                        <td className="p-2 whitespace-nowrap text-xs text-muted-foreground">
-                          {log.ip_address ?? "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScrollArea>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <p className="font-semibold text-muted-foreground">
-                  Total {numberFormat(activityTotal)} log · Halaman {activityPage} dari{" "}
-                  {activityTotalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={loading || activityPage <= 1}
-                    onClick={() => loadActivityLogs(activityPage - 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={loading || activityPage >= activityTotalPages}
-                    onClick={() => loadActivityLogs(activityPage + 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat activity log" />
+            }
+          >
+            <AdminActivityTab
+              logs={activityLogs}
+              search={activitySearch}
+              onSearchChange={setActivitySearch}
+              action={activityAction}
+              onActionChange={setActivityAction}
+              entityType={activityEntityType}
+              onEntityTypeChange={setActivityEntityType}
+              from={activityFrom}
+              onFromChange={setActivityFrom}
+              to={activityTo}
+              onToChange={setActivityTo}
+              page={activityPage}
+              totalPages={activityTotalPages}
+              total={activityTotal}
+              loading={loading}
+              onLoadPage={(page) => void loadActivityLogs(page)}
+            />
+          </Suspense>
         )}
 
         {!loading && tab === "users" && canManageUsers && (
@@ -3205,26 +2543,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                     className="ml-1 flex items-center gap-2"
                     onSubmit={(event) => {
                       event.preventDefault();
-                      jumpToSalesTransactionPage();
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min={1}
-                      max={salesTransactionTotalPages}
-                      value={salesTransactionPageInput}
-                      onChange={(event) => setSalesTransactionPageInput(event.target.value)}
-                      className="w-20 rounded-lg border border-border bg-card px-2 py-2"
-                      aria-label="Nomor halaman transaksi tujuan"
-                    />
-                    <Button type="submit" variant="outline" className="rounded-full font-bold">
-                      Pergi
-                    </Button>
-                  </form>
-                  <form
-                    className="ml-1 flex items-center gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
                       jumpToCustomerPage();
                     }}
                   >
@@ -3658,76 +2976,6 @@ function TabButton({
   );
 }
 
-const metricToneClasses = {
-  primary: {
-    border: "border-primary/20",
-    icon: "bg-primary/10 text-primary",
-    accent: "bg-primary",
-  },
-  success: {
-    border: "border-emerald-500/20",
-    icon: "bg-emerald-500/10 text-emerald-700",
-    accent: "bg-emerald-500",
-  },
-  gold: {
-    border: "border-amber-500/20",
-    icon: "bg-amber-500/10 text-amber-700",
-    accent: "bg-amber-500",
-  },
-  info: {
-    border: "border-sky-500/20",
-    icon: "bg-sky-500/10 text-sky-700",
-    accent: "bg-sky-500",
-  },
-  muted: {
-    border: "border-muted-foreground/20",
-    icon: "bg-muted text-muted-foreground",
-    accent: "bg-muted-foreground",
-  },
-  danger: {
-    border: "border-rose-500/20",
-    icon: "bg-rose-500/10 text-rose-700",
-    accent: "bg-rose-500",
-  },
-} as const;
-
-function Metric({
-  title,
-  value,
-  icon,
-  tone = "primary",
-}: {
-  title: string;
-  value: string;
-  icon: ReactNode;
-  tone?: keyof typeof metricToneClasses;
-}) {
-  const classes = metricToneClasses[tone];
-
-  return (
-    <div
-      className={`relative flex min-h-[104px] min-w-0 flex-col overflow-hidden rounded-xl border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px] ${classes.border}`}
-    >
-      <span className={`absolute inset-x-0 top-0 h-1 ${classes.accent}`} />
-      <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 text-center sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start lg:text-left">
-        <span
-          className={`grid h-7 w-7 shrink-0 place-items-center rounded-full [&>svg]:h-3.5 [&>svg]:w-3.5 sm:h-8 sm:w-8 sm:[&>svg]:h-4 sm:[&>svg]:w-4 ${classes.icon}`}
-        >
-          {icon}
-        </span>
-        <p className="min-w-0 text-[9px] font-black uppercase leading-tight text-muted-foreground sm:text-[11px] lg:text-xs">
-          {title}
-        </p>
-      </div>
-      <div className="flex flex-1 items-center justify-center px-1 pt-1.5">
-        <p className="max-w-full truncate text-lg font-black leading-none tracking-normal tabular-nums sm:text-[1.4rem] lg:text-2xl">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function AdminPageSkeleton({ tab }: { tab: Tab }) {
   if (tab === "report") {
     return (
@@ -3810,382 +3058,6 @@ function AdminPageSkeleton({ tab }: { tab: Tab }) {
       </div>
     </section>
   );
-}
-
-function ReportChartBoundary({ children }: { children: ReactNode }) {
-  return (
-    <Suspense
-      fallback={<Skeleton className="h-[260px] w-full rounded-2xl" aria-label="Memuat grafik" />}
-    >
-      {children}
-    </Suspense>
-  );
-}
-
-export function TopRewardsChart({ rewards }: { rewards: LoyaltySummary["top_rewards"] }) {
-  const isCompact = useMediaQuery("(max-width: 640px)");
-  const colors = ["#E11D48", "#F97316", "#EAB308", "#22C55E", "#0EA5E9"];
-  const labelLimit = isCompact ? 14 : 24;
-  const chartData = rewards.map((reward, index) => ({
-    rank: index + 1,
-    name: reward.reward_name,
-    shortName:
-      reward.reward_name.length > labelLimit
-        ? `${reward.reward_name.slice(0, labelLimit)}...`
-        : reward.reward_name,
-    redemptions: reward.redemption_count,
-    points: reward.points_spent,
-    fill: colors[index % colors.length],
-  }));
-  const totalRedemptions = chartData.reduce((sum, reward) => sum + reward.redemptions, 0);
-
-  if (chartData.length === 0) {
-    return (
-      <p className="text-sm font-semibold text-muted-foreground">Belum ada data redemption.</p>
-    );
-  }
-
-  return (
-    <div className="min-w-0 space-y-3 overflow-hidden">
-      <p className="text-sm font-semibold text-muted-foreground">
-        Total {numberFormat(totalRedemptions)} redeem dari 5 reward teratas
-      </p>
-      <ChartContainer
-        config={{
-          redemptions: {
-            label: "Jumlah Redeem",
-            color: colors[0],
-          },
-        }}
-        className="h-[260px] min-h-[230px] w-full min-w-0 max-w-full overflow-hidden"
-      >
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 4, right: isCompact ? 18 : 42, left: 0, bottom: 4 }}
-          barCategoryGap={10}
-        >
-          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-          <XAxis
-            type="number"
-            allowDecimals={false}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={10}
-            tickFormatter={(value) => numberFormat(Number(value))}
-          />
-          <YAxis
-            dataKey="shortName"
-            type="category"
-            width={isCompact ? 88 : 138}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={isCompact ? 6 : 10}
-            tick={({ x, y, payload }) => {
-              const item = chartData.find((reward) => reward.shortName === payload.value);
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <text
-                    x={0}
-                    y={0}
-                    dy={4}
-                    textAnchor="end"
-                    className="fill-foreground text-[10px] font-bold sm:text-[11px]"
-                  >
-                    {item ? `#${item.rank} ${payload.value}` : payload.value}
-                  </text>
-                </g>
-              );
-            }}
-          />
-          <ChartTooltip
-            cursor={{ fill: "hsl(var(--muted))" }}
-            content={
-              <ChartTooltipContent
-                hideLabel={false}
-                labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
-                formatter={(value, name, item) => (
-                  <div className="grid min-w-[190px] gap-1">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">
-                        {name === "redemptions" ? "Jumlah Redeem" : name}
-                      </span>
-                      <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
-                    </div>
-                    {item.payload?.points !== undefined && (
-                      <div className="flex items-center justify-between gap-4 text-xs">
-                        <span className="text-muted-foreground">Poin Terpakai</span>
-                        <span className="font-mono font-semibold">
-                          {numberFormat(Number(item.payload.points))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              />
-            }
-          />
-          <Bar dataKey="redemptions" radius={[0, 7, 7, 0]} barSize={22}>
-            {chartData.map((entry) => (
-              <Cell key={entry.name} fill={entry.fill} />
-            ))}
-            <LabelList
-              dataKey="redemptions"
-              position="right"
-              offset={isCompact ? 4 : 10}
-              className="fill-foreground text-[10px] font-black sm:text-xs"
-              formatter={(value: number) => numberFormat(value)}
-            />
-          </Bar>
-        </BarChart>
-      </ChartContainer>
-    </div>
-  );
-}
-
-export function TopRedeemOutletsChart({
-  outlets,
-}: {
-  outlets: NonNullable<LoyaltySummary["top_redeem_outlets"]>;
-}) {
-  const isCompact = useMediaQuery("(max-width: 640px)");
-  const colors = ["#0EA5E9", "#22C55E", "#F97316", "#E11D48", "#8B5CF6"];
-  const labelLimit = isCompact ? 14 : 22;
-  const chartData = outlets.map((outlet, index) => ({
-    rank: index + 1,
-    name: outlet.outlet_name,
-    shortName:
-      outlet.outlet_name.length > labelLimit
-        ? `${outlet.outlet_name.slice(0, labelLimit)}...`
-        : outlet.outlet_name,
-    redemptions: outlet.redemption_count,
-    points: outlet.points_spent,
-    city: outlet.city,
-    fill: colors[index % colors.length],
-  }));
-  const totalRedemptions = chartData.reduce((sum, outlet) => sum + outlet.redemptions, 0);
-
-  if (chartData.length === 0) {
-    return (
-      <p className="text-sm font-semibold text-muted-foreground">Belum ada data redeem outlet.</p>
-    );
-  }
-
-  return (
-    <div className="min-w-0 space-y-3 overflow-hidden">
-      <p className="text-sm font-semibold text-muted-foreground">
-        Total {numberFormat(totalRedemptions)} redeem dari 5 outlet teratas
-      </p>
-      <ChartContainer
-        config={{
-          redemptions: {
-            label: "Jumlah Redeem",
-            color: colors[0],
-          },
-        }}
-        className="h-[260px] min-h-[230px] w-full min-w-0 max-w-full overflow-hidden"
-      >
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 4, right: isCompact ? 18 : 42, left: 0, bottom: 4 }}
-          barCategoryGap={10}
-        >
-          <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-          <XAxis
-            type="number"
-            allowDecimals={false}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={10}
-            tickFormatter={(value) => numberFormat(Number(value))}
-          />
-          <YAxis
-            dataKey="shortName"
-            type="category"
-            width={isCompact ? 88 : 138}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={isCompact ? 6 : 10}
-            tick={({ x, y, payload }) => {
-              const item = chartData.find((outlet) => outlet.shortName === payload.value);
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <text
-                    x={0}
-                    y={0}
-                    dy={4}
-                    textAnchor="end"
-                    className="fill-foreground text-[10px] font-bold sm:text-[11px]"
-                  >
-                    {item ? `#${item.rank} ${payload.value}` : payload.value}
-                  </text>
-                </g>
-              );
-            }}
-          />
-          <ChartTooltip
-            cursor={{ fill: "hsl(var(--muted))" }}
-            content={
-              <ChartTooltipContent
-                hideLabel={false}
-                labelFormatter={(_, payload) => payload?.[0]?.payload?.name ?? ""}
-                formatter={(value, name, item) => (
-                  <div className="grid min-w-[190px] gap-1">
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">
-                        {name === "redemptions" ? "Jumlah Redeem" : name}
-                      </span>
-                      <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
-                    </div>
-                    {item.payload?.city && (
-                      <div className="text-xs font-semibold text-muted-foreground">
-                        {item.payload.city}
-                      </div>
-                    )}
-                    {item.payload?.points !== undefined && (
-                      <div className="flex items-center justify-between gap-4 text-xs">
-                        <span className="text-muted-foreground">Poin Terpakai</span>
-                        <span className="font-mono font-semibold">
-                          {numberFormat(Number(item.payload.points))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              />
-            }
-          />
-          <Bar dataKey="redemptions" radius={[0, 7, 7, 0]} barSize={22}>
-            {chartData.map((entry) => (
-              <Cell key={entry.name} fill={entry.fill} />
-            ))}
-            <LabelList
-              dataKey="redemptions"
-              position="right"
-              offset={isCompact ? 4 : 10}
-              className="fill-foreground text-[10px] font-black sm:text-xs"
-              formatter={(value: number) => numberFormat(value)}
-            />
-          </Bar>
-        </BarChart>
-      </ChartContainer>
-    </div>
-  );
-}
-
-export function RedemptionHistoryChart({
-  data,
-}: {
-  data: NonNullable<LoyaltySummary["redemption_trend"]>;
-}) {
-  const chartData = data.map((item) => ({
-    ...item,
-    label: dateFormat(item.date),
-  }));
-
-  if (chartData.length === 0) {
-    return (
-      <p className="text-sm font-semibold text-muted-foreground">
-        Belum ada data reward yang ditukar pada rentang tanggal ini.
-      </p>
-    );
-  }
-
-  return (
-    <ChartContainer
-      config={{
-        redemption_count: {
-          // Keterangan sumbu ikut ditulis karena grafik memakai dua sumbu Y
-          // dengan skala berbeda.
-          label: "Jumlah Redeem (sumbu kiri)",
-          color: "#E11D48",
-        },
-        points_spent: {
-          label: "Poin Ditukar (sumbu kanan)",
-          color: "#0EA5E9",
-        },
-      }}
-      className="min-h-[260px] w-full"
-    >
-      <LineChart data={chartData} margin={{ top: 8, right: 18, left: 0, bottom: 8 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} minTickGap={18} />
-        <YAxis
-          yAxisId="count"
-          allowDecimals={false}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={10}
-          tickFormatter={(value) => numberFormat(Number(value))}
-        />
-        <YAxis
-          yAxisId="points"
-          orientation="right"
-          allowDecimals={false}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={10}
-          tickFormatter={(value) => numberFormat(Number(value))}
-        />
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              hideLabel={false}
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ""}
-              formatter={(value, name) => (
-                <div className="flex min-w-[170px] items-center justify-between gap-4">
-                  <span className="text-muted-foreground">
-                    {name === "redemption_count" ? "Jumlah Redeem" : "Poin Ditukar"}
-                  </span>
-                  <span className="font-mono font-bold">{numberFormat(Number(value))}</span>
-                </div>
-              )}
-            />
-          }
-        />
-        <Line
-          yAxisId="count"
-          type="monotone"
-          dataKey="redemption_count"
-          stroke="#E11D48"
-          strokeWidth={3}
-          dot={{ r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-        <Line
-          yAxisId="points"
-          type="monotone"
-          dataKey="points_spent"
-          stroke="#0EA5E9"
-          strokeWidth={3}
-          dot={{ r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-        <ChartLegend content={<ChartLegendContent />} />
-      </LineChart>
-    </ChartContainer>
-  );
-}
-
-// Input pada tab lain tidak perlu membuat ulang tiga pohon Recharts yang
-// mahal selama object summary tidak berubah.
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia(query);
-    const updateMatch = () => setMatches(mediaQuery.matches);
-
-    updateMatch();
-    mediaQuery.addEventListener("change", updateMatch);
-
-    return () => mediaQuery.removeEventListener("change", updateMatch);
-  }, [query]);
-
-  return matches;
 }
 
 function CategoryMenuPicker({
@@ -4359,97 +3231,12 @@ function CategoryMenuPicker({
   );
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
-      <h2 className="mb-4 text-lg font-black">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
 function CustomerFormGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="mb-5 border-t border-border pt-4 first:border-t-0 first:pt-0">
       <legend className="mb-3 text-sm font-black uppercase text-muted-foreground">{title}</legend>
       {children}
     </fieldset>
-  );
-}
-
-function RequiredLabel({ label, required }: { label: string; required?: boolean }) {
-  return (
-    <>
-      {label}
-      {required && (
-        <span className="ml-1 text-destructive" aria-label="wajib diisi">
-          *
-        </span>
-      )}
-    </>
-  );
-}
-
-function SortableHeader<T extends string>({
-  label,
-  sortKey,
-  sort,
-  onSort,
-  className = "p-2",
-}: {
-  label: string;
-  sortKey: T;
-  sort: SortState<T>;
-  onSort: (sortKey: T) => void;
-  className?: string;
-}) {
-  const active = sort.sort_by === sortKey;
-  const Icon = active ? (sort.sort_order === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
-
-  return (
-    <th
-      className={className}
-      aria-sort={active ? (sort.sort_order === "asc" ? "ascending" : "descending") : "none"}
-    >
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1.5 rounded-md text-left font-black transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/25 ${
-          active ? "text-primary" : ""
-        }`}
-      >
-        {label}
-        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-    </th>
-  );
-}
-
-function FormInput({
-  label,
-  value,
-  onChange,
-  type = "text",
-  required = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="mb-3 block text-sm font-bold">
-      <RequiredLabel label={label} required={required} />
-      <input
-        type={type}
-        value={value}
-        required={required}
-        aria-required={required}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 font-medium"
-      />
-    </label>
   );
 }
 
@@ -4479,174 +3266,4 @@ function Toggle({
       {label}
     </label>
   );
-}
-
-// M-10: sebelumnya komponen ini adalah dropdown buatan sendiri (bukan
-// primitive Radix, walau @radix-ui/react-select sudah jadi dependency) --
-// opsi cuma menembak onMouseDown, tanpa onClick, tanpa navigasi panah,
-// tanpa Enter/Space/Escape, tanpa aria-activedescendant, tanpa typeahead.
-// Pengguna keyboard/screen-reader bisa MEMBUKA dropdown-nya (tombol trigger
-// native, bisa difokus & di-Enter/Space) tapi tidak bisa MEMILIH opsi
-// apa pun di dalamnya. Sekarang jadi pembungkus tipis di atas primitive
-// Radix Select (SelectRoot/SelectTrigger/SelectContent/SelectItem di
-// src/components/ui/select.tsx) yang sudah menangani seluruh interaksi
-// keyboard/ARIA itu bawaan -- bukan ditulis ulang manual di sini.
-//
-// Kontrak prop (label/value/onChange/options/required) SENGAJA dibuat
-// identik dengan versi lama supaya ke-12 pemanggil komponen ini di file ini
-// (filter role, outlet, status, dst) tidak perlu diubah sama sekali.
-//
-// Satu penyesuaian: Radix Select.Item tidak mengizinkan value="" (dipakai
-// Radix sendiri sebagai penanda "belum ada yang dipilih"). Filter "Semua
-// outlet" di halaman ini memang memakai value="" untuk berarti "tanpa
-// filter", jadi dipetakan bolak-balik ke SELECT_EMPTY_VALUE secara
-// transparan di dalam wrapper ini -- pemanggil tetap bekerja dengan string
-// kosong seperti sebelumnya.
-const SELECT_EMPTY_VALUE = "__crisbar_select_empty__";
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-  required = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-  required?: boolean;
-}) {
-  return (
-    <label className="mb-3 block text-sm font-bold text-foreground">
-      <span className="mb-1.5 block text-xs font-black uppercase text-muted-foreground">
-        <RequiredLabel label={label} required={required} />
-      </span>
-      <SelectRoot
-        value={value === "" ? SELECT_EMPTY_VALUE : value}
-        onValueChange={(next) => onChange(next === SELECT_EMPTY_VALUE ? "" : next)}
-      >
-        <SelectTrigger aria-required={required}>
-          <SelectValue placeholder="Pilih opsi" />
-        </SelectTrigger>
-        <SelectContent>
-          {(options ?? []).map((option) => (
-            <SelectItem
-              key={option.value === "" ? SELECT_EMPTY_VALUE : option.value}
-              value={option.value === "" ? SELECT_EMPTY_VALUE : option.value}
-            >
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </SelectRoot>
-    </label>
-  );
-}
-
-function TableScrollArea({ children, maxHeight }: { children: ReactNode; maxHeight?: number }) {
-  return (
-    <div
-      className={`table-scroll-area -mx-1 min-w-0 max-w-full overflow-auto overscroll-x-contain overscroll-y-auto px-1 pb-3 ${
-        maxHeight ? "" : "max-h-[70dvh]"
-      }`}
-      style={maxHeight ? { maxHeight } : undefined}
-    >
-      {children}
-    </div>
-  );
-}
-
-function DataTable({
-  headers,
-  rows,
-  emptyMessage = "Belum ada data.",
-  minWidth,
-  maxHeight,
-}: {
-  headers: string[];
-  rows?: string[][];
-  emptyMessage?: string;
-  minWidth?: number;
-  maxHeight?: number;
-}) {
-  const [sort, setSort] = useState<SortState<string>>({ sort_by: "", sort_order: "asc" });
-  const hasRows = (rows ?? []).length > 0;
-  const tableMinWidth = minWidth ?? Math.max(640, headers.length * 160);
-  const sortedRows = useMemo(() => {
-    if (!sort.sort_by) return rows ?? [];
-    const columnIndex = Number(sort.sort_by);
-    if (!Number.isInteger(columnIndex)) return rows ?? [];
-
-    return [...(rows ?? [])].sort((a, b) => {
-      const direction = sort.sort_order === "asc" ? 1 : -1;
-      return compareTableCell(a[columnIndex], b[columnIndex]) * direction;
-    });
-  }, [rows, sort]);
-
-  return (
-    <TableScrollArea maxHeight={maxHeight}>
-      <table className="w-full text-sm" style={{ minWidth: tableMinWidth }}>
-        <thead>
-          <tr className="text-left text-muted-foreground">
-            {(headers ?? []).map((header, index) => (
-              <SortableHeader
-                key={header}
-                label={header}
-                sortKey={String(index)}
-                sort={sort}
-                onSort={(sortKey) => setSort((current) => nextSortState(current, sortKey))}
-                className={maxHeight ? "sticky top-0 z-10 bg-background p-2 shadow-sm" : "p-2"}
-              />
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {hasRows ? (
-            sortedRows.map((row, index) => (
-              <tr key={index} className="border-t border-border">
-                {(row ?? []).map((cell, cellIndex) => (
-                  <td key={cellIndex} className="p-2 font-medium">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))
-          ) : (
-            <tr className="border-t border-border">
-              <td className="p-2 font-medium text-muted-foreground" colSpan={headers.length}>
-                {emptyMessage}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </TableScrollArea>
-  );
-}
-
-function compareTableCell(a = "", b = "") {
-  const firstDate = Date.parse(a);
-  const secondDate = Date.parse(b);
-  if (!Number.isNaN(firstDate) && !Number.isNaN(secondDate)) {
-    return firstDate - secondDate;
-  }
-
-  const firstNumber = parseTableNumber(a);
-  const secondNumber = parseTableNumber(b);
-  if (firstNumber !== null && secondNumber !== null) {
-    return firstNumber - secondNumber;
-  }
-
-  return a.localeCompare(b, "id-ID", { numeric: true, sensitivity: "base" });
-}
-
-function parseTableNumber(value: string) {
-  const normalized = value
-    .replace(/[^\d,-]/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  if (!normalized || normalized === "-") return null;
-  const number = Number(normalized);
-  return Number.isFinite(number) ? number : null;
 }
