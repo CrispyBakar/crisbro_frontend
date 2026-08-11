@@ -69,6 +69,7 @@ import {
   SortableHeader,
   TableScrollArea,
 } from "./adminUiPrimitives";
+import { DebouncedSearchInput, type DebouncedSearchInputHandle } from "./DebouncedSearchInput";
 
 // H-5: tab read-only dipecah jadi modul lazy tersendiri, jadi kode &
 // helper-nya hanya diunduh browser saat tab itu benar-benar dibuka.
@@ -205,7 +206,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [userSearch, setUserSearch] = useState("");
+  // H-5: sama seperti pencarian customer -- nilai ketikan ditahan komponen
+  // input, bukan state di sini.
+  const userSearchRef = useRef<DebouncedSearchInputHandle>(null);
   const [appliedUserSearch, setAppliedUserSearch] = useState("");
   const [userSort, setUserSort] = useState<SortState<UserSortKey>>({
     sort_by: "role",
@@ -213,7 +216,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   });
   const [userForm, setUserForm] = useState(emptyUserForm);
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
-  const [customerSearch, setCustomerSearch] = useState("");
+  // H-5: nilai ketikan pencarian TIDAK lagi disimpan di sini. Dulu setiap
+  // huruf memicu setState di komponen ini, sehingga badan AdminPage
+  // dieksekusi ulang dan seluruh JSX tab aktif (termasuk tabel puluhan baris)
+  // dibuat ulang. Sekarang nilainya ditahan DebouncedSearchInput, dan
+  // komponen ini hanya diberi tahu saat pencarian benar-benar dijalankan.
+  const customerSearchRef = useRef<DebouncedSearchInputHandle>(null);
   const [appliedCustomerSearch, setAppliedCustomerSearch] = useState("");
   const [customerSort, setCustomerSort] = useState<SortState<CustomerSortKey>>({
     sort_by: "created_at",
@@ -346,14 +354,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setLoading(true);
     setError("");
     try {
-      setUsers(await adminApi.users(appliedUserSearch || userSearch.trim(), userSort));
+      setUsers(await adminApi.users(appliedUserSearch, userSort));
       loadedTabs.current.users = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat user admin");
     } finally {
       setLoading(false);
     }
-  }, [appliedUserSearch, canManageUsers, userSearch, userSort]);
+  }, [appliedUserSearch, canManageUsers, userSort]);
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -660,8 +668,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     tab,
   ]);
 
-  async function searchUsers() {
-    const normalizedSearch = userSearch.trim();
+  async function searchUsers(searchTerm: string) {
+    const normalizedSearch = searchTerm.trim();
     setError("");
     try {
       setAppliedUserSearch(normalizedSearch);
@@ -683,7 +691,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   }
 
   const searchCustomers = useCallback(
-    async (searchTerm = customerSearch) => {
+    async (searchTerm: string) => {
       const normalizedSearch = searchTerm.trim();
       setError("");
       try {
@@ -703,25 +711,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         setError(err instanceof Error ? err.message : "Gagal mencari customer");
       }
     },
-    [
-      appliedCustomerFrom,
-      appliedCustomerTo,
-      customerEmailStatus,
-      customerLimit,
-      customerSearch,
-      customerSort,
-    ],
+    [appliedCustomerFrom, appliedCustomerTo, customerEmailStatus, customerLimit, customerSort],
   );
-
-  useEffect(() => {
-    if (tab !== "customers" || !canViewCustomers) return;
-
-    const timer = window.setTimeout(() => {
-      void searchCustomers(customerSearch);
-    }, 400);
-
-    return () => window.clearTimeout(timer);
-  }, [canViewCustomers, customerSearch, searchCustomers, tab]);
 
   async function loadCustomersPage(page: number) {
     const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
@@ -1852,19 +1843,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 Tambah User Admin
               </Button>
               <div className="mb-4 flex gap-2">
-                <input
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void searchUsers();
-                    }
-                  }}
+                <DebouncedSearchInput
+                  handleRef={userSearchRef}
+                  ariaLabel="Cari user admin"
                   placeholder="Cari email, nomor, atau role..."
                   className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                  onSearch={(value) => void searchUsers(value)}
                 />
-                <Button onClick={searchUsers} variant="outline">
+                <Button onClick={() => userSearchRef.current?.submit()} variant="outline">
                   Cari
                 </Button>
               </div>
@@ -2203,19 +2189,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                 </div>
               )}
               <div className="mb-4 flex gap-2">
-                <input
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void searchCustomers();
-                    }
-                  }}
+                <DebouncedSearchInput
+                  handleRef={customerSearchRef}
+                  ariaLabel="Cari customer"
                   placeholder="Cari nama, nomor, email, atau outlet..."
                   className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                  debounceMs={400}
+                  onSearch={(value) => void searchCustomers(value)}
                 />
-                <Button onClick={() => void searchCustomers()} variant="outline">
+                <Button onClick={() => customerSearchRef.current?.submit()} variant="outline">
                   Cari
                 </Button>
               </div>
