@@ -206,6 +206,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userPage, setUserPage] = useState(1);
+  const [userTotalPages, setUserTotalPages] = useState(1);
+  const [userTotal, setUserTotal] = useState(0);
+  const userLimit = 50;
   // H-5: sama seperti pencarian customer -- nilai ketikan ditahan komponen
   // input, bukan state di sini.
   const userSearchRef = useRef<DebouncedSearchInputHandle>(null);
@@ -260,6 +264,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [summary, setSummary] = useState<LoyaltySummary | null>(null);
   const [redeemItems, setRedeemItems] = useState<RedeemItem[]>([]);
+  const [redeemPage, setRedeemPage] = useState(1);
+  const [redeemTotalPages, setRedeemTotalPages] = useState(1);
+  const [redeemTotal, setRedeemTotal] = useState(0);
+  const redeemLimit = 50;
   const [redeemSort, setRedeemSort] = useState<SortState<RedeemSortKey>>({
     sort_by: "sort_order",
     sort_order: "asc",
@@ -349,19 +357,23 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }, [locations, reportFilters]);
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = useCallback(async (page = userPage) => {
     if (!canManageUsers) return;
     setLoading(true);
     setError("");
     try {
-      setUsers(await adminApi.users(appliedUserSearch, userSort));
+      const data = await adminApi.users(appliedUserSearch, userSort, page, userLimit);
+      setUsers(data.items ?? []);
+      setUserPage(data.page ?? page);
+      setUserTotalPages(data.total_pages ?? 1);
+      setUserTotal(data.total ?? 0);
       loadedTabs.current.users = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat user admin");
     } finally {
       setLoading(false);
     }
-  }, [appliedUserSearch, canManageUsers, userSort]);
+  }, [appliedUserSearch, canManageUsers, userPage, userSort]);
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -473,18 +485,22 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     void loadSalesTransactions(1, limit);
   }
 
-  const loadRedeem = useCallback(async () => {
+  const loadRedeem = useCallback(async (page = redeemPage) => {
     setLoading(true);
     setError("");
     try {
-      setRedeemItems(await adminApi.redeemItems(redeemSort));
+      const data = await adminApi.redeemItems(redeemSort, page, redeemLimit);
+      setRedeemItems(data.items ?? []);
+      setRedeemPage(data.page ?? page);
+      setRedeemTotalPages(data.total_pages ?? 1);
+      setRedeemTotal(data.total ?? 0);
       loadedTabs.current.redeem = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat menu redeem");
     } finally {
       setLoading(false);
     }
-  }, [redeemSort]);
+  }, [redeemPage, redeemSort]);
 
   const loadActivityLogs = useCallback(
     async (page = activityPage) => {
@@ -673,7 +689,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       setAppliedUserSearch(normalizedSearch);
-      setUsers(await adminApi.users(normalizedSearch, userSort));
+      const data = await adminApi.users(normalizedSearch, userSort, 1, userLimit);
+      setUsers(data.items ?? []);
+      setUserPage(data.page ?? 1);
+      setUserTotalPages(data.total_pages ?? 1);
+      setUserTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mencari user");
     }
@@ -684,7 +704,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setUserSort(nextSort);
     setError("");
     try {
-      setUsers(await adminApi.users(appliedUserSearch, nextSort));
+      const data = await adminApi.users(appliedUserSearch, nextSort, 1, userLimit);
+      setUsers(data.items ?? []);
+      setUserPage(data.page ?? 1);
+      setUserTotalPages(data.total_pages ?? 1);
+      setUserTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengurutkan user");
     }
@@ -1035,7 +1059,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
       setUserForm(emptyUserForm);
       setActiveMobileForm(null);
-      setUsers(await adminApi.users(appliedUserSearch, userSort));
+      await loadUsers(userPage);
       toast.success(
         isEditing ? "User admin berhasil diperbarui" : "User admin berhasil ditambahkan",
       );
@@ -1053,7 +1077,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       await adminApi.deleteUser(id);
-      setUsers(await adminApi.users(appliedUserSearch, userSort));
+      await loadUsers(userPage);
       if (userForm.id === id) setUserForm(emptyUserForm);
       toast.success("User admin berhasil dihapus");
     } catch (err) {
@@ -1253,7 +1277,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setRedeemSort(nextSort);
     setError("");
     try {
-      setRedeemItems(await adminApi.redeemItems(nextSort));
+      const data = await adminApi.redeemItems(nextSort, 1, redeemLimit);
+      setRedeemItems(data.items ?? []);
+      setRedeemPage(data.page ?? 1);
+      setRedeemTotalPages(data.total_pages ?? 1);
+      setRedeemTotal(data.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal mengurutkan menu redeem");
     }
@@ -1340,7 +1368,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setError("");
     try {
       await adminApi.deleteRedeemItem(item.id);
-      setRedeemItems(await adminApi.redeemItems(redeemSort));
+      const data = await adminApi.redeemItems(redeemSort, redeemPage, redeemLimit);
+      setRedeemItems(data.items ?? []);
+      setRedeemPage(data.page ?? redeemPage);
+      setRedeemTotalPages(data.total_pages ?? 1);
+      setRedeemTotal(data.total ?? 0);
       if (redeemForm.id === item.id) {
         resetRedeemForm();
       }
@@ -1930,6 +1962,27 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   </tbody>
                 </table>
               </TableScrollArea>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {numberFormat(userTotal)} user · Halaman {userPage} dari {userTotalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={userPage <= 1}
+                    onClick={() => void loadUsers(userPage - 1)}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={userPage >= userTotalPages}
+                    onClick={() => void loadUsers(userPage + 1)}
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
+              </div>
             </Panel>
           </section>
         )}
@@ -2758,6 +2811,27 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
                   </tbody>
                 </table>
               </TableScrollArea>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                  {numberFormat(redeemTotal)} menu · Halaman {redeemPage} dari {redeemTotalPages}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={redeemPage <= 1}
+                    onClick={() => void loadRedeem(redeemPage - 1)}
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={redeemPage >= redeemTotalPages}
+                    onClick={() => void loadRedeem(redeemPage + 1)}
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
+              </div>
             </Panel>
           </section>
         )}

@@ -80,6 +80,16 @@ export type Reward = {
   is_active: boolean;
 };
 
+export type Page<T> = {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
+export type RewardPage = Page<Reward>;
+
 export type CatalogMenuItem = {
   id: number;
   runchise_id: number | null;
@@ -109,6 +119,8 @@ export type RedeemCategory = {
   is_active: boolean;
 };
 
+export type RedeemCategoryPage = Page<RedeemCategory>;
+
 export type RedeemItem = {
   id: number;
   menu_item_id: number;
@@ -125,6 +137,8 @@ export type RedeemItem = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type RedeemItemPage = Page<RedeemItem>;
 
 export type Redemption = {
   id: number;
@@ -162,6 +176,8 @@ export type AdminUser = {
   created_at: string;
   updated_at: string;
 };
+
+export type AdminUserPage = Page<AdminUser>;
 
 export type AdminUserPayload = {
   email?: string | null;

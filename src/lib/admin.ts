@@ -2,14 +2,17 @@ import { apiUrl } from "./api";
 import type {
   LoyaltySummary,
   Reward,
+  RewardPage,
   CatalogMenuItem,
   CatalogMenuCategory,
   CatalogMenuResponse,
   RedeemCategory,
   RedeemItem,
+  RedeemItemPage,
   Redemption,
   RedemptionPage,
   AdminUser,
+  AdminUserPage,
   AdminUserPayload,
   AdminBrand,
   AdminLocation,
@@ -32,14 +35,17 @@ import type {
 export type {
   LoyaltySummary,
   Reward,
+  RewardPage,
   CatalogMenuItem,
   CatalogMenuCategory,
   CatalogMenuResponse,
   RedeemCategory,
   RedeemItem,
+  RedeemItemPage,
   Redemption,
   RedemptionPage,
   AdminUser,
+  AdminUserPage,
   AdminUserPayload,
   AdminBrand,
   AdminLocation,
@@ -150,13 +156,13 @@ export const adminApi = {
     if (filters.to) params.set("to", filters.to);
     return adminRequest<AdminActivityLogPage>(`/activity-logs?${params.toString()}`);
   },
-  users: (search = "", sort: AdminSort = {}) => {
-    const params = new URLSearchParams();
+  users: (search = "", sort: AdminSort = {}, page = 1, limit = 50) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (search) params.set("search", search);
     if (sort.sort_by) params.set("sort_by", sort.sort_by);
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
     const query = params.toString();
-    return adminRequest<AdminUser[]>(`/users${query ? `?${query}` : ""}`);
+    return adminRequest<AdminUserPage>(`/users${query ? `?${query}` : ""}`);
   },
   createUser: (payload: AdminUserPayload) =>
     adminRequest<AdminUser>("/users", { method: "POST", body: JSON.stringify(payload) }),
@@ -260,7 +266,8 @@ export const adminApi = {
     const query = params.toString();
     return adminRequest<LoyaltySummary>(`/loyalty-summary${query ? `?${query}` : ""}`);
   },
-  rewards: () => adminRequest<Reward[]>("/rewards"),
+  rewards: (page = 1, limit = 50) =>
+    adminRequest<RewardPage>(`/rewards?page=${page}&limit=${limit}`),
   createReward: (payload: Partial<Reward>) =>
     adminRequest<Reward>("/rewards", { method: "POST", body: JSON.stringify(payload) }),
   updateReward: (id: number, payload: Partial<Reward>) =>
@@ -269,12 +276,12 @@ export const adminApi = {
     adminRequest<CatalogMenuResponse>(
       `/catalog/menu-items?limit=1000${search ? `&search=${encodeURIComponent(search)}` : ""}`,
     ),
-  redeemItems: (sort: AdminSort = {}) => {
-    const params = new URLSearchParams();
+  redeemItems: (sort: AdminSort = {}, page = 1, limit = 50) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (sort.sort_by) params.set("sort_by", sort.sort_by);
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
     const query = params.toString();
-    return adminRequest<RedeemItem[]>(`/redeem-menu/items${query ? `?${query}` : ""}`);
+    return adminRequest<RedeemItemPage>(`/redeem-menu/items${query ? `?${query}` : ""}`);
   },
   createRedeemItem: (payload: Partial<RedeemItem>) =>
     adminRequest<RedeemItem>("/redeem-menu/items", {
