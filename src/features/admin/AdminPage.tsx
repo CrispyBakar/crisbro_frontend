@@ -52,32 +52,38 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  currencyFormat,
-  dateFormat,
-  dateTimeFormat,
+  getCustomerSyncMessage,
+  getCustomerSyncStatus,
   nextSortState,
   numberFormat,
-  paginationItems,
   type SortState,
-  toNumber,
 } from "./adminFormatters";
-import {
-  FormInput,
-  Panel,
-  RequiredLabel,
-  Select,
-  SortableHeader,
-  TableScrollArea,
-} from "./adminUiPrimitives";
 import { DebouncedSearchInput, type DebouncedSearchInputHandle } from "./DebouncedSearchInput";
+import { CustomerFormFields, RedeemFormFields, UserFormFields } from "./AdminFormFields";
+import { emptyCustomerForm, emptyUserForm, type RedeemFormState } from "./adminFormDefaults";
+import { useStableCallback } from "./useStableCallback";
+import {
+  AdminPageSkeleton,
+  ConfirmDeleteDialog,
+  MobileCrudDialog,
+  TabButton,
+} from "./AdminConsoleChrome";
+import type { ConfirmDialogState, ConsoleTab } from "./adminConsoleTypes";
 
 // H-5: tab read-only dipecah jadi modul lazy tersendiri, jadi kode &
 // helper-nya hanya diunduh browser saat tab itu benar-benar dibuka.
+// L-7: tiga tab sisanya (user, customer, redeem) menyusul dengan pola yang sama,
+// sehingga AdminPage.tsx tinggal memegang state + orkestrasi, bukan lagi markup
+// setiap tab. State tetap di sini supaya isian form dan posisi halaman tidak
+// hilang saat berpindah tab -- perilaku itu sengaja tidak diubah.
 const AdminActivityTab = lazy(() => import("./AdminActivityTab"));
 const AdminReportTab = lazy(() => import("./AdminReportTab"));
 const AdminSalesTransactionsTab = lazy(() => import("./AdminSalesTransactionsTab"));
+const AdminUsersTab = lazy(() => import("./AdminUsersTab"));
+const AdminCustomersTab = lazy(() => import("./AdminCustomersTab"));
+const AdminRedeemTab = lazy(() => import("./AdminRedeemTab"));
 
-type Tab = "report" | "sales-transactions" | "users" | "customers" | "redeem" | "activity";
+type Tab = ConsoleTab;
 type ConsoleMode = "admin" | "marketing";
 type UserSortKey = "email" | "phone_number" | "role" | "created_at";
 type CustomerSortKey =
@@ -93,58 +99,7 @@ type CustomerSortKey =
   | "updated_at";
 type RedeemSortKey = "menu" | "price" | "points" | "status" | "sort_order" | "created_at";
 
-const emptyUserForm = {
-  id: 0,
-  email: "",
-  phone_number: "",
-  password: "",
-  role: "marketing",
-};
-
-const emptyCustomerForm = {
-  id: 0,
-  name: "",
-  email: "",
-  phone_number: "",
-  phone_number_country_code: 62,
-  address: "",
-  province: "",
-  city: "",
-  country: "Indonesia",
-  postal_code: "",
-  dob: "",
-  gender: "unknown",
-  status: "active",
-  balance: 0,
-  brand_id: 1,
-  owner_location_id: 0,
-  location_ids: [] as number[],
-  total_point: 0,
-  available_point: 0,
-  next_reward_threshold: 2000,
-};
-
-type RedeemFormState = {
-  id: number;
-  menu_item_id: number;
-  points_required: number;
-  sort_order: number;
-  is_active: boolean;
-};
-
-type ConfirmDialogState = {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  onConfirm: () => Promise<void>;
-};
-
 type MobileCrudForm = "user" | "customer" | "redeem";
-
-function accountStatusLabel(status?: string | null) {
-  if (status === "not_linked") return "Belum Terhubung";
-  return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
-}
 
 function requiredFieldsMessage(fields: string[]) {
   return `Lengkapi field wajib: ${fields.join(", ")}.`;
@@ -152,53 +107,6 @@ function requiredFieldsMessage(fields: string[]) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function runchiseSyncLabel(status?: string | null) {
-  if (status === "not_linked") return "Belum Terhubung";
-  if (status === "synced") return "Runchise OK";
-  if (status === "failed") return "Sync Gagal";
-  if (status === "skipped") return "Belum Sync";
-  return "Pending Sync";
-}
-
-function runchiseSyncClassName(status?: string | null) {
-  if (status === "synced") return "bg-emerald-500/10 text-emerald-700";
-  if (status === "failed") return "bg-red-500/10 text-red-700";
-  if (status === "skipped") return "bg-amber-500/10 text-amber-700";
-  return "bg-slate-500/10 text-slate-700";
-}
-
-function getCustomerSyncStatus(customer: AdminCustomer) {
-  return customer.runchise_sync?.status ?? customer.runchise_sync_status ?? "not_linked";
-}
-
-function getCustomerSyncMessage(customer: AdminCustomer) {
-  return (
-    customer.runchise_sync?.error ??
-    customer.runchise_sync_error ??
-    customer.runchise_sync?.reason ??
-    null
-  );
-}
-
-function getCustomerSyncNotice(customer: AdminCustomer) {
-  const status = getCustomerSyncStatus(customer);
-
-  if (status === "failed") {
-    return "Perubahan lokal belum terkirim ke Runchise.";
-  }
-  if (status === "pending") {
-    return "Data lokal menunggu sync Runchise.";
-  }
-  if (status === "skipped") {
-    return "Sync Runchise dilewati.";
-  }
-  if (status === "not_linked") {
-    return "Customer Runchise belum terhubung ke data lokal.";
-  }
-
-  return null;
 }
 
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
@@ -357,23 +265,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }, [locations, reportFilters]);
 
-  const loadUsers = useCallback(async (page = userPage) => {
-    if (!canManageUsers) return;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await adminApi.users(appliedUserSearch, userSort, page, userLimit);
-      setUsers(data.items ?? []);
-      setUserPage(data.page ?? page);
-      setUserTotalPages(data.total_pages ?? 1);
-      setUserTotal(data.total ?? 0);
-      loadedTabs.current.users = true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat user admin");
-    } finally {
-      setLoading(false);
-    }
-  }, [appliedUserSearch, canManageUsers, userPage, userSort]);
+  const loadUsers = useCallback(
+    async (page = userPage) => {
+      if (!canManageUsers) return;
+      setLoading(true);
+      setError("");
+      try {
+        const data = await adminApi.users(appliedUserSearch, userSort, page, userLimit);
+        setUsers(data.items ?? []);
+        setUserPage(data.page ?? page);
+        setUserTotalPages(data.total_pages ?? 1);
+        setUserTotal(data.total ?? 0);
+        loadedTabs.current.users = true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat user admin");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [appliedUserSearch, canManageUsers, userPage, userSort],
+  );
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -485,22 +396,25 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     void loadSalesTransactions(1, limit);
   }
 
-  const loadRedeem = useCallback(async (page = redeemPage) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await adminApi.redeemItems(redeemSort, page, redeemLimit);
-      setRedeemItems(data.items ?? []);
-      setRedeemPage(data.page ?? page);
-      setRedeemTotalPages(data.total_pages ?? 1);
-      setRedeemTotal(data.total ?? 0);
-      loadedTabs.current.redeem = true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat menu redeem");
-    } finally {
-      setLoading(false);
-    }
-  }, [redeemPage, redeemSort]);
+  const loadRedeem = useCallback(
+    async (page = redeemPage) => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await adminApi.redeemItems(redeemSort, page, redeemLimit);
+        setRedeemItems(data.items ?? []);
+        setRedeemPage(data.page ?? page);
+        setRedeemTotalPages(data.total_pages ?? 1);
+        setRedeemTotal(data.total ?? 0);
+        loadedTabs.current.redeem = true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat menu redeem");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [redeemPage, redeemSort],
+  );
 
   const loadActivityLogs = useCallback(
     async (page = activityPage) => {
@@ -1396,6 +1310,37 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     });
   }
 
+  // L-7: handler yang dikirim ke panel tabel ber-`memo` dibungkus agar
+  // identitasnya stabil antar render. Tanpa ini, panel tabel tetap dirender
+  // ulang setiap kali ada state lain di AdminPage yang berubah (mis. satu
+  // ketikan di form) karena setiap render menghasilkan fungsi baru.
+  const stableSortUsers = useStableCallback(sortUsers);
+  const stableSearchUsers = useStableCallback(searchUsers);
+  const stableEditUser = useStableCallback(editUser);
+  const stableRequestDeleteUser = useStableCallback(requestDeleteUser);
+  const stableOpenCreateUserForm = useStableCallback(openCreateUserForm);
+
+  const stableSortCustomers = useStableCallback(sortCustomers);
+  const stableSearchCustomers = useStableCallback(searchCustomers);
+  const stableChangeCustomerLimit = useStableCallback(changeCustomerLimit);
+  const stableJumpToCustomerPage = useStableCallback(jumpToCustomerPage);
+  const stableLoadCustomersPage = useStableCallback(loadCustomersPage);
+  const stableApplyCustomerDateFilter = useStableCallback(applyCustomerDateFilter);
+  const stableResetCustomerDateFilter = useStableCallback(resetCustomerDateFilter);
+  const stableApplyCustomerEmailStatus = useStableCallback(applyCustomerEmailStatus);
+  const stableStartCustomerImport = useStableCallback(startCustomerImportFromRunchise);
+  const stableOpenCreateCustomerForm = useStableCallback(openCreateCustomerForm);
+  const stableEditCustomer = useStableCallback(editCustomer);
+  const stableRequestDeleteCustomer = useStableCallback(requestDeleteCustomer);
+  const stableResendActivation = useStableCallback(resendActivation);
+  const stableRetryCustomerRunchiseSync = useStableCallback(retryCustomerRunchiseSync);
+
+  const stableSortRedeemItems = useStableCallback(sortRedeemItems);
+  const stableEditRedeemItem = useStableCallback(editRedeemItem);
+  const stableRequestDeleteRedeemItem = useStableCallback(requestDeleteRedeemItem);
+  const stableOpenCreateRedeemForm = useStableCallback(openCreateRedeemForm);
+  const stableResetCatalogSearch = useStableCallback(resetCatalogSearch);
+
   async function confirmDeleteAction() {
     if (!confirmDialog) return;
 
@@ -1403,239 +1348,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     setConfirmDialog(null);
   }
 
-  const mobileUserForm = (
-    <>
-      <FormInput
-        label="Email"
-        type="email"
-        value={userForm.email}
-        onChange={(v) => setUserForm({ ...userForm, email: v })}
-      />
-      <FormInput
-        label="Nomor Telepon"
-        value={userForm.phone_number}
-        onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
-      />
-      <FormInput
-        label={userForm.id ? "Password Baru" : "Password"}
-        type="password"
-        required={!userForm.id}
-        value={userForm.password}
-        onChange={(v) => setUserForm({ ...userForm, password: v })}
-      />
-      <Select
-        label="Role"
-        required
-        value={userForm.role}
-        onChange={(v) => setUserForm({ ...userForm, role: v })}
-        options={[
-          { value: "marketing", label: "Marketing" },
-          { value: "admin", label: "Admin" },
-        ]}
-      />
-      <Button onClick={saveUser} disabled={saving} className="mt-3 w-full rounded-full font-bold">
-        Simpan User
-      </Button>
-    </>
-  );
-
-  const customerLoyaltyFields =
-    customerForm.id > 0 ? (
-      <CustomerFormGroup title="Loyalty">
-        <div className="grid gap-3 md:grid-cols-2">
-          <Select
-            label="Status"
-            value={customerForm.status}
-            onChange={(v) => setCustomerForm({ ...customerForm, status: v })}
-            options={[
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
-            ]}
-          />
-          <ReadOnlyField label="Saldo" value={currencyFormat(Number(customerForm.balance))} />
-          <ReadOnlyField label="Total Poin" value={numberFormat(customerForm.total_point)} />
-          <ReadOnlyField label="Poin Tersedia" value={numberFormat(customerForm.available_point)} />
-        </div>
-      </CustomerFormGroup>
-    ) : null;
-
-  const mobileCustomerForm = (
-    <>
-      <CustomerFormGroup title="Identitas">
-        <div className="grid gap-3 md:grid-cols-2">
-          <FormInput
-            label="Nama"
-            required
-            value={customerForm.name}
-            onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
-          />
-          <FormInput
-            label="Nomor Telepon"
-            required
-            value={customerForm.phone_number}
-            onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
-          />
-          <FormInput
-            label="Email"
-            required
-            type="email"
-            value={customerForm.email}
-            onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
-          />
-          <Select
-            label="Gender"
-            value={customerForm.gender}
-            onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
-            options={[
-              { value: "unknown", label: "Unknown" },
-              { value: "male", label: "Male" },
-              { value: "female", label: "Female" },
-            ]}
-          />
-          <FormInput
-            label="Tanggal Lahir"
-            type="date"
-            value={customerForm.dob}
-            onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
-          />
-        </div>
-      </CustomerFormGroup>
-
-      <CustomerFormGroup title="Lokasi">
-        <div className="grid gap-3 md:grid-cols-2">
-          <Select
-            label="Brand"
-            required
-            value={String(customerForm.brand_id)}
-            onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
-            options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
-              (brand) => ({
-                value: String(brand.id),
-                label: brand.name,
-              }),
-            )}
-          />
-          <Select
-            label="Owner Outlet"
-            required
-            value={String(customerForm.owner_location_id)}
-            onChange={(v) => {
-              const ownerId = Number(v);
-              setCustomerForm({
-                ...customerForm,
-                owner_location_id: ownerId,
-                location_ids:
-                  ownerId > 0
-                    ? Array.from(new Set([...customerForm.location_ids, ownerId]))
-                    : customerForm.location_ids,
-              });
-            }}
-            options={[
-              { value: "0", label: "Tanpa outlet" },
-              ...(locations ?? []).map((location) => ({
-                value: String(location.id),
-                label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
-              })),
-            ]}
-          />
-        </div>
-        <FormInput
-          label="Alamat"
-          value={customerForm.address}
-          onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
-        />
-        <div className="grid gap-3 md:grid-cols-2">
-          <FormInput
-            label="Kota"
-            value={customerForm.city}
-            onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
-          />
-          <FormInput
-            label="Provinsi"
-            value={customerForm.province}
-            onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
-          />
-          <FormInput
-            label="Negara"
-            value={customerForm.country}
-            onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
-          />
-          <FormInput
-            label="Kode Pos"
-            value={customerForm.postal_code}
-            onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
-          />
-        </div>
-      </CustomerFormGroup>
-
-      {customerLoyaltyFields}
-      <Button
-        onClick={saveCustomer}
-        disabled={saving}
-        className="mt-3 w-full rounded-full font-bold"
-      >
-        Simpan Customer
-      </Button>
-    </>
-  );
-
-  const mobileRedeemForm = (
-    <>
-      <div className="mb-3 flex gap-2">
-        <input
-          value={catalogSearch}
-          onChange={(e) => setCatalogSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") searchCatalog();
-          }}
-          placeholder="Cari menu..."
-          className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-        />
-        <Button onClick={searchCatalog} variant="outline">
-          Cari
-        </Button>
-        {appliedCatalogSearch && (
-          <Button onClick={resetCatalogSearch} variant="outline">
-            Reset
-          </Button>
-        )}
-      </div>
-      <CategoryMenuPicker
-        categories={catalogCategories}
-        items={catalogItems}
-        searchQuery={appliedCatalogSearch}
-        selectedItem={selectedCatalogItem}
-        selectedItemId={redeemForm.menu_item_id}
-        onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
-      />
-      <FormInput
-        label="Poin Redeem"
-        type="number"
-        required
-        value={String(redeemForm.points_required)}
-        onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
-      />
-      <FormInput
-        label="Urutan"
-        type="number"
-        value={String(redeemForm.sort_order)}
-        onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
-      />
-      <Toggle
-        label="Aktif"
-        checked={redeemForm.is_active}
-        onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
-      />
-      <Button
-        onClick={saveRedeemItem}
-        disabled={saving}
-        className="mt-3 w-full rounded-full font-bold"
-      >
-        Simpan Item
-      </Button>
-    </>
-  );
-
+  // L-7: dialog mobile kini memakai komponen field yang sama dengan panel
+  // desktop di dalam modul tab, jadi markup formnya tidak lagi ditulis dua kali.
   const mobileCrudTitle =
     activeMobileForm === "user"
       ? userForm.id
@@ -1650,11 +1364,52 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           : "Tambah Menu Redeem";
 
   const mobileCrudContent =
-    activeMobileForm === "user"
-      ? mobileUserForm
-      : activeMobileForm === "customer"
-        ? mobileCustomerForm
-        : mobileRedeemForm;
+    activeMobileForm === "user" ? (
+      <>
+        <UserFormFields userForm={userForm} setUserForm={setUserForm} />
+        <Button onClick={saveUser} disabled={saving} className="mt-3 w-full rounded-full font-bold">
+          Simpan User
+        </Button>
+      </>
+    ) : activeMobileForm === "customer" ? (
+      <>
+        <CustomerFormFields
+          customerForm={customerForm}
+          setCustomerForm={setCustomerForm}
+          brands={brands}
+          locations={locations}
+        />
+        <Button
+          onClick={saveCustomer}
+          disabled={saving}
+          className="mt-3 w-full rounded-full font-bold"
+        >
+          Simpan Customer
+        </Button>
+      </>
+    ) : (
+      <>
+        <RedeemFormFields
+          redeemForm={redeemForm}
+          setRedeemForm={setRedeemForm}
+          catalogSearch={catalogSearch}
+          setCatalogSearch={setCatalogSearch}
+          searchCatalog={searchCatalog}
+          resetCatalogSearch={resetCatalogSearch}
+          appliedCatalogSearch={appliedCatalogSearch}
+          catalogCategories={catalogCategories}
+          catalogItems={catalogItems}
+          selectedCatalogItem={selectedCatalogItem}
+        />
+        <Button
+          onClick={saveRedeemItem}
+          disabled={saving}
+          className="mt-3 w-full rounded-full font-bold"
+        >
+          Simpan Item
+        </Button>
+      </>
+    );
 
   if (!canAccess) return null;
 
@@ -1814,1026 +1569,115 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         )}
 
         {!loading && tab === "users" && canManageUsers && (
-          <section className="grid gap-5 lg:grid-cols-[360px_1fr]">
-            <div className="hidden md:block">
-              <Panel title={userForm.id ? "Edit User" : "Tambah User"}>
-                <FormInput
-                  label="Email"
-                  type="email"
-                  value={userForm.email}
-                  onChange={(v) => setUserForm({ ...userForm, email: v })}
-                />
-                <FormInput
-                  label="Nomor Telepon"
-                  value={userForm.phone_number}
-                  onChange={(v) => setUserForm({ ...userForm, phone_number: v })}
-                />
-                <FormInput
-                  label={userForm.id ? "Password Baru" : "Password"}
-                  type="password"
-                  required={!userForm.id}
-                  value={userForm.password}
-                  onChange={(v) => setUserForm({ ...userForm, password: v })}
-                />
-                <Select
-                  label="Role"
-                  required
-                  value={userForm.role}
-                  onChange={(v) => setUserForm({ ...userForm, role: v })}
-                  options={[
-                    { value: "marketing", label: "Marketing" },
-                    { value: "admin", label: "Admin" },
-                  ]}
-                />
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    onClick={saveUser}
-                    disabled={saving}
-                    className="flex-1 rounded-full font-bold"
-                  >
-                    Simpan User
-                  </Button>
-                  {userForm.id > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setUserForm(emptyUserForm)}
-                      className="rounded-full font-bold"
-                    >
-                      Batal
-                    </Button>
-                  )}
-                </div>
-              </Panel>
-            </div>
-            <Panel title="Daftar User Admin">
-              <Button
-                type="button"
-                onClick={openCreateUserForm}
-                className="mb-4 w-full rounded-full font-bold md:hidden"
-              >
-                Tambah User Admin
-              </Button>
-              <div className="mb-4 flex gap-2">
-                <DebouncedSearchInput
-                  handleRef={userSearchRef}
-                  ariaLabel="Cari user admin"
-                  placeholder="Cari email, nomor, atau role..."
-                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                  onSearch={(value) => void searchUsers(value)}
-                />
-                <Button onClick={() => userSearchRef.current?.submit()} variant="outline">
-                  Cari
-                </Button>
-              </div>
-              <TableScrollArea>
-                <table className="min-w-[840px] w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <SortableHeader
-                        label="Email"
-                        sortKey="email"
-                        sort={userSort}
-                        onSort={sortUsers}
-                      />
-                      <SortableHeader
-                        label="Nomor"
-                        sortKey="phone_number"
-                        sort={userSort}
-                        onSort={sortUsers}
-                      />
-                      <SortableHeader
-                        label="Role"
-                        sortKey="role"
-                        sort={userSort}
-                        onSort={sortUsers}
-                      />
-                      <SortableHeader
-                        label="Dibuat"
-                        sortKey="created_at"
-                        sort={userSort}
-                        onSort={sortUsers}
-                      />
-                      <th className="p-2">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.length === 0 && (
-                      <tr className="border-t border-border">
-                        <td colSpan={5} className="p-8 text-center">
-                          <p className="font-bold text-foreground">
-                            {appliedUserSearch
-                              ? "Kata kunci yang Anda cari tidak ditemukan"
-                              : "Belum ada data user admin"}
-                          </p>
-                          {appliedUserSearch && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              Tidak ada hasil untuk "{appliedUserSearch}".
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                    {users.map((user) => (
-                      <tr key={user.id} className="border-t border-border">
-                        <td className="p-2 font-bold">{user.email ?? "-"}</td>
-                        <td className="p-2">{user.phone_number ?? "-"}</td>
-                        <td className="p-2 capitalize">{user.role}</td>
-                        <td className="p-2">{dateFormat(user.created_at)}</td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-3">
-                            <button
-                              className="inline-flex items-center gap-1 font-bold text-primary"
-                              onClick={() => editUser(user)}
-                            >
-                              <Pencil className="h-4 w-4" /> Edit
-                            </button>
-                            <button
-                              className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
-                              disabled={saving || user.id === currentUser?.id}
-                              onClick={() => requestDeleteUser(user)}
-                            >
-                              <Trash2 className="h-4 w-4" /> Hapus
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScrollArea>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">
-                  {numberFormat(userTotal)} user · Halaman {userPage} dari {userTotalPages}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={userPage <= 1}
-                    onClick={() => void loadUsers(userPage - 1)}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={userPage >= userTotalPages}
-                    onClick={() => void loadUsers(userPage + 1)}
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat user admin" />
+            }
+          >
+            <AdminUsersTab
+              userForm={userForm}
+              setUserForm={setUserForm}
+              saveUser={saveUser}
+              users={users}
+              userSort={userSort}
+              sortUsers={stableSortUsers}
+              appliedUserSearch={appliedUserSearch}
+              userSearchRef={userSearchRef}
+              searchUsers={stableSearchUsers}
+              userTotal={userTotal}
+              userPage={userPage}
+              userTotalPages={userTotalPages}
+              loadUsers={loadUsers}
+              editUser={stableEditUser}
+              requestDeleteUser={stableRequestDeleteUser}
+              openCreateUserForm={stableOpenCreateUserForm}
+              saving={saving}
+              currentUser={currentUser}
+            />
+          </Suspense>
         )}
 
         {!loading && tab === "customers" && (
-          <section className="grid gap-5 lg:grid-cols-[420px_1fr]">
-            <div className="hidden md:block">
-              <Panel title={customerForm.id ? "Edit Customer" : "Tambah Customer"}>
-                <CustomerFormGroup title="Identitas">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormInput
-                      label="Nama"
-                      required
-                      value={customerForm.name}
-                      onChange={(v) => setCustomerForm({ ...customerForm, name: v })}
-                    />
-                    <FormInput
-                      label="Nomor Telepon"
-                      required
-                      value={customerForm.phone_number}
-                      onChange={(v) => setCustomerForm({ ...customerForm, phone_number: v })}
-                    />
-                    <FormInput
-                      label="Email"
-                      required
-                      type="email"
-                      value={customerForm.email}
-                      onChange={(v) => setCustomerForm({ ...customerForm, email: v })}
-                    />
-                    <Select
-                      label="Gender"
-                      value={customerForm.gender}
-                      onChange={(v) => setCustomerForm({ ...customerForm, gender: v })}
-                      options={[
-                        { value: "unknown", label: "Unknown" },
-                        { value: "male", label: "Male" },
-                        { value: "female", label: "Female" },
-                      ]}
-                    />
-                    <FormInput
-                      label="Tanggal Lahir"
-                      type="date"
-                      value={customerForm.dob}
-                      onChange={(v) => setCustomerForm({ ...customerForm, dob: v })}
-                    />
-                  </div>
-                </CustomerFormGroup>
-
-                <CustomerFormGroup title="Lokasi">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Select
-                      label="Brand"
-                      required
-                      value={String(customerForm.brand_id)}
-                      onChange={(v) => setCustomerForm({ ...customerForm, brand_id: Number(v) })}
-                      options={((brands ?? []).length ? brands : [{ id: 1, name: "Brand 1" }]).map(
-                        (brand) => ({
-                          value: String(brand.id),
-                          label: brand.name,
-                        }),
-                      )}
-                    />
-                    <Select
-                      label="Owner Outlet"
-                      required
-                      value={String(customerForm.owner_location_id)}
-                      onChange={(v) => {
-                        const ownerId = Number(v);
-                        setCustomerForm({
-                          ...customerForm,
-                          owner_location_id: ownerId,
-                          location_ids:
-                            ownerId > 0
-                              ? Array.from(new Set([...customerForm.location_ids, ownerId]))
-                              : customerForm.location_ids,
-                        });
-                      }}
-                      options={[
-                        { value: "0", label: "Tanpa outlet" },
-                        ...(locations ?? []).map((location) => ({
-                          value: String(location.id),
-                          label: `${location.name}${location.city ? ` - ${location.city}` : ""}`,
-                        })),
-                      ]}
-                    />
-                  </div>
-                  <FormInput
-                    label="Alamat"
-                    value={customerForm.address}
-                    onChange={(v) => setCustomerForm({ ...customerForm, address: v })}
-                  />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <FormInput
-                      label="Kota"
-                      value={customerForm.city}
-                      onChange={(v) => setCustomerForm({ ...customerForm, city: v })}
-                    />
-                    <FormInput
-                      label="Provinsi"
-                      value={customerForm.province}
-                      onChange={(v) => setCustomerForm({ ...customerForm, province: v })}
-                    />
-                    <FormInput
-                      label="Negara"
-                      value={customerForm.country}
-                      onChange={(v) => setCustomerForm({ ...customerForm, country: v })}
-                    />
-                    <FormInput
-                      label="Kode Pos"
-                      value={customerForm.postal_code}
-                      onChange={(v) => setCustomerForm({ ...customerForm, postal_code: v })}
-                    />
-                  </div>
-                </CustomerFormGroup>
-
-                {customerLoyaltyFields}
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    onClick={saveCustomer}
-                    disabled={saving}
-                    className="flex-1 rounded-full font-bold"
-                  >
-                    Simpan Customer
-                  </Button>
-                  {customerForm.id > 0 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setCustomerForm({ ...emptyCustomerForm, brand_id: brands[0]?.id ?? 1 })
-                      }
-                      className="rounded-full font-bold"
-                    >
-                      Batal
-                    </Button>
-                  )}
-                </div>
-              </Panel>
-            </div>
-            <Panel title="Daftar Customer">
-              <div className="mb-4 flex gap-2">
-                <Button
-                  type="button"
-                  onClick={openCreateCustomerForm}
-                  className="w-full rounded-full font-bold md:hidden"
-                >
-                  Tambah Customer
-                </Button>
-                {canSyncCustomers && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={
-                      !customerSyncEnabled ||
-                      saving ||
-                      customerImportJob?.status === "queued" ||
-                      customerImportJob?.status === "running"
-                    }
-                    title={
-                      customerSyncEnabled
-                        ? undefined
-                        : "Sinkronisasi customer Runchise sedang dijeda sementara"
-                    }
-                    onClick={() => void startCustomerImportFromRunchise()}
-                    className="ml-auto rounded-full font-bold"
-                  >
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${
-                        customerSyncEnabled &&
-                        (saving ||
-                          customerImportJob?.status === "queued" ||
-                          customerImportJob?.status === "running")
-                          ? "animate-spin"
-                          : ""
-                      }`}
-                    />
-                    Sinkronkan Customer Runchise
-                  </Button>
-                )}
-              </div>
-              {customerImportJob && (
-                <div className="mb-4 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-black">
-                      {customerImportJob.status === "completed" ||
-                      customerImportJob.status === "completed_with_errors"
-                        ? "Sinkronisasi customer selesai"
-                        : !customerSyncEnabled
-                          ? "Sinkronisasi customer dijeda sementara"
-                          : customerImportJob.status === "running"
-                            ? "Sinkronisasi customer sedang berjalan"
-                            : "Sinkronisasi customer menunggu worker"}
-                    </p>
-                    <span className="font-semibold text-muted-foreground">
-                      Job #{customerImportJob.id}
-                    </span>
-                  </div>
-                  {!customerSyncEnabled &&
-                    customerImportJob.status !== "completed" &&
-                    customerImportJob.status !== "completed_with_errors" && (
-                      <p className="mt-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">
-                        Impor customer baru dihentikan sementara untuk menghemat kapasitas database;
-                        dashboard memakai data customer yang sudah tersimpan. Progres job ini
-                        tersimpan dan akan dilanjutkan dari halaman terakhir begitu sinkronisasi
-                        diaktifkan kembali.
-                      </p>
-                    )}
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          customerImportJob.locations_total > 0
-                            ? (customerImportJob.locations_completed /
-                                customerImportJob.locations_total) *
-                                100
-                            : 0,
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
-                    <span>Diproses: {numberFormat(customerImportJob.processed)} record API</span>
-                    <span>Dibuat: {numberFormat(customerImportJob.created)} customer</span>
-                    <span>Diperbarui: {numberFormat(customerImportJob.updated)} customer</span>
-                    <span>
-                      Outlet: {numberFormat(customerImportJob.locations_completed)}/
-                      {numberFormat(customerImportJob.locations_total)}
-                    </span>
-                    <span>Fase: {customerImportJob.phase}</span>
-                    <span>Halaman: {numberFormat(customerImportJob.current_page)}</span>
-                    <span>Gagal: {numberFormat(customerImportJob.failed)}</span>
-                    <span>Konflik: {numberFormat(customerImportJob.skipped_conflicts)}</span>
-                    <span>
-                      Terbaru Runchise:{" "}
-                      {customerImportJob.latest_runchise_created_at
-                        ? dateTimeFormat(customerImportJob.latest_runchise_created_at)
-                        : "-"}
-                    </span>
-                    <span>
-                      Terbaru lokal:{" "}
-                      {customerImportJob.latest_local_created_at
-                        ? dateTimeFormat(customerImportJob.latest_local_created_at)
-                        : "-"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Aktivitas terakhir: {dateTimeFormat(customerImportJob.heartbeat_at)}
-                  </p>
-                  {customerImportJob.error && (
-                    <p className="mt-2 text-xs font-semibold text-red-600">
-                      Percobaan terakhir gagal dan akan dilanjutkan dari cursor tersimpan:{" "}
-                      {customerImportJob.error}
-                    </p>
-                  )}
-                </div>
-              )}
-              <div className="mb-4 flex gap-2">
-                <DebouncedSearchInput
-                  handleRef={customerSearchRef}
-                  ariaLabel="Cari customer"
-                  placeholder="Cari nama, nomor, email, atau outlet..."
-                  className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                  debounceMs={400}
-                  onSearch={(value) => void searchCustomers(value)}
-                />
-                <Button onClick={() => customerSearchRef.current?.submit()} variant="outline">
-                  Cari
-                </Button>
-              </div>
-              <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
-                <FormInput
-                  label="Daftar dari"
-                  type="date"
-                  value={customerFrom}
-                  onChange={setCustomerFrom}
-                />
-                <FormInput
-                  label="Daftar hingga"
-                  type="date"
-                  value={customerTo}
-                  onChange={setCustomerTo}
-                />
-                <Button
-                  type="button"
-                  onClick={applyCustomerDateFilter}
-                  className="mb-3 rounded-full font-bold"
-                >
-                  Terapkan
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={resetCustomerDateFilter}
-                  className="mb-3 rounded-full font-bold"
-                >
-                  Reset
-                </Button>
-              </div>
-              <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-muted/30 p-4 md:grid-cols-[minmax(0,20rem)_1fr] md:items-center">
-                <Select
-                  label="Status Email"
-                  value={customerEmailStatus}
-                  onChange={(value) => void applyCustomerEmailStatus(value as CustomerEmailStatus)}
-                  options={[
-                    { value: "all", label: "Semua customer" },
-                    { value: "missing", label: "Belum punya email" },
-                    { value: "present", label: "Sudah punya email" },
-                  ]}
-                />
-                <p className="mb-3 text-xs font-semibold text-muted-foreground">
-                  Tautan aktivasi hanya bisa dikirim lewat email. Pilih{" "}
-                  <span className="font-bold text-foreground">Belum punya email</span> untuk melihat
-                  customer mana saja yang emailnya masih perlu ditanyakan saat mereka datang ke
-                  outlet.
-                </p>
-              </div>
-              <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-border p-3">
-                  <p className="text-xs font-bold text-muted-foreground">Customer ditemukan</p>
-                  <p className="text-lg font-black">{numberFormat(customerTotal)}</p>
-                </div>
-                <div className="rounded-2xl border border-border p-3">
-                  <p className="text-xs font-bold text-muted-foreground">Pendaftaran paling awal</p>
-                  <p className="text-lg font-black">
-                    {customerRegistrationRange.earliest
-                      ? dateFormat(customerRegistrationRange.earliest)
-                      : "-"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-border p-3">
-                  <p className="text-xs font-bold text-muted-foreground">
-                    Pendaftaran paling akhir
-                  </p>
-                  <p className="text-lg font-black">
-                    {customerRegistrationRange.latest
-                      ? dateFormat(customerRegistrationRange.latest)
-                      : "-"}
-                  </p>
-                </div>
-              </div>
-              <TableScrollArea>
-                <table className="min-w-[1540px] w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <th className="p-2 whitespace-nowrap">ID Runchise</th>
-                      <SortableHeader
-                        label="Nama"
-                        sortKey="name"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Kontak"
-                        sortKey="phone_number"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Outlet"
-                        sortKey="outlet"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Poin"
-                        sortKey="points"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Status"
-                        sortKey="status"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Status Akun"
-                        sortKey="activation_status"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Sync Runchise"
-                        sortKey="runchise_sync_status"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Tanggal Daftar"
-                        sortKey="created_at"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <SortableHeader
-                        label="Diperbarui di Runchise"
-                        sortKey="updated_at"
-                        sort={customerSort}
-                        onSort={sortCustomers}
-                      />
-                      <th className="p-2">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customers.length === 0 && (
-                      <tr className="border-t border-border">
-                        <td colSpan={11} className="p-8 text-center">
-                          <p className="font-bold text-foreground">
-                            {appliedCustomerSearch
-                              ? "Kata kunci yang Anda cari tidak ditemukan"
-                              : "Belum ada data customer"}
-                          </p>
-                          {appliedCustomerSearch && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              Tidak ada hasil untuk "{appliedCustomerSearch}".
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                    )}
-                    {customers.map((customer) => (
-                      <tr
-                        key={customer.runchise_id ?? customer.id}
-                        className="border-t border-border"
-                      >
-                        <td className="p-2 font-mono">{customer.runchise_id ?? "-"}</td>
-                        <td className="p-2 font-bold">{customer.name}</td>
-                        <td className="p-2">
-                          {customer.phone_number ?? "-"}
-                          <br />
-                          <span className="text-xs text-muted-foreground">
-                            {customer.user.email ?? "-"}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          {customer.owner_location?.name ?? "-"}
-                          <br />
-                          <span className="text-xs text-muted-foreground">
-                            {customer.owner_location?.city ?? customer.city ?? "-"}
-                          </span>
-                          {(customer.location_ids?.length ?? 0) > 1 && (
-                            <div
-                              className="mt-1 text-xs text-muted-foreground"
-                              title={customer.customer_locations
-                                ?.map(
-                                  (item) => item.location?.name ?? `Outlet ID ${item.location_id}`,
-                                )
-                                .join(", ")}
-                            >
-                              +{(customer.location_ids?.length ?? 1) - 1} outlet lainnya
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-2">
-                          {numberFormat(customer.customer_point?.available_point ?? 0)}
-                        </td>
-                        <td className="p-2 capitalize">{customer.status ?? "-"}</td>
-                        <td className="p-2">
-                          <span
-                            className={`inline-flex min-w-[104px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
-                              customer.user.activation_status === "pending_activation"
-                                ? "bg-amber-500/10 text-amber-700"
-                                : customer.user.activation_status === "not_linked"
-                                  ? "bg-slate-500/10 text-slate-700"
-                                  : "bg-emerald-500/10 text-emerald-700"
-                            }`}
-                          >
-                            {accountStatusLabel(customer.user.activation_status)}
-                          </span>
-                        </td>
-                        <td className="p-2">
-                          <div className="space-y-1">
-                            <span
-                              className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${runchiseSyncClassName(
-                                getCustomerSyncStatus(customer),
-                              )}`}
-                            >
-                              {runchiseSyncLabel(getCustomerSyncStatus(customer))}
-                            </span>
-                            {getCustomerSyncNotice(customer) && (
-                              <p className="max-w-[220px] text-xs font-semibold text-amber-700">
-                                {getCustomerSyncNotice(customer)}
-                              </p>
-                            )}
-                            {getCustomerSyncMessage(customer) && (
-                              <p className="max-w-[220px] text-xs text-muted-foreground">
-                                {getCustomerSyncMessage(customer)}
-                              </p>
-                            )}
-                            {customer.id > 0 && getCustomerSyncStatus(customer) !== "synced" && (
-                              <button
-                                className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
-                                disabled={saving || customer.id <= 0}
-                                onClick={() => retryCustomerRunchiseSync(customer)}
-                              >
-                                <RefreshCw className="h-3.5 w-3.5" /> Retry
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-2">
-                          {customer.created_at ? dateFormat(customer.created_at) : "-"}
-                        </td>
-                        <td className="p-2">
-                          {customer.runchise_updated_at
-                            ? dateFormat(customer.runchise_updated_at)
-                            : "-"}
-                        </td>
-                        <td className="p-2">
-                          <div className="flex items-center gap-3">
-                            {customer.id > 0 &&
-                              customer.user.activation_status === "pending_activation" && (
-                                <span
-                                  className="inline-flex min-w-[130px] flex-col items-start gap-1"
-                                  title={
-                                    customer.user.email
-                                      ? "Kirim ulang email aktivasi"
-                                      : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
-                                  }
-                                >
-                                  <button
-                                    className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={saving || !customer.user.email}
-                                    onClick={() => resendActivation(customer)}
-                                  >
-                                    <Mail className="h-4 w-4" /> Aktivasi
-                                  </button>
-                                  {!customer.user.email && (
-                                    <button
-                                      type="button"
-                                      className="inline-flex max-w-[150px] items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
-                                      onClick={() => editCustomer(customer)}
-                                    >
-                                      Tambah email dulu
-                                    </button>
-                                  )}
-                                </span>
-                              )}
-                            {customer.id > 0 && (
-                              <>
-                                <button
-                                  className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
-                                  onClick={() => editCustomer(customer)}
-                                >
-                                  <Pencil className="h-4 w-4" /> Edit
-                                </button>
-                                <button
-                                  className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
-                                  disabled={saving}
-                                  onClick={() => requestDeleteCustomer(customer)}
-                                >
-                                  <Trash2 className="h-4 w-4" /> Hapus
-                                </button>
-                              </>
-                            )}
-                            {customer.id <= 0 && (
-                              <span className="text-xs font-semibold text-muted-foreground">
-                                Belum terhubung lokal
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableScrollArea>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
-                  <span>
-                    Menampilkan {customerTotal === 0 ? 0 : (customerPage - 1) * customerLimit + 1}–
-                    {Math.min(customerPage * customerLimit, customerTotal)} dari{" "}
-                    {numberFormat(customerTotal)}
-                  </span>
-                  <label className="flex items-center gap-2">
-                    Per halaman
-                    <select
-                      value={customerLimit}
-                      onChange={(event) => void changeCustomerLimit(Number(event.target.value))}
-                      className="rounded-lg border border-border bg-card px-2 py-1"
-                    >
-                      {[25, 50, 100].map((limit) => (
-                        <option key={limit} value={limit}>
-                          {limit}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={saving || customerPage <= 1}
-                    onClick={() => loadCustomersPage(customerPage - 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Sebelumnya
-                  </Button>
-                  {paginationItems(customerPage, customerTotalPages).map((item, index) =>
-                    item === "ellipsis" ? (
-                      <span key={`ellipsis-${index}`} className="px-1 text-muted-foreground">
-                        …
-                      </span>
-                    ) : (
-                      <Button
-                        key={item}
-                        type="button"
-                        variant={item === customerPage ? "default" : "outline"}
-                        disabled={saving}
-                        onClick={() => loadCustomersPage(item)}
-                        className="h-9 min-w-9 rounded-full px-3 font-bold"
-                        aria-label={`Halaman ${item}`}
-                        aria-current={item === customerPage ? "page" : undefined}
-                      >
-                        {item}
-                      </Button>
-                    ),
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={saving || customerPage >= customerTotalPages}
-                    onClick={() => loadCustomersPage(customerPage + 1)}
-                    className="rounded-full font-bold"
-                  >
-                    Berikutnya
-                  </Button>
-                  <form
-                    className="ml-1 flex items-center gap-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      jumpToCustomerPage();
-                    }}
-                  >
-                    <input
-                      type="number"
-                      min={1}
-                      max={customerTotalPages}
-                      value={customerPageInput}
-                      onChange={(event) => setCustomerPageInput(event.target.value)}
-                      className="w-20 rounded-lg border border-border bg-card px-2 py-2"
-                      aria-label="Nomor halaman tujuan"
-                    />
-                    <Button type="submit" variant="outline" className="rounded-full font-bold">
-                      Pergi
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat customer" />
+            }
+          >
+            <AdminCustomersTab
+              customerForm={customerForm}
+              setCustomerForm={setCustomerForm}
+              saveCustomer={saveCustomer}
+              brands={brands}
+              locations={locations}
+              customers={customers}
+              customerSort={customerSort}
+              sortCustomers={stableSortCustomers}
+              appliedCustomerSearch={appliedCustomerSearch}
+              customerSearchRef={customerSearchRef}
+              searchCustomers={stableSearchCustomers}
+              customerTotal={customerTotal}
+              customerPage={customerPage}
+              customerTotalPages={customerTotalPages}
+              customerLimit={customerLimit}
+              changeCustomerLimit={stableChangeCustomerLimit}
+              customerPageInput={customerPageInput}
+              setCustomerPageInput={setCustomerPageInput}
+              jumpToCustomerPage={stableJumpToCustomerPage}
+              loadCustomersPage={stableLoadCustomersPage}
+              customerFrom={customerFrom}
+              setCustomerFrom={setCustomerFrom}
+              customerTo={customerTo}
+              setCustomerTo={setCustomerTo}
+              applyCustomerDateFilter={stableApplyCustomerDateFilter}
+              resetCustomerDateFilter={stableResetCustomerDateFilter}
+              customerEmailStatus={customerEmailStatus}
+              applyCustomerEmailStatus={stableApplyCustomerEmailStatus}
+              customerRegistrationRange={customerRegistrationRange}
+              customerImportJob={customerImportJob}
+              customerSyncEnabled={customerSyncEnabled}
+              canSyncCustomers={canSyncCustomers}
+              startCustomerImportFromRunchise={stableStartCustomerImport}
+              openCreateCustomerForm={stableOpenCreateCustomerForm}
+              editCustomer={stableEditCustomer}
+              requestDeleteCustomer={stableRequestDeleteCustomer}
+              resendActivation={stableResendActivation}
+              retryCustomerRunchiseSync={stableRetryCustomerRunchiseSync}
+              saving={saving}
+            />
+          </Suspense>
         )}
 
         {!loading && tab === "redeem" && (
-          <section className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-            <div className="hidden md:block">
-              <Panel title={redeemForm.id ? "Edit Item Redeem" : "Tambah Item Redeem"}>
-                <div className="mb-3 flex gap-2">
-                  <input
-                    value={catalogSearch}
-                    onChange={(e) => setCatalogSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") searchCatalog();
-                    }}
-                    placeholder="Cari menu..."
-                    className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm"
-                  />
-                  <Button onClick={searchCatalog} variant="outline">
-                    Cari
-                  </Button>
-                  {appliedCatalogSearch && (
-                    <Button onClick={resetCatalogSearch} variant="outline">
-                      Reset
-                    </Button>
-                  )}
-                </div>
-                <CategoryMenuPicker
-                  categories={catalogCategories}
-                  items={catalogItems}
-                  searchQuery={appliedCatalogSearch}
-                  selectedItem={selectedCatalogItem}
-                  selectedItemId={redeemForm.menu_item_id}
-                  onSelect={(item) => setRedeemForm({ ...redeemForm, menu_item_id: item.id })}
-                />
-                <FormInput
-                  label="Poin Redeem"
-                  type="number"
-                  required
-                  value={String(redeemForm.points_required)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, points_required: Number(v) })}
-                />
-                <FormInput
-                  label="Urutan"
-                  type="number"
-                  value={String(redeemForm.sort_order)}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, sort_order: Number(v) })}
-                />
-                <Toggle
-                  label="Aktif"
-                  checked={redeemForm.is_active}
-                  onChange={(v) => setRedeemForm({ ...redeemForm, is_active: v })}
-                />
-                <Button
-                  onClick={saveRedeemItem}
-                  disabled={saving}
-                  className="mt-3 w-full rounded-full font-bold"
-                >
-                  Simpan Item
-                </Button>
-              </Panel>
-            </div>
-            <Panel title="Menu Redeem Aktif dan Draft">
-              <Button
-                type="button"
-                onClick={openCreateRedeemForm}
-                className="mb-4 w-full rounded-full font-bold md:hidden"
-              >
-                Tambah Menu Redeem
-              </Button>
-              <TableScrollArea>
-                <table className="min-w-[1040px] w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-muted-foreground">
-                      <SortableHeader
-                        label="Menu"
-                        sortKey="menu"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <SortableHeader
-                        label="Nilai Jual & PB1"
-                        sortKey="price"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <SortableHeader
-                        label="Poin"
-                        sortKey="points"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <SortableHeader
-                        label="Status"
-                        sortKey="status"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <SortableHeader
-                        label="Urutan"
-                        sortKey="sort_order"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <SortableHeader
-                        label="Dibuat"
-                        sortKey="created_at"
-                        sort={redeemSort}
-                        onSort={sortRedeemItems}
-                      />
-                      <th className="p-2">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {redeemItems.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="border-t border-border p-6 text-center font-semibold text-muted-foreground"
-                        >
-                          Belum ada data menu redeem.
-                        </td>
-                      </tr>
-                    ) : (
-                      redeemItems.map((item) => (
-                        <tr key={item.id} className="border-t border-border">
-                          <td className="p-2 font-bold">
-                            {item.menu_item.name}
-                            {!item.menu_item.is_active && (
-                              <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase text-muted-foreground">
-                                Menu Nonaktif
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            <div className="space-y-0.5">
-                              <p className="font-semibold">
-                                {currencyFormat(toNumber(item.menu_item.price))}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                PB1 {numberFormat(item.pb1_rate * 100)}%:{" "}
-                                {currencyFormat(item.pb1_amount)}
-                              </p>
-                              <p className="text-xs font-bold text-primary">
-                                Total {currencyFormat(item.price_with_pb1)}
-                              </p>
-                            </div>
-                          </td>
-                          <td className="p-2">{numberFormat(item.points_required)}</td>
-                          <td className="p-2">{item.is_active ? "Aktif" : "Nonaktif"}</td>
-                          <td className="p-2">{numberFormat(item.sort_order)}</td>
-                          <td className="p-2">
-                            {item.created_at ? dateFormat(item.created_at) : "-"}
-                          </td>
-                          <td className="p-2">
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                className="inline-flex items-center gap-1 font-bold text-primary"
-                                onClick={() => editRedeemItem(item)}
-                              >
-                                <Pencil className="h-4 w-4" /> Edit
-                              </button>
-                              <button
-                                className="inline-flex items-center gap-1 font-bold text-destructive"
-                                disabled={saving}
-                                onClick={() => requestDeleteRedeemItem(item)}
-                              >
-                                <Trash2 className="h-4 w-4" /> Hapus
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </TableScrollArea>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">
-                  {numberFormat(redeemTotal)} menu · Halaman {redeemPage} dari {redeemTotalPages}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={redeemPage <= 1}
-                    onClick={() => void loadRedeem(redeemPage - 1)}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={redeemPage >= redeemTotalPages}
-                    onClick={() => void loadRedeem(redeemPage + 1)}
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            </Panel>
-          </section>
+          <Suspense
+            fallback={
+              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat menu redeem" />
+            }
+          >
+            <AdminRedeemTab
+              redeemForm={redeemForm}
+              setRedeemForm={setRedeemForm}
+              saveRedeemItem={saveRedeemItem}
+              catalogSearch={catalogSearch}
+              setCatalogSearch={setCatalogSearch}
+              searchCatalog={searchCatalog}
+              resetCatalogSearch={stableResetCatalogSearch}
+              appliedCatalogSearch={appliedCatalogSearch}
+              catalogCategories={catalogCategories}
+              catalogItems={catalogItems}
+              selectedCatalogItem={selectedCatalogItem}
+              redeemItems={redeemItems}
+              redeemSort={redeemSort}
+              sortRedeemItems={stableSortRedeemItems}
+              redeemTotal={redeemTotal}
+              redeemPage={redeemPage}
+              redeemTotalPages={redeemTotalPages}
+              loadRedeem={loadRedeem}
+              editRedeemItem={stableEditRedeemItem}
+              requestDeleteRedeemItem={stableRequestDeleteRedeemItem}
+              openCreateRedeemForm={stableOpenCreateRedeemForm}
+              saving={saving}
+            />
+          </Suspense>
         )}
       </section>
       <ConfirmDeleteDialog
@@ -2851,513 +1695,5 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {mobileCrudContent}
       </MobileCrudDialog>
     </main>
-  );
-}
-
-// M-11: Radix Dialog memindahkan fokus ke dalam dialog saat dibuka,
-// menjebak Tab di dalamnya, dan mendukung Escape secara bawaan -- tapi
-// PENGEMBALIAN fokus ke elemen pemicu saat ditutup andalannya adalah
-// Dialog.Trigger sebagai penanda "elemen mana yang harus difokus balik".
-// Kedua dialog di file ini dibuka dari banyak tombol pemicu yang tersebar
-// (tiap baris tabel punya tombol Edit/Hapus sendiri) lewat state
-// eksternal (activeMobileForm/confirmDialog), bukan dibungkus satu
-// Dialog.Trigger -- diverifikasi lewat pengujian browser sungguhan bahwa
-// fallback restorasi fokus Radix TIDAK konsisten mengembalikan fokus ke
-// pemicu yang benar dalam pola ini (kadang jatuh ke <body>, bukan tombol
-// yang tadi diklik). Hook ini mengingat elemen yang fokus tepat sebelum
-// dialog dibuka, lalu mengembalikannya secara eksplisit lewat
-// onCloseAutoFocus saat dialog ditutup.
-function useDialogCloseFocusRestore(open: boolean) {
-  const lastFocusedRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (open) lastFocusedRef.current = document.activeElement as HTMLElement | null;
-  }, [open]);
-
-  return useCallback((event: Event) => {
-    event.preventDefault();
-    lastFocusedRef.current?.focus();
-  }, []);
-}
-
-// Sebelumnya <div role="dialog" aria-modal="true"> ditulis manual --
-// atribut ARIA-nya BENAR, tapi tidak ada satu pun perilaku di baliknya:
-// tidak ada focus trap (Tab bisa "bocor" ke konten di belakang overlay),
-// tidak ada pemindahan fokus ke dialog saat dibuka, tidak ada pengembalian
-// fokus ke elemen pemicu saat ditutup, dan tidak ada handler Escape sama
-// sekali. Sekarang dibungkus Radix Dialog (Root/Content), yang menyediakan
-// focus trap, focus-on-open, dan Escape bawaan lewat FocusScope +
-// DismissableLayer internal Radix -- bukan ditulis ulang manual. Restorasi
-// fokus saat tutup memakai useDialogCloseFocusRestore di atas (lihat
-// komentarnya untuk alasan tidak memakai default Radix apa adanya).
-//
-// Kontrak prop (open/title/saving/children/onClose) dipertahankan identik
-// dengan versi lama supaya pemanggilnya di bawah tidak perlu berubah.
-// "saving" tetap mencegah dialog ditutup lewat Escape/klik-di-luar SELAMA
-// proses simpan berjalan, sama seperti closeDialog() versi lama.
-function MobileCrudDialog({
-  open,
-  title,
-  saving,
-  children,
-  onClose,
-}: {
-  open: boolean;
-  title: string;
-  saving: boolean;
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  const restoreFocusOnClose = useDialogCloseFocusRestore(open);
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && !saving) onClose();
-      }}
-    >
-      <DialogPortal>
-        <DialogOverlay className="md:hidden" />
-        <DialogContent
-          onEscapeKeyDown={(event) => {
-            if (saving) event.preventDefault();
-          }}
-          onInteractOutside={(event) => {
-            if (saving) event.preventDefault();
-          }}
-          onCloseAutoFocus={restoreFocusOnClose}
-          aria-describedby={undefined}
-          className="flex max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-(--shadow-pop) md:hidden"
-        >
-          <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3">
-            <DialogTitle asChild>
-              <h2 className="text-lg font-black">{title}</h2>
-            </DialogTitle>
-            <DialogClose asChild>
-              <button
-                type="button"
-                disabled={saving}
-                aria-label="Tutup form"
-                className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </DialogClose>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4">{children}</div>
-        </DialogContent>
-      </DialogPortal>
-    </Dialog>
-  );
-}
-
-// M-11: sama seperti MobileCrudDialog di atas -- role="alertdialog"
-// aria-modal="true" dulu ditulis manual tanpa focus trap/focus
-// management/Escape di baliknya. Dibungkus Radix Dialog untuk perilaku
-// yang sama (focus trap, focus-on-open, restore focus, Escape). Role
-// "alertdialog" (bukan "dialog" default Radix) dipertahankan eksplisit
-// lewat prop -- Radix meneruskan prop yang di-spread ke elemen DOM
-// sehingga override ini sah, dan tetap sesuai kontrak ARIA
-// alertdialog+aria-describedby yang sudah benar sejak versi lama.
-function ConfirmDeleteDialog({
-  dialog,
-  saving,
-  onCancel,
-  onConfirm,
-}: {
-  dialog: ConfirmDialogState | null;
-  saving: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const restoreFocusOnClose = useDialogCloseFocusRestore(Boolean(dialog));
-
-  return (
-    <Dialog
-      open={Boolean(dialog)}
-      onOpenChange={(next) => {
-        if (!next && !saving) onCancel();
-      }}
-    >
-      <DialogPortal>
-        <DialogOverlay className="z-50" />
-        <DialogContent
-          role="alertdialog"
-          aria-describedby="confirm-delete-description"
-          onEscapeKeyDown={(event) => {
-            if (saving) event.preventDefault();
-          }}
-          onInteractOutside={(event) => {
-            if (saving) event.preventDefault();
-          }}
-          onCloseAutoFocus={restoreFocusOnClose}
-          className="z-50 max-w-md rounded-xl border border-border bg-card p-6 shadow-(--shadow-pop)"
-        >
-          <DialogClose asChild>
-            <button
-              type="button"
-              disabled={saving}
-              aria-label="Tutup dialog konfirmasi"
-              className="absolute right-4 top-4 grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </DialogClose>
-          <div className="mb-4 grid h-12 w-12 place-items-center rounded-lg bg-destructive/10 text-destructive">
-            <Trash2 className="h-6 w-6" />
-          </div>
-          <DialogTitle asChild>
-            <h2 className="text-xl font-black tracking-tight">{dialog?.title}</h2>
-          </DialogTitle>
-          <DialogDescription
-            id="confirm-delete-description"
-            className="mt-2 text-sm leading-6 text-muted-foreground"
-          >
-            {dialog?.description}
-          </DialogDescription>
-          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={saving}
-              className="font-bold"
-            >
-              Tidak, batal
-            </Button>
-            <Button
-              type="button"
-              onClick={onConfirm}
-              disabled={saving}
-              className="bg-destructive font-bold text-destructive-foreground hover:bg-destructive/90"
-            >
-              {saving ? "Menghapus..." : (dialog?.confirmLabel ?? "Hapus")}
-            </Button>
-          </div>
-        </DialogContent>
-      </DialogPortal>
-    </Dialog>
-  );
-}
-
-function TabButton({
-  active,
-  icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`relative inline-flex min-h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-center text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset lg:min-w-0 lg:flex-1 ${
-        active
-          ? "border-primary text-primary"
-          : "border-transparent text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      <span className="shrink-0">{icon}</span>
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function AdminPageSkeleton({ tab }: { tab: Tab }) {
-  if (tab === "report") {
-    return (
-      <section className="space-y-6">
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6 lg:gap-4">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="flex min-h-[104px] flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px]"
-            >
-              <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start">
-                <Skeleton className="h-7 w-7 rounded-full sm:h-8 sm:w-8" />
-                <Skeleton className="h-3 w-12 sm:w-16 lg:w-24" />
-              </div>
-              <div className="flex flex-1 items-center justify-center pt-1.5">
-                <Skeleton className="h-6 w-14 sm:h-7 sm:w-20 lg:h-8 lg:w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <div
-              key={index}
-              className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)"
-            >
-              <Skeleton className="mb-5 h-6 w-56" />
-              <Skeleton className="mb-4 h-4 w-64 max-w-full" />
-              <div className="space-y-4">
-                {Array.from({ length: 5 }).map((__, rowIndex) => (
-                  <div key={rowIndex} className="flex items-center gap-3">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-5 flex-1 rounded-full" />
-                    <Skeleton className="h-4 w-8" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
-          <Skeleton className="mb-5 h-6 w-64" />
-          <div className="grid gap-3 md:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-10 w-full rounded-xl" />
-            ))}
-          </div>
-          <Skeleton className="mt-5 h-48 w-full" />
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(280px,420px)_1fr]">
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
-        <Skeleton className="mb-5 h-6 w-44" />
-        <div className="space-y-4">
-          {Array.from({ length: tab === "redeem" ? 5 : 6 }).map((_, index) => (
-            <div key={index}>
-              <Skeleton className="mb-2 h-3 w-24" />
-              <Skeleton className="h-10 w-full rounded-xl" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
-        <Skeleton className="mb-5 h-6 w-52" />
-        <Skeleton className="mb-4 h-10 w-full rounded-xl" />
-        <div className="space-y-3">
-          {Array.from({ length: 7 }).map((_, index) => (
-            <div key={index} className="grid gap-3 md:grid-cols-[1.2fr_1fr_0.8fr_0.7fr]">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-full" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CategoryMenuPicker({
-  categories,
-  items,
-  searchQuery,
-  selectedItem,
-  selectedItemId,
-  onSelect,
-}: {
-  categories: CatalogMenuCategory[];
-  items: CatalogMenuItem[];
-  searchQuery: string;
-  selectedItem: CatalogMenuItem | null;
-  selectedItemId: number;
-  onSelect: (item: CatalogMenuItem) => void;
-}) {
-  const isSearching = searchQuery.trim().length > 0;
-  const groups = useMemo(() => {
-    const groupMap = new Map<
-      string,
-      { id: string; name: string; isActive: boolean; items: CatalogMenuItem[] }
-    >();
-
-    if (!isSearching) {
-      for (const category of categories) {
-        groupMap.set(String(category.id), {
-          id: String(category.id),
-          name: category.name,
-          isActive: category.is_active,
-          items: [],
-        });
-      }
-    }
-
-    for (const item of items) {
-      const categoryId = item.category?.id ?? 0;
-      const categoryName = item.category?.name ?? "Tanpa kategori";
-      const categoryIsActive = item.category?.is_active ?? true;
-      const id = String(categoryId);
-
-      if (!groupMap.has(id)) {
-        groupMap.set(id, {
-          id,
-          name: categoryName,
-          isActive: categoryIsActive,
-          items: [],
-        });
-      }
-
-      groupMap.get(id)?.items.push(item);
-    }
-
-    return Array.from(groupMap.values()).sort((a, b) => {
-      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, [categories, isSearching, items]);
-
-  const [activeGroupId, setActiveGroupId] = useState("");
-
-  useEffect(() => {
-    if (groups.length === 0) {
-      setActiveGroupId("");
-      return;
-    }
-
-    const selectedGroup = groups.find((group) =>
-      group.items.some((item) => item.id === selectedItemId),
-    );
-    const nextGroupId = selectedGroup?.id ?? groups[0].id;
-
-    setActiveGroupId((current) =>
-      current && groups.some((group) => group.id === current) ? current : nextGroupId,
-    );
-  }, [groups, selectedItemId]);
-
-  const activeGroup = groups.find((group) => group.id === activeGroupId) ?? groups[0];
-
-  return (
-    <div className="mb-3">
-      <p className="mb-1 text-sm font-bold">Menu</p>
-      <div className="rounded-xl border border-border bg-background">
-        <div className="border-b border-border px-3 py-2 text-sm font-semibold text-muted-foreground">
-          {selectedItem
-            ? `${selectedItem.name} - ${selectedItem.category?.name ?? "Tanpa kategori"}`
-            : "Pilih menu dari kategori"}
-        </div>
-        {isSearching && (
-          <div className="border-b border-border bg-secondary/40 px-3 py-2 text-xs font-bold text-muted-foreground">
-            Hasil pencarian "{searchQuery}" - {numberFormat(items.length)} menu di{" "}
-            {numberFormat(groups.length)} kategori
-          </div>
-        )}
-        {groups.length === 0 ? (
-          <p className="p-3 text-sm font-semibold text-muted-foreground">
-            {isSearching
-              ? `Tidak ada menu ditemukan untuk "${searchQuery}".`
-              : "Tidak ada menu ditemukan."}
-          </p>
-        ) : (
-          <div className="grid min-h-[220px] md:grid-cols-[220px_1fr]">
-            <div className="max-h-[280px] overflow-auto border-b border-border md:border-b-0 md:border-r">
-              {groups.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  onMouseEnter={() => setActiveGroupId(group.id)}
-                  onFocus={() => setActiveGroupId(group.id)}
-                  onClick={() => setActiveGroupId(group.id)}
-                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-bold ${
-                    activeGroup?.id === group.id
-                      ? "bg-secondary text-secondary-foreground"
-                      : "hover:bg-secondary/70"
-                  }`}
-                >
-                  <span>
-                    {group.name}
-                    {!group.isActive && (
-                      <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase text-muted-foreground">
-                        Nonaktif
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{group.items.length}</span>
-                </button>
-              ))}
-            </div>
-            <div className="max-h-[320px] overflow-auto p-2">
-              {(activeGroup?.items ?? []).length === 0 ? (
-                <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
-                  Belum ada menu di kategori ini.
-                </p>
-              ) : (
-                (activeGroup?.items ?? []).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onSelect(item)}
-                    className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm ${
-                      selectedItemId === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary"
-                    }`}
-                  >
-                    <span className="block font-bold">
-                      {item.name}
-                      {!item.is_active && (
-                        <span
-                          className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
-                            selectedItemId === item.id
-                              ? "bg-primary-foreground/20 text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          Menu Nonaktif
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-xs opacity-80">
-                      {currencyFormat(toNumber(item.price))}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CustomerFormGroup({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <fieldset className="mb-5 border-t border-border pt-4 first:border-t-0 first:pt-0">
-      <legend className="mb-3 text-sm font-black uppercase text-muted-foreground">{title}</legend>
-      {children}
-    </fieldset>
-  );
-}
-
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-3 block text-sm font-bold">
-      <span className="block">{label}</span>
-      <div className="mt-1 w-full rounded-xl border border-border bg-muted/40 px-3 py-2 font-medium text-muted-foreground">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm font-bold">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {label}
-    </label>
   );
 }

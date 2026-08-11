@@ -1,4 +1,9 @@
-import type { SortOrder } from "@/lib/admin";
+import type { AdminCustomer, SortOrder } from "@/lib/admin";
+
+type CustomerSyncSource = Pick<
+  AdminCustomer,
+  "runchise_sync" | "runchise_sync_status" | "runchise_sync_error"
+>;
 
 // H-5: fungsi murni (bukan komponen) dipisahkan dari adminUiPrimitives.tsx.
 // Vite/React Fast Refresh hanya bekerja bila satu file mengekspor komponen
@@ -67,4 +72,59 @@ export function nextSortState<T extends string>(
   }
 
   return { sort_by: sortBy, sort_order: current.sort_order === "asc" ? "desc" : "asc" };
+}
+
+// L-7: helper status customer/Runchise dipindahkan dari AdminPage.tsx karena
+// sekarang dipakai bersama oleh AdminPage (saat menyimpan customer) dan modul
+// tab customer yang dipecah darinya. Isinya tidak diubah.
+export function accountStatusLabel(status?: string | null) {
+  if (status === "not_linked") return "Belum Terhubung";
+  return status === "pending_activation" ? "Pending Aktivasi" : "Aktif";
+}
+
+export function runchiseSyncLabel(status?: string | null) {
+  if (status === "synced") return "Runchise OK";
+  if (status === "not_linked") return "Belum Terhubung";
+  if (status === "failed") return "Sync Gagal";
+  if (status === "skipped") return "Belum Sync";
+  return "Pending Sync";
+}
+
+export function runchiseSyncClassName(status?: string | null) {
+  if (status === "synced") return "bg-emerald-500/10 text-emerald-700";
+  if (status === "failed") return "bg-red-500/10 text-red-700";
+  if (status === "skipped") return "bg-amber-500/10 text-amber-700";
+  return "bg-slate-500/10 text-slate-700";
+}
+
+export function getCustomerSyncStatus(customer: CustomerSyncSource) {
+  return customer.runchise_sync?.status ?? customer.runchise_sync_status ?? "not_linked";
+}
+
+export function getCustomerSyncMessage(customer: CustomerSyncSource) {
+  return (
+    customer.runchise_sync?.error ??
+    customer.runchise_sync_error ??
+    customer.runchise_sync?.reason ??
+    null
+  );
+}
+
+export function getCustomerSyncNotice(customer: CustomerSyncSource) {
+  const status = getCustomerSyncStatus(customer);
+
+  if (status === "failed") {
+    return "Perubahan lokal belum terkirim ke Runchise.";
+  }
+  if (status === "pending") {
+    return "Data lokal menunggu sync Runchise.";
+  }
+  if (status === "skipped") {
+    return "Sync Runchise dilewati.";
+  }
+  if (status === "not_linked") {
+    return "Customer Runchise belum terhubung ke data lokal.";
+  }
+
+  return null;
 }
