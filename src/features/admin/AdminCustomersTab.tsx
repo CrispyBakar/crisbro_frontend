@@ -164,11 +164,16 @@ const CustomersListPanel = memo(function CustomersListPanel({
               {customerImportJob.status === "completed" ||
               customerImportJob.status === "completed_with_errors"
                 ? "Sinkronisasi customer selesai"
-                : !customerSyncEnabled
-                  ? "Sinkronisasi customer dijeda sementara"
-                  : customerImportJob.status === "running"
-                    ? "Sinkronisasi customer sedang berjalan"
-                    : "Sinkronisasi customer menunggu worker"}
+                : // M-2: job yang dihentikan permanen (mis. paginasi upstream
+                  // melewati batas aman) tidak boleh tampil sebagai "menunggu
+                  // worker" -- tidak ada worker yang akan mengambilnya lagi.
+                  customerImportJob.status === "failed"
+                  ? "Sinkronisasi customer dihentikan"
+                  : !customerSyncEnabled
+                    ? "Sinkronisasi customer dijeda sementara"
+                    : customerImportJob.status === "running"
+                      ? "Sinkronisasi customer sedang berjalan"
+                      : "Sinkronisasi customer menunggu worker"}
             </p>
             <span className="font-semibold text-muted-foreground">Job #{customerImportJob.id}</span>
           </div>
@@ -225,7 +230,9 @@ const CustomersListPanel = memo(function CustomersListPanel({
           </p>
           {customerImportJob.error && (
             <p className="mt-2 text-xs font-semibold text-red-600">
-              Percobaan terakhir gagal dan akan dilanjutkan dari cursor tersimpan:{" "}
+              {customerImportJob.status === "failed"
+                ? "Job dihentikan dan tidak akan dilanjutkan otomatis. Jalankan sinkronisasi ulang setelah penyebabnya diperiksa: "
+                : "Percobaan terakhir gagal dan akan dilanjutkan dari cursor tersimpan: "}
               {customerImportJob.error}
             </p>
           )}

@@ -140,6 +140,69 @@ describe("AdminCustomersTab", () => {
     expect(screen.getByText("Loyalty")).toBeInTheDocument();
   });
 
+  // M-2: job yang dihentikan permanen harus terbaca sebagai gagal, bukan
+  // "menunggu worker". Tanpa ini, cap paginasi yang menghentikan job justru
+  // tampil seperti antrean normal dan tetap tidak terlihat oleh operator.
+  function buildImportJob(overrides = {}) {
+    return {
+      id: 77,
+      status: "failed",
+      source: "cron",
+      phase: "recent",
+      location_ids: [101],
+      locations_total: 1,
+      locations_completed: 0,
+      current_location_index: 0,
+      current_location: 101,
+      current_page: 101,
+      total_api: 0,
+      processed: 0,
+      created: 0,
+      updated: 0,
+      skipped_conflicts: 0,
+      failed: 0,
+      latest_runchise_created_at: null,
+      latest_local_created_at: null,
+      error: "Pagination customer import worker melewati batas aman 100 halaman",
+      heartbeat_at: "2026-08-12T03:00:00+07:00",
+      ...overrides,
+    };
+  }
+
+  function JobHarness({ job }: { job: ReturnType<typeof buildImportJob> }) {
+    const [listProps] = useState(() => baseProps([]));
+    return (
+      <AdminCustomersTab
+        {...listProps}
+        customerImportJob={job as never}
+        customerForm={emptyCustomerForm}
+        setCustomerForm={vi.fn()}
+      />
+    );
+  }
+
+  it("job impor berstatus failed tampil sebagai dihentikan, bukan menunggu worker", () => {
+    render(<JobHarness job={buildImportJob()} />);
+
+    expect(screen.getByText("Sinkronisasi customer dihentikan")).toBeInTheDocument();
+    expect(screen.queryByText("Sinkronisasi customer menunggu worker")).not.toBeInTheDocument();
+    expect(screen.getByText(/tidak akan dilanjutkan otomatis/)).toBeInTheDocument();
+    expect(screen.getByText(/melewati batas aman/)).toBeInTheDocument();
+  });
+
+  it("job yang gagal sementara tetap menyatakan akan dilanjutkan dari cursor", () => {
+    render(<JobHarness job={buildImportJob({ status: "queued", error: "socket hang up" })} />);
+
+    expect(screen.getByText(/dilanjutkan dari cursor tersimpan/)).toBeInTheDocument();
+    expect(screen.queryByText(/tidak akan dilanjutkan otomatis/)).not.toBeInTheDocument();
+  });
+
+  it("tombol sinkronisasi bisa ditekan lagi setelah job dihentikan", () => {
+    render(<JobHarness job={buildImportJob()} />);
+
+    expect(screen.getByRole("button", { name: /Sinkronkan Customer Runchise/ })).toBeEnabled();
+  });
+
   it("mengetik di form customer tidak merender ulang panel daftar", async () => {
     const user = userEvent.setup();
     render(<Harness customers={[buildCustomer()]} />);
