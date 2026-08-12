@@ -44,11 +44,7 @@ export function Navbar() {
 
   const customerName =
     user?.customer?.name ??
-    (user?.role === "admin"
-      ? "Admin"
-      : user?.role === "marketing"
-        ? "Marketing"
-        : "");
+    (user?.role === "admin" ? "Admin" : user?.role === "marketing" ? "Marketing" : "");
   const initial = customerName.charAt(0).toUpperCase() || "?";
   const phoneNumber = user?.phone_number ?? "-";
   const isAdmin = user?.role === "admin";
@@ -322,8 +318,7 @@ export function Navbar() {
                 onClick={close}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-foreground hover:bg-background transition-colors"
               >
-                <LayoutDashboard className="h-4 w-4 text-primary" />{" "}
-                {dashboardLabel}
+                <LayoutDashboard className="h-4 w-4 text-primary" /> {dashboardLabel}
               </Link>
               <Link
                 to="/change-password"
