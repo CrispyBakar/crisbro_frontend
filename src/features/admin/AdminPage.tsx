@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 import {
   lazy,
   Suspense,
@@ -11,15 +10,6 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getUser } from "@/lib/auth";
@@ -38,18 +28,7 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import {
-  BarChart3,
-  History,
-  ListChecks,
-  Mail,
-  Pencil,
-  RefreshCw,
-  ReceiptText,
-  Trash2,
-  Users,
-  X,
-} from "lucide-react";
+import { BarChart3, History, ListChecks, RefreshCw, ReceiptText, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSyncMessage,
@@ -59,15 +38,9 @@ import {
   type SortState,
 } from "./adminFormatters";
 import { DebouncedSearchInput, type DebouncedSearchInputHandle } from "./DebouncedSearchInput";
-import { CustomerFormFields, RedeemFormFields, UserFormFields } from "./AdminFormFields";
 import { emptyCustomerForm, emptyUserForm, type RedeemFormState } from "./adminFormDefaults";
 import { useStableCallback } from "./useStableCallback";
-import {
-  AdminPageSkeleton,
-  ConfirmDeleteDialog,
-  MobileCrudDialog,
-  TabButton,
-} from "./AdminConsoleChrome";
+import { AdminPageSkeleton, TabButton } from "./AdminConsoleChrome";
 import type { ConfirmDialogState, ConsoleTab } from "./adminConsoleTypes";
 
 // H-5: tab read-only dipecah jadi modul lazy tersendiri, jadi kode &
@@ -82,6 +55,21 @@ const AdminSalesTransactionsTab = lazy(() => import("./AdminSalesTransactionsTab
 const AdminUsersTab = lazy(() => import("./AdminUsersTab"));
 const AdminCustomersTab = lazy(() => import("./AdminCustomersTab"));
 const AdminRedeemTab = lazy(() => import("./AdminRedeemTab"));
+const ConfirmDeleteDialog = lazy(() =>
+  import("./AdminDialogs").then((module) => ({ default: module.ConfirmDeleteDialog })),
+);
+const MobileCrudDialog = lazy(() =>
+  import("./AdminDialogs").then((module) => ({ default: module.MobileCrudDialog })),
+);
+const UserFormFields = lazy(() =>
+  import("./AdminFormFields").then((module) => ({ default: module.UserFormFields })),
+);
+const CustomerFormFields = lazy(() =>
+  import("./AdminFormFields").then((module) => ({ default: module.CustomerFormFields })),
+);
+const RedeemFormFields = lazy(() =>
+  import("./AdminFormFields").then((module) => ({ default: module.RedeemFormFields })),
+);
 
 type Tab = ConsoleTab;
 type ConsoleMode = "admin" | "marketing";
@@ -1365,14 +1353,14 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
   const mobileCrudContent =
     activeMobileForm === "user" ? (
-      <>
+      <Suspense fallback={<Skeleton className="h-72 w-full rounded-2xl" />}>
         <UserFormFields userForm={userForm} setUserForm={setUserForm} />
         <Button onClick={saveUser} disabled={saving} className="mt-3 w-full rounded-full font-bold">
           Simpan User
         </Button>
-      </>
+      </Suspense>
     ) : activeMobileForm === "customer" ? (
-      <>
+      <Suspense fallback={<Skeleton className="h-72 w-full rounded-2xl" />}>
         <CustomerFormFields
           customerForm={customerForm}
           setCustomerForm={setCustomerForm}
@@ -1386,9 +1374,9 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         >
           Simpan Customer
         </Button>
-      </>
+      </Suspense>
     ) : (
-      <>
+      <Suspense fallback={<Skeleton className="h-72 w-full rounded-2xl" />}>
         <RedeemFormFields
           redeemForm={redeemForm}
           setRedeemForm={setRedeemForm}
@@ -1408,7 +1396,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         >
           Simpan Item
         </Button>
-      </>
+      </Suspense>
     );
 
   if (!canAccess) return null;
@@ -1680,20 +1668,24 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           </Suspense>
         )}
       </section>
-      <ConfirmDeleteDialog
-        dialog={confirmDialog}
-        saving={saving}
-        onCancel={() => setConfirmDialog(null)}
-        onConfirm={confirmDeleteAction}
-      />
-      <MobileCrudDialog
-        open={Boolean(activeMobileForm)}
-        title={mobileCrudTitle}
-        saving={saving}
-        onClose={() => setActiveMobileForm(null)}
-      >
-        {mobileCrudContent}
-      </MobileCrudDialog>
+      {(confirmDialog || activeMobileForm) && (
+        <Suspense fallback={null}>
+          <ConfirmDeleteDialog
+            dialog={confirmDialog}
+            saving={saving}
+            onCancel={() => setConfirmDialog(null)}
+            onConfirm={confirmDeleteAction}
+          />
+          <MobileCrudDialog
+            open={Boolean(activeMobileForm)}
+            title={mobileCrudTitle}
+            saving={saving}
+            onClose={() => setActiveMobileForm(null)}
+          >
+            {mobileCrudContent}
+          </MobileCrudDialog>
+        </Suspense>
+      )}
     </main>
   );
 }
