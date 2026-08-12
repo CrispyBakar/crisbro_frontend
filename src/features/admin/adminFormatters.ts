@@ -29,8 +29,12 @@ export function toNumber(value: string | number | null | undefined) {
   return Number.isNaN(number) ? 0 : number;
 }
 
+// M-4: Memastikan seluruh tanggal dashboard selalu dirender berdasarkan zona waktu Asia/Jakarta agar konsisten dengan kalender bisnis WIB di semua perangkat.
+const WIB_TIME_ZONE = "Asia/Jakarta";
+
 export function dateFormat(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: WIB_TIME_ZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -39,6 +43,7 @@ export function dateFormat(value: string) {
 
 export function dateTimeFormat(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: WIB_TIME_ZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",
