@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
@@ -55,6 +56,7 @@ function MenuPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [insufficientPoints, setInsufficientPoints] = useState<{
     item: MenuItem;
     availablePoint: number;
@@ -162,7 +164,17 @@ function MenuPage() {
         {items.map((item) => (
           <article
             key={item.id}
-            className="group rounded-xl bg-card border border-border overflow-hidden shadow-(--shadow-soft) hover:-translate-y-1 transition-transform flex flex-col"
+            role="button"
+            tabIndex={0}
+            aria-label={`Lihat detail ${item.name}`}
+            onClick={() => setSelectedItem(item)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelectedItem(item);
+              }
+            }}
+            className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card shadow-(--shadow-soft) transition-transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             <div className="relative overflow-hidden bg-card">
               {item.image_url ? (
@@ -198,7 +210,10 @@ function MenuPage() {
                   {item.points_required.toLocaleString("id-ID")} Poin
                 </span>
                 <button
-                  onClick={() => handleTukar(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleTukar(item);
+                  }}
                   className="rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-(--shadow-pop) transition-colors hover:bg-primary/90 sm:px-5 sm:py-2 sm:text-sm"
                 >
                   Tukar Poin
@@ -233,7 +248,101 @@ function MenuPage() {
         data={insufficientPoints}
         onClose={() => setInsufficientPoints(null)}
       />
+      <RedeemDetailDialog
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onRedeem={(item) => {
+          setSelectedItem(null);
+          handleTukar(item);
+        }}
+      />
     </main>
+  );
+}
+
+function RedeemDetailDialog({
+  item,
+  onClose,
+  onRedeem,
+}: {
+  item: MenuItem | null;
+  onClose: () => void;
+  onRedeem: (item: MenuItem) => void;
+}) {
+  useEffect(() => {
+    if (!item) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [item, onClose]);
+
+  if (!item) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
+      role="presentation"
+      onClick={onClose}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="redeem-detail-title"
+        onClick={(event: ReactMouseEvent<HTMLElement>) => event.stopPropagation()}
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg cursor-default overflow-y-auto rounded-3xl border border-border bg-card shadow-(--shadow-pop)"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup detail menu redeem"
+          className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full border border-border bg-card/95 text-muted-foreground shadow-(--shadow-soft) transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        <div className="relative overflow-hidden bg-card">
+          {item.image_url ? (
+            <img src={item.image_url} alt={item.name} className="block h-auto w-full" />
+          ) : (
+            <div className="flex min-h-64 w-full items-center justify-center text-5xl">🍽️</div>
+          )}
+          {item.category && (
+            <Badge className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-full border border-primary/20 bg-card/95 px-3 py-1 text-xs font-bold text-primary shadow-(--shadow-pop) backdrop-blur-sm hover:bg-card hover:text-primary">
+              {item.category}
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-4 p-5 sm:p-6">
+          <div className="space-y-2">
+            <h2 id="redeem-detail-title" className="text-2xl font-black leading-tight">
+              {item.name}
+            </h2>
+            <p className="text-2xl font-black text-primary">
+              {item.points_required.toLocaleString("id-ID")} Poin
+            </p>
+          </div>
+
+          {item.description && (
+            <p className="break-words text-sm leading-7 text-muted-foreground sm:text-base">
+              {item.description}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onRedeem(item)}
+            className="w-full rounded-full bg-primary px-5 py-3 text-sm font-black text-primary-foreground shadow-(--shadow-pop) transition-colors hover:bg-primary/90"
+          >
+            Tukar Poin
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
