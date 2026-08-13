@@ -1,4 +1,4 @@
-import { apiUrl } from "./api";
+import { apiFetch, apiUrl } from "./api";
 import type {
   LoyaltySummary,
   Reward,
@@ -68,7 +68,7 @@ export type {
 const ADMIN_PATH = "/admin";
 
 async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(apiUrl(`${ADMIN_PATH}${path}`), {
+  const res = await apiFetch(apiUrl(`${ADMIN_PATH}${path}`), {
     ...options,
     credentials: "include",
     headers: {

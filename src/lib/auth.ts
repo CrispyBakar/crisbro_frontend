@@ -1,4 +1,4 @@
-import { apiUrl } from "./api";
+import { apiFetch, apiUrl } from "./api";
 
 const LEGACY_TOKEN_KEY = "crisbar_token";
 const USER_KEY = "crisbar_user";
@@ -72,7 +72,7 @@ function clearLocalAuth() {
 // halaman segera berpindah atau ditutup.
 export function logout() {
   clearLocalAuth();
-  void fetch(apiUrl("/logout"), {
+  void apiFetch(apiUrl("/logout"), {
     method: "POST",
     credentials: "include",
     keepalive: true,
@@ -86,7 +86,7 @@ export function logout() {
 // lain.
 export async function logoutAllDevices() {
   try {
-    await fetch(apiUrl("/logout-all"), { method: "POST", credentials: "include" });
+    await apiFetch(apiUrl("/logout-all"), { method: "POST", credentials: "include" });
   } catch {
     // State UI lokal tetap dibersihkan saat jaringan gagal.
   }
@@ -187,7 +187,7 @@ export async function apiProfile() {
 }
 
 export async function apiLogin(phone_number: string, password: string) {
-  const res = await fetch(apiUrl("/login"), {
+  const res = await apiFetch(apiUrl("/login"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -218,7 +218,7 @@ export async function apiValidateActivation(token: string) {
 }
 
 export async function apiActivateAccount(token: string, password: string) {
-  const res = await fetch(apiUrl("/activate"), {
+  const res = await apiFetch(apiUrl("/activate"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, password }),
@@ -233,7 +233,7 @@ export async function apiActivateAccount(token: string, password: string) {
 }
 
 export async function apiChangePassword(currentPassword: string, newPassword: string) {
-  const res = await fetch(apiUrl("/change-password"), {
+  const res = await apiFetch(apiUrl("/change-password"), {
     method: "POST",
     credentials: "include",
     headers: {
@@ -260,7 +260,7 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
 // nomor yang terdaftar maupun tidak, jadi jangan pernah menyimpulkan status
 // sebuah nomor dari respons ini.
 export async function apiRequestActivation(name: string, phone_number: string) {
-  const res = await fetch(apiUrl("/register"), {
+  const res = await apiFetch(apiUrl("/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, phone_number }),
