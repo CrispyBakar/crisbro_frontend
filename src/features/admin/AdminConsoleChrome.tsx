@@ -41,9 +41,9 @@ export function AdminPageSkeleton({ tab }: { tab: ConsoleTab }) {
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="flex min-h-[104px] flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px]"
+              className="flex min-h-26 flex-col rounded-xl border border-border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-29.5 sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-28"
             >
-              <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start">
+              <div className="flex min-h-12 flex-col items-center justify-center gap-1.5 sm:min-h-13 sm:gap-2 lg:min-h-9 lg:flex-row lg:justify-start">
                 <Skeleton className="h-7 w-7 rounded-full sm:h-8 sm:w-8" />
                 <Skeleton className="h-3 w-12 sm:w-16 lg:w-24" />
               </div>

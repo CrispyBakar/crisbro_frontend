@@ -3,22 +3,7 @@ import type { AdminActivityLog } from "@/lib/admin";
 import { dateTimeFormat, numberFormat } from "./adminFormatters";
 import { FormInput, Panel, TableScrollArea } from "./adminUiPrimitives";
 
-// H-5: tab Activity Log dipecah dari AdminPage.tsx (dulu 4.652 baris/176KB
-// satu file) jadi modul lazy terpisah, sebagai percontohan pola pemecahan
-// per-tab. Dipilih sebagai tab pertama karena paling terisolasi -- murni
-// read-only (tidak ada form CRUD, tidak menulis state tab lain).
-//
-// State (activityLogs, filter, halaman) dan fungsi loadActivityLogs()
-// SENGAJA TETAP di AdminPage.tsx, bukan dipindah ke sini -- komponen ini
-// murni presentational, menerima semuanya lewat props. Itu berarti
-// ekstraksi ini terbukti aman untuk mengurangi ukuran bundle & baris file
-// (JSX + helper metadata log ~190 baris pindah ke chunk lazy terpisah,
-// hanya diunduh saat tab ini dibuka), TAPI belum mengurangi jumlah
-// useState di AdminPage atau biaya re-render lintas tab -- itu perbaikan
-// lanjutan yang lebih besar (state per tab juga perlu dipindah, plus
-// orkestrasi loading/error/loadedTabs di AdminPage perlu disesuaikan),
-// disengaja tidak dilakukan sekaligus di sini agar pola dasarnya bisa
-// diverifikasi aman dulu sebelum diterapkan ke tab lain.
+// H-5: Tab Activity Log dipecah menjadi modul lazy terpisah yang tetap presentational dan menerima state lewat props, sehingga mengurangi ukuran bundle tanpa mengubah state atau biaya re-render di AdminPage.
 
 function compactJson(value: unknown) {
   if (value === null || value === undefined) return "-";
@@ -277,14 +262,14 @@ export default function AdminActivityTab({
           </Button>
         </div>
         <TableScrollArea>
-          <table className="min-w-[1180px] w-full table-fixed text-sm">
+          <table className="min-w-295 w-full table-fixed text-sm">
             <colgroup>
-              <col className="w-[150px]" />
-              <col className="w-[220px]" />
-              <col className="w-[190px]" />
-              <col className="w-[150px]" />
-              <col className="w-[360px]" />
-              <col className="w-[110px]" />
+              <col className="w-37.5" />
+              <col className="w-55" />
+              <col className="w-47.5" />
+              <col className="w-37.5" />
+              <col className="w-90" />
+              <col className="w-27.5" />
             </colgroup>
             <thead>
               <tr className="text-left text-muted-foreground">
@@ -320,7 +305,7 @@ export default function AdminActivityTab({
                       {log.actor_role ?? log.actor?.role ?? "-"}
                     </p>
                   </td>
-                  <td className="p-2 break-words font-bold">{log.action}</td>
+                  <td className="p-2 wrap-break-word font-bold">{log.action}</td>
                   <td className="p-2 whitespace-nowrap">
                     {log.entity_type}
                     {log.entity_id ? ` #${log.entity_id}` : ""}

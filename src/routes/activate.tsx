@@ -96,7 +96,9 @@ function ActivatePage() {
           className="space-y-4 rounded-3xl border border-border bg-card p-7 shadow-(--shadow-soft)"
         >
           {loading ? (
-            <p className="text-sm font-semibold text-muted-foreground">Memvalidasi link aktivasi...</p>
+            <p className="text-sm font-semibold text-muted-foreground">
+              Memvalidasi link aktivasi...
+            </p>
           ) : success ? (
             <div className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-700">
               <CheckCircle2 className="mr-2 inline h-4 w-4" />

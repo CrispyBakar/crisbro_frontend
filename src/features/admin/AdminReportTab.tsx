@@ -87,10 +87,10 @@ function Metric({
 
   return (
     <div
-      className={`relative flex min-h-[104px] min-w-0 flex-col overflow-hidden rounded-xl border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-[118px] sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-[112px] ${classes.border}`}
+      className={`relative flex min-h-26 min-w-0 flex-col overflow-hidden rounded-xl border bg-card px-3 pb-2.5 pt-3.5 shadow-(--shadow-soft) sm:min-h-29.5 sm:rounded-2xl sm:px-4 sm:pb-3 sm:pt-4 lg:min-h-28 ${classes.border}`}
     >
       <span className={`absolute inset-x-0 top-0 h-1 ${classes.accent}`} />
-      <div className="flex min-h-[48px] flex-col items-center justify-center gap-1.5 text-center sm:min-h-[52px] sm:gap-2 lg:min-h-[36px] lg:flex-row lg:justify-start lg:text-left">
+      <div className="flex min-h-12 flex-col items-center justify-center gap-1.5 text-center sm:min-h-13 sm:gap-2 lg:min-h-9 lg:flex-row lg:justify-start lg:text-left">
         <span
           className={`grid h-7 w-7 shrink-0 place-items-center rounded-full [&>svg]:h-3.5 [&>svg]:w-3.5 sm:h-8 sm:w-8 sm:[&>svg]:h-4 sm:[&>svg]:w-4 ${classes.icon}`}
         >
@@ -206,7 +206,7 @@ function DataTable({
 function ReportChartBoundary({ children }: { children: ReactNode }) {
   return (
     <Suspense
-      fallback={<Skeleton className="h-[260px] w-full rounded-2xl" aria-label="Memuat grafik" />}
+      fallback={<Skeleton className="h-65 w-full rounded-2xl" aria-label="Memuat grafik" />}
     >
       {children}
     </Suspense>

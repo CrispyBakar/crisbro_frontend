@@ -1,15 +1,4 @@
-// H-5: AdminReportTab dipecah dari AdminPage.tsx jadi modul lazy. Test ini
-// mengunci perilaku tab agar pemecahan modul tidak mengubahnya -- termasuk
-// DataTable (dengan sorting per kolom) dan Metric yang ikut pindah ke modul
-// ini karena hanya dipakai tab report.
-//
-// Modul grafik (AdminReportCharts, membawa recharts) sengaja TIDAK di-mock.
-// Percobaan me-mock-nya lewat vi.mock membuat hanya grafik pertama yang
-// ter-render di jsdom -- artefak mocking, bukan cacat komponen: dengan modul
-// aslinya ketiga grafik muncul lengkap (diverifikasi lewat jumlah
-// container [data-chart] dan nol skeleton tersisa). Memakai modul asli juga
-// membuat test ini benar-benar menguji wiring React.lazy/Suspense yang
-// justru menjadi inti perubahan H-5.
+// H-5: AdminReportTab dipisahkan dari AdminPage.tsx menjadi modul lazy agar tab report memiliki chunk sendiri tanpa mengubah perilaku, termasuk DataTable, Metric, dan tiga grafik yang tetap diuji dengan modul aslinya untuk memverifikasi wiring React.lazy/Suspense.
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

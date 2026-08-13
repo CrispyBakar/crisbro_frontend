@@ -197,11 +197,11 @@ function MenuPage() {
             </div>
 
             <div className="flex flex-1 flex-col p-3 sm:p-6">
-              <h3 className="mb-1 break-words text-sm font-extrabold leading-snug sm:mb-1.5 sm:text-xl">
+              <h3 className="mb-1 wrap-break-word text-sm font-extrabold leading-snug sm:mb-1.5 sm:text-xl">
                 {item.name}
               </h3>
               {item.description && (
-                <p className="mb-3 flex-1 break-words text-xs leading-relaxed text-muted-foreground sm:mb-5 sm:text-sm">
+                <p className="mb-3 flex-1 wrap-break-word text-xs leading-relaxed text-muted-foreground sm:mb-5 sm:text-sm">
                   {item.description}
                 </p>
               )}
@@ -284,7 +284,7 @@ function RedeemDetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-100 flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
       role="presentation"
       onClick={onClose}
     >
@@ -328,7 +328,7 @@ function RedeemDetailDialog({
           </div>
 
           {item.description && (
-            <p className="break-words text-sm leading-7 text-muted-foreground sm:text-base">
+            <p className="wrap-break-word text-sm leading-7 text-muted-foreground sm:text-base">
               {item.description}
             </p>
           )}
@@ -360,7 +360,7 @@ function InsufficientPointsDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-100 flex cursor-pointer items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm"
       role="presentation"
       onClick={onClose}
     >

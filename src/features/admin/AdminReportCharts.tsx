@@ -58,7 +58,7 @@ function TopRewardsChartView({ rewards }: { rewards: LoyaltySummary["top_rewards
   return (
     <ChartContainer
       config={{ redemptions: { label: "Jumlah Redeem", color: colors[0] } }}
-      className="h-[260px] min-h-[230px] w-full"
+      className="h-65 min-h-57.5 w-full"
     >
       <BarChart data={data} layout="vertical" margin={{ right: compact ? 18 : 42 }}>
         <CartesianGrid horizontal={false} strokeDasharray="3 3" />
@@ -113,7 +113,7 @@ function TopRedeemOutletsChartView({
   return (
     <ChartContainer
       config={{ redemptions: { label: "Jumlah Redeem", color: colors[0] } }}
-      className="h-[260px] min-h-[230px] w-full"
+      className="h-65 min-h-57.5 w-full"
     >
       <BarChart data={data} layout="vertical" margin={{ right: compact ? 18 : 42 }}>
         <CartesianGrid horizontal={false} strokeDasharray="3 3" />
@@ -160,7 +160,7 @@ function RedemptionHistoryChartView({
         redemption_count: { label: "Jumlah Redeem", color: "#E11D48" },
         points_spent: { label: "Poin Ditukar", color: "#0EA5E9" },
       }}
-      className="min-h-[260px] w-full"
+      className="min-h-65 w-full"
     >
       <LineChart data={chartData} margin={{ top: 8, right: 18, bottom: 8 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -199,7 +199,7 @@ function RedemptionHistoryChartView({
 
 function TooltipRows({ value, name, points }: { value: unknown; name: unknown; points?: unknown }) {
   return (
-    <div className="grid min-w-[180px] gap-1">
+    <div className="grid min-w-45 gap-1">
       <div className="flex justify-between gap-4">
         <span className="text-muted-foreground">
           {name === "redemptions" ? "Jumlah Redeem" : String(name)}

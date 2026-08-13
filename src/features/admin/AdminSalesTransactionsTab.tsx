@@ -92,7 +92,7 @@ export default function AdminSalesTransactionsTab({
           </Button>
         </div>
         <TableScrollArea>
-          <table className="min-w-[1650px] w-full text-sm">
+          <table className="min-w-412.5 w-full text-sm">
             <thead>
               <tr className="text-left text-muted-foreground">
                 <th className="p-2">ID Transaksi</th>
@@ -144,7 +144,7 @@ export default function AdminSalesTransactionsTab({
                   <td className="p-2 text-right">
                     {numberFormat(toNumber(transaction.penggunaan_poin))}
                   </td>
-                  <td className="min-w-[280px] p-2">
+                  <td className="min-w-70 p-2">
                     {(transaction.redeemed_rewards ?? []).length === 0 ? (
                       <span className="text-muted-foreground">-</span>
                     ) : (

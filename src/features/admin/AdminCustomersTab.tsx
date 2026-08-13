@@ -313,7 +313,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
         </div>
       </div>
       <TableScrollArea>
-        <table className="min-w-[1540px] w-full text-sm">
+        <table className="min-w-385 w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground">
               <th className="p-2 whitespace-nowrap">ID Runchise</th>
@@ -425,7 +425,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
                 <td className="p-2 capitalize">{customer.status ?? "-"}</td>
                 <td className="p-2">
                   <span
-                    className={`inline-flex min-w-[104px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
+                    className={`inline-flex min-w-26 items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
                       customer.user.activation_status === "pending_activation"
                         ? "bg-amber-500/10 text-amber-700"
                         : customer.user.activation_status === "not_linked"
@@ -446,12 +446,12 @@ const CustomersListPanel = memo(function CustomersListPanel({
                       {runchiseSyncLabel(getCustomerSyncStatus(customer))}
                     </span>
                     {getCustomerSyncNotice(customer) && (
-                      <p className="max-w-[220px] text-xs font-semibold text-amber-700">
+                      <p className="max-w-55 text-xs font-semibold text-amber-700">
                         {getCustomerSyncNotice(customer)}
                       </p>
                     )}
                     {getCustomerSyncMessage(customer) && (
-                      <p className="max-w-[220px] text-xs text-muted-foreground">
+                      <p className="max-w-55 text-xs text-muted-foreground">
                         {getCustomerSyncMessage(customer)}
                       </p>
                     )}
@@ -477,7 +477,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
                     {customer.id > 0 &&
                       customer.user.activation_status === "pending_activation" && (
                         <span
-                          className="inline-flex min-w-[130px] flex-col items-start gap-1"
+                          className="inline-flex min-w-32.5 flex-col items-start gap-1"
                           title={
                             customer.user.email
                               ? "Kirim ulang email aktivasi"
@@ -494,7 +494,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
                           {!customer.user.email && (
                             <button
                               type="button"
-                              className="inline-flex max-w-[150px] items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
+                              className="inline-flex max-w-37.5 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
                               onClick={() => editCustomer(customer)}
                             >
                               Tambah email dulu

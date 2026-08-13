@@ -54,7 +54,7 @@ const RedeemListPanel = memo(function RedeemListPanel({
         Tambah Menu Redeem
       </Button>
       <TableScrollArea>
-        <table className="min-w-[1040px] w-full text-sm">
+        <table className="min-w-260 w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground">
               <SortableHeader

@@ -411,8 +411,8 @@ function CategoryMenuPicker({
               : "Tidak ada menu ditemukan."}
           </p>
         ) : (
-          <div className="grid min-h-[220px] md:grid-cols-[220px_1fr]">
-            <div className="max-h-[280px] overflow-auto border-b border-border md:border-b-0 md:border-r">
+          <div className="grid min-h-55 md:grid-cols-[220px_1fr]">
+            <div className="max-h-70 overflow-auto border-b border-border md:border-b-0 md:border-r">
               {groups.map((group) => (
                 <button
                   key={group.id}
@@ -438,7 +438,7 @@ function CategoryMenuPicker({
                 </button>
               ))}
             </div>
-            <div className="max-h-[320px] overflow-auto p-2">
+            <div className="max-h-80 overflow-auto p-2">
               {(activeGroup?.items ?? []).length === 0 ? (
                 <p className="px-3 py-2 text-sm font-semibold text-muted-foreground">
                   Belum ada menu di kategori ini.

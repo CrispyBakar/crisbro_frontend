@@ -317,7 +317,9 @@ function PromoPage() {
                   <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4 sm:gap-3">
                     <ChannelIcon brand={channelBrand} />
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-3 sm:py-1 sm:text-xs ${st.color}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-3 sm:py-1 sm:text-xs ${st.color}`}
+                      >
                         {st.label}
                       </span>
                     </div>
@@ -368,7 +370,6 @@ function PromoPage() {
                       </div>
                     )
                   )}
-
                 </article>
               );
             })}

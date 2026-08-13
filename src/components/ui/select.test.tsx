@@ -120,13 +120,12 @@ describe("Select keyboard accessibility (M-10 regression guard)", () => {
     await user.click(trigger);
     await screen.findByRole("listbox");
 
-    await user.keyboard("{ArrowDown}"); // pindah highlight ke "Admin"
+    await user.keyboard("{ArrowDown}");
     await user.keyboard("{Escape}");
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(trigger).toHaveTextContent("Marketing");
-    // Fokus dikembalikan ke trigger, bukan hilang ke elemen lain.
     expect(trigger).toHaveFocus();
   });
 

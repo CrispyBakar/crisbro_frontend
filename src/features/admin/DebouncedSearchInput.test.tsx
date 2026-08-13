@@ -1,13 +1,4 @@
-// H-5: mengukur klaim inti temuan audit — "setiap ketikan me-render ulang
-// seluruh pohon". Test ini MENGHITUNG render induk secara nyata, bukan
-// mengandalkan asumsi bahwa memindahkan state sudah cukup.
-//
-// Sengaja memakai timer asli, bukan fake timer: memalsukan timer di
-// lingkungan ini membuat scheduler React dan userEvent menggantung (seluruh
-// test timeout). Jedanya dipakai sama dengan produksi (400 ms) karena
-// userEvent butuh waktu nyata untuk memproses tiap ketikan -- dengan jeda
-// terlalu pendek, debounce menembak di tengah pengetikan dan yang gagal
-// adalah test-nya, bukan komponennya.
+// H-5: Test ini mengukur secara nyata bahwa perubahan input pencarian mencegah render ulang induk setiap ketikan, menggunakan timer asli dan debounce 400 ms agar sesuai perilaku produksi serta menghindari timeout akibat fake timer.
 import { describe, expect, it, vi } from "vitest";
 import { useRef, useState } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -15,10 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { DebouncedSearchInput, type DebouncedSearchInputHandle } from "./DebouncedSearchInput";
 
 const DEBOUNCE_MS = 400;
-// Untuk test yang mengandalkan debounce TIDAK menembak selama interaksi
-// berlangsung. Di bawah beban (suite penuh, worker paralel) pengetikan
-// userEvent bisa memakan lebih dari 400 ms, sehingga debounce menembak di
-// tengah dan yang gagal adalah test-nya, bukan komponennya.
+// Test ini memastikan debounce tidak menembak selama interaksi; timeout dibuat cukup toleran karena userEvent dapat melebihi 400 ms saat suite berjalan paralel.
 const NEVER_FIRES_MS = 10_000;
 
 /** Jeda nyata yang cukup panjang untuk membuktikan "tidak dipanggil". */

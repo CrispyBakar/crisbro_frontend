@@ -1476,9 +1476,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
         {!loading && tab === "report" && summary && (
           <Suspense
-            fallback={
-              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat laporan" />
-            }
+            fallback={<Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat laporan" />}
           >
             <AdminReportTab
               summary={summary}
@@ -1499,7 +1497,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
           <Suspense
             fallback={
               <Skeleton
-                className="h-[420px] w-full rounded-2xl"
+                className="h-105 w-full rounded-2xl"
                 aria-label="Memuat laporan transaksi"
               />
             }
@@ -1532,7 +1530,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "activity" && canViewActivityLogs && (
           <Suspense
             fallback={
-              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat activity log" />
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat activity log" />
             }
           >
             <AdminActivityTab
@@ -1559,7 +1557,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "users" && canManageUsers && (
           <Suspense
             fallback={
-              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat user admin" />
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat user admin" />
             }
           >
             <AdminUsersTab
@@ -1588,7 +1586,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "customers" && (
           <Suspense
             fallback={
-              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat customer" />
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat customer" />
             }
           >
             <AdminCustomersTab
@@ -1638,7 +1636,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "redeem" && (
           <Suspense
             fallback={
-              <Skeleton className="h-[420px] w-full rounded-2xl" aria-label="Memuat menu redeem" />
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat menu redeem" />
             }
           >
             <AdminRedeemTab

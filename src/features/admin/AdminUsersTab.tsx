@@ -70,7 +70,7 @@ const UsersListPanel = memo(function UsersListPanel({
         </Button>
       </div>
       <TableScrollArea>
-        <table className="min-w-[840px] w-full text-sm">
+        <table className="min-w-210 w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground">
               <SortableHeader label="Email" sortKey="email" sort={userSort} onSort={sortUsers} />

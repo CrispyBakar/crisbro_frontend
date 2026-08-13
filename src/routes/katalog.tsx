@@ -493,11 +493,11 @@ function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void
         </Badge>
       </div>
       <div className="flex flex-1 flex-col p-3 sm:p-6">
-        <h3 className="mb-1 break-words text-sm font-extrabold leading-snug sm:mb-1.5 sm:text-xl">
+        <h3 className="mb-1 wrap-break-word text-sm font-extrabold leading-snug sm:mb-1.5 sm:text-xl">
           {product.name}
         </h3>
         {product.description && (
-          <p className="mb-3 hidden flex-1 break-words text-xs leading-relaxed text-muted-foreground sm:mb-4 sm:block sm:text-sm">
+          <p className="mb-3 hidden flex-1 wrap-break-word text-xs leading-relaxed text-muted-foreground sm:mb-4 sm:block sm:text-sm">
             {product.description}
           </p>
         )}
@@ -531,7 +531,7 @@ function ProductDetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-100 flex cursor-pointer items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm"
       role="presentation"
       onClick={onClose}
     >
@@ -573,7 +573,7 @@ function ProductDetailDialog({
           </div>
 
           {product.description && (
-            <p className="break-words text-sm leading-7 text-muted-foreground sm:text-base">
+            <p className="wrap-break-word text-sm leading-7 text-muted-foreground sm:text-base">
               {product.description}
             </p>
           )}

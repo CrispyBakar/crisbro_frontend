@@ -1,6 +1,3 @@
-// L-7: AdminCustomersTab dipecah dari AdminPage.tsx. Tab ini yang paling berat
-// (form terpanjang + tabel terlebar), jadi test menjaga isinya tetap sama dan
-// membuktikan panel daftar tidak ikut dirender ulang saat form diketik.
 import { describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { render, screen } from "@testing-library/react";
