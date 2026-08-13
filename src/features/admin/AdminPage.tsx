@@ -1044,7 +1044,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         dob: customerForm.dob || null,
         gender: customerForm.gender,
         status: isEditing ? customerForm.status : "active",
-        balance: isEditing ? Number(customerForm.balance) : 0,
         brand_id: Number(customerForm.brand_id || brands[0]?.id || 1),
         owner_location_id: customerForm.owner_location_id
           ? Number(customerForm.owner_location_id)
@@ -1054,8 +1053,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               new Set([...customerForm.location_ids, Number(customerForm.owner_location_id)]),
             )
           : customerForm.location_ids,
-        total_point: isEditing ? Number(customerForm.total_point) : 0,
-        available_point: isEditing ? Number(customerForm.available_point) : 0,
       };
 
       const savedCustomer = customerForm.id
