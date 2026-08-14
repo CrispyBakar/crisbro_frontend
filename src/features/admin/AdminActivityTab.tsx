@@ -57,19 +57,21 @@ function actualCustomerChangedFields(log?: AdminActivityLog) {
     "brand_id",
     "owner_location_id",
   ];
+  const before = isRecord(log.before) ? log.before : {};
+  const after = isRecord(log.after) ? log.after : {};
   const changedFields = customerFields.filter(
-    (field) => !auditValuesEqual(log.before[field], log.after[field]),
+    (field) => !auditValuesEqual(before[field], after[field]),
   );
 
-  const beforeUser = isRecord(log.before.user) ? log.before.user : {};
-  const afterUser = isRecord(log.after.user) ? log.after.user : {};
+  const beforeUser = isRecord(before.user) ? before.user : {};
+  const afterUser = isRecord(after.user) ? after.user : {};
   for (const field of ["phone_number", "email"]) {
     if (!auditValuesEqual(beforeUser[field], afterUser[field])) {
       changedFields.push(`user.${field}`);
     }
   }
 
-  const beforePoint = isRecord(log.before.customer_point) ? log.before.customer_point : {};
+  const beforePoint = isRecord(before.customer_point) ? before.customer_point : {};
   const afterPoint = isRecord(log.after.customer_point) ? log.after.customer_point : {};
   for (const field of ["total_point", "available_point"]) {
     if (!auditValuesEqual(beforePoint[field], afterPoint[field])) {

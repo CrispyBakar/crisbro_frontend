@@ -42,6 +42,7 @@ import { emptyCustomerForm, emptyUserForm, type RedeemFormState } from "./adminF
 import { useStableCallback } from "./useStableCallback";
 import { AdminPageSkeleton, TabButton } from "./AdminConsoleChrome";
 import type { ConfirmDialogState, ConsoleTab } from "./adminConsoleTypes";
+import { adminTabLoaders } from "./adminTabLoaders";
 
 // H-5: tab read-only dipecah jadi modul lazy tersendiri, jadi kode &
 // helper-nya hanya diunduh browser saat tab itu benar-benar dibuka.
@@ -49,12 +50,12 @@ import type { ConfirmDialogState, ConsoleTab } from "./adminConsoleTypes";
 // sehingga AdminPage.tsx tinggal memegang state + orkestrasi, bukan lagi markup
 // setiap tab. State tetap di sini supaya isian form dan posisi halaman tidak
 // hilang saat berpindah tab -- perilaku itu sengaja tidak diubah.
-const AdminActivityTab = lazy(() => import("./AdminActivityTab"));
-const AdminReportTab = lazy(() => import("./AdminReportTab"));
-const AdminSalesTransactionsTab = lazy(() => import("./AdminSalesTransactionsTab"));
-const AdminUsersTab = lazy(() => import("./AdminUsersTab"));
-const AdminCustomersTab = lazy(() => import("./AdminCustomersTab"));
-const AdminRedeemTab = lazy(() => import("./AdminRedeemTab"));
+const AdminActivityTab = lazy(adminTabLoaders.activity);
+const AdminReportTab = lazy(adminTabLoaders.report);
+const AdminSalesTransactionsTab = lazy(adminTabLoaders.sales);
+const AdminUsersTab = lazy(adminTabLoaders.users);
+const AdminCustomersTab = lazy(adminTabLoaders.customers);
+const AdminRedeemTab = lazy(adminTabLoaders.redeem);
 const ConfirmDeleteDialog = lazy(() =>
   import("./AdminDialogs").then((module) => ({ default: module.ConfirmDeleteDialog })),
 );

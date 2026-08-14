@@ -1,6 +1,6 @@
 name: CI
 
-# M-12: Menambahkan CI gate untuk pengujian frontend (Vitest), dengan type-check dijalankan sebagai pemeriksaan informatif agar tidak memblokir PR akibat error tipe yang sudah ada sebelumnya.
+# M-12: Unit test, lint, typecheck, dan build semuanya merupakan gate blocking.
 on:
   push:
     branches: [main]
@@ -16,16 +16,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm test
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx tsc --noEmit -p tsconfig.json
-        continue-on-error: true
+      - run: npm run typecheck
+      - run: npm run build

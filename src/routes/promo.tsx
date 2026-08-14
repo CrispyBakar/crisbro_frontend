@@ -138,11 +138,11 @@ function isPromoResponse(data: unknown): data is PromoResponse {
 }
 
 function isPositiveInteger(value: unknown): value is number {
-  return Number.isInteger(value) && value >= 1;
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
 }
 
 function isNonNegativeInteger(value: unknown): value is number {
-  return Number.isInteger(value) && value >= 0;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
 function isPromo(item: unknown): item is Promo {

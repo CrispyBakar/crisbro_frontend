@@ -42,6 +42,7 @@ function isMenuItem(item: unknown): item is MenuItem {
     typeof menuItem.name === "string" &&
     (menuItem.description === null || typeof menuItem.description === "string") &&
     Number.isFinite(menuItem.points_required) &&
+    typeof menuItem.points_required === "number" &&
     menuItem.points_required >= 0 &&
     (menuItem.image_url === null || typeof menuItem.image_url === "string") &&
     (menuItem.category === null || typeof menuItem.category === "string") &&
