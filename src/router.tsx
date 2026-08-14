@@ -1,5 +1,6 @@
 import { createRouter, useRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { getCspNonce } from "./lib/cspNonce";
 
 // eslint-disable-next-line react-refresh/only-export-components
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
@@ -62,6 +63,10 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     defaultErrorComponent: DefaultErrorComponent,
+    // L-2: nonce request berjalan, dibaca dari AsyncLocalStorage yang dipasang
+    // middleware CSP di src/start.ts. Di browser nilainya undefined dan router
+    // berperilaku persis seperti sebelum CSP dipasang.
+    ssr: { nonce: getCspNonce() },
   });
 
   return router;

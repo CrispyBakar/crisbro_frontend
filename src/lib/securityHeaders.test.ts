@@ -2,35 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { apiFetch } from "./api";
-
-// Origin backend produksi. Frontend dan backend berada di site Vercel yang
-// berbeda (karena itu cookie sesi memakai SameSite=None), sehingga origin ini
-// WAJIB tercantum di connect-src. Tanpa itu browser memblokir setiap panggilan
-// API sebelum request dikirim dan seluruh aplikasi mati di produksi.
-const API_ORIGIN = "https://crisbro-backend.vercel.app";
+import { API_ORIGIN, buildContentSecurityPolicy } from "./csp";
 
 const repoRoot = path.resolve(__dirname, "..", "..");
-
-function readVercelCsp() {
-  const config = JSON.parse(
-    fs.readFileSync(path.join(repoRoot, "vercel.json"), "utf8"),
-  );
-  const header = config.headers
-    ?.flatMap((rule: { headers?: { key: string; value: string }[] }) => rule.headers ?? [])
-    .find((entry: { key: string }) => entry.key === "Content-Security-Policy");
-
-  return header?.value as string | undefined;
-}
-
-function readEdgeHeadersCsp() {
-  const raw = fs.readFileSync(path.join(repoRoot, "public", "_headers"), "utf8");
-  const line = raw
-    .split("\n")
-    .map((entry) => entry.trim())
-    .find((entry) => entry.startsWith("Content-Security-Policy:"));
-
-  return line?.slice("Content-Security-Policy:".length).trim();
-}
 
 function getDirective(csp: string, name: string) {
   return csp
@@ -40,30 +14,55 @@ function getDirective(csp: string, name: string) {
 }
 
 describe("Content-Security-Policy", () => {
+  const policy = buildContentSecurityPolicy("TESTNONCE");
+
   it("mengizinkan panggilan ke origin API produksi", () => {
-    const csp = readVercelCsp();
-    expect(csp, "vercel.json harus memuat header Content-Security-Policy").toBeTruthy();
-
-    const connectSrc = getDirective(csp as string, "connect-src");
-    expect(connectSrc, "CSP harus punya direktif connect-src eksplisit").toBeTruthy();
+    // Frontend dan backend berada di origin berbeda. Tanpa baris ini browser
+    // memblokir setiap fetch ke API dan seluruh aplikasi mati.
+    const connectSrc = getDirective(policy, "connect-src");
+    expect(connectSrc).toBeTruthy();
     expect(connectSrc).toContain(API_ORIGIN);
+    expect(connectSrc).toContain("'self'");
   });
 
-  it("tidak melemahkan pembatasan default", () => {
-    const csp = readVercelCsp() as string;
-    expect(getDirective(csp, "connect-src")).toContain("'self'");
-    expect(getDirective(csp, "object-src")).toBe("object-src 'none'");
-    expect(getDirective(csp, "frame-ancestors")).toBe("frame-ancestors 'none'");
-    expect(csp).not.toContain("connect-src *");
+  it("memakai nonce dan tidak lagi mengizinkan skrip inline sembarangan", () => {
+    const scriptSrc = getDirective(policy, "script-src");
+    expect(scriptSrc).toBe("script-src 'self' 'nonce-TESTNONCE'");
+    // 'unsafe-inline' pada script-src akan diabaikan browser begitu ada nonce,
+    // jadi kehadirannya hanya menyesatkan pembaca policy.
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
   });
 
-  // vercel.json adalah satu-satunya file yang benar-benar dibaca host saat ini,
-  // tetapi public/_headers ikut ter-copy ke output build dan dibaca kalau
-  // hosting dipindah ke Cloudflare Pages/Netlify. Keduanya harus sama persis
-  // supaya tidak ada satu pun yang diam-diam basi.
-  it("konsisten antara vercel.json dan public/_headers", () => {
-    expect(readEdgeHeadersCsp()).toBe(readVercelCsp());
+  it("menghasilkan nonce berbeda untuk tiap request", () => {
+    expect(buildContentSecurityPolicy("A")).not.toBe(
+      buildContentSecurityPolicy("B"),
+    );
   });
+
+  it("tidak melemahkan pembatasan lain", () => {
+    expect(getDirective(policy, "object-src")).toBe("object-src 'none'");
+    expect(getDirective(policy, "frame-ancestors")).toBe(
+      "frame-ancestors 'none'",
+    );
+    expect(getDirective(policy, "base-uri")).toBe("base-uri 'none'");
+    expect(policy).not.toContain("connect-src *");
+  });
+
+  // Dua file konfigurasi hosting ini tidak boleh memuat CSP sendiri: header
+  // statis tidak bisa membawa nonce, dan policy kedua akan beririsan dengan
+  // policy dinamis sehingga skrip inline ber-nonce ikut terblokir.
+  it.each(["vercel.json", path.join("public", "_headers")])(
+    "%s tidak memasang CSP statis yang beririsan",
+    (relativePath) => {
+      const raw = fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+      const declarations = raw
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("#"))
+        .join("\n");
+
+      expect(declarations).not.toContain("Content-Security-Policy");
+    },
+  );
 });
 
 describe("apiFetch CSRF protection", () => {
