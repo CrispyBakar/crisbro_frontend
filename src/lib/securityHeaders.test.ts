@@ -65,6 +65,64 @@ describe("Content-Security-Policy", () => {
   );
 });
 
+// Keempat header ini dipasang lewat `headers` di vercel.json. Sudah
+// diverifikasi runtime (curl -I ke deployment produksi) bahwa Vercel tetap
+// menerapkannya walaupun build menghasilkan .vercel/output (Build Output API):
+// keempatnya muncul di response produksi, begitu pula rewrite /api/*.
+// .vercel/ sendiri ada di .gitignore, jadi isinya artefak build lokal dan
+// bukan gambaran konfigurasi yang dipakai deployment.
+//
+// Tidak ada gate otomatis yang menjaga keempatnya sebelum ini, sehingga
+// terhapusnya satu baris hanya ketahuan lewat pemeriksaan manual.
+const REQUIRED_STATIC_HEADERS: Record<string, string> = {
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
+describe("header keamanan statis", () => {
+  it("vercel.json memasang keempatnya untuk seluruh path", () => {
+    const config = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, "vercel.json"), "utf8"),
+    ) as {
+      headers?: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+    };
+
+    const catchAll = config.headers?.find((entry) => entry.source === "/(.*)");
+    expect(catchAll, "vercel.json harus punya aturan header untuk /(.*)").toBeTruthy();
+
+    const declared = new Map(
+      (catchAll?.headers ?? []).map((header) => [header.key, header.value]),
+    );
+    for (const [key, value] of Object.entries(REQUIRED_STATIC_HEADERS)) {
+      expect(declared.get(key), `${key} hilang atau berubah di vercel.json`).toBe(value);
+    }
+  });
+
+  it("public/_headers tetap sinkron dengan vercel.json", () => {
+    // File ini format Cloudflare Pages, jadi TIDAK aktif di deployment Vercel
+    // saat ini. Dibiarkan ada sebagai konfigurasi untuk host alternatif --
+    // karena itu isinya harus tetap sama, supaya pindah host tidak diam-diam
+    // menurunkan proteksi.
+    const raw = fs.readFileSync(path.join(repoRoot, "public", "_headers"), "utf8");
+    const declared = new Map(
+      raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#") && line.includes(":"))
+        .map((line) => {
+          const separator = line.indexOf(":");
+          return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
+        }),
+    );
+
+    for (const [key, value] of Object.entries(REQUIRED_STATIC_HEADERS)) {
+      expect(declared.get(key), `${key} hilang atau berbeda di public/_headers`).toBe(value);
+    }
+  });
+});
+
 describe("apiFetch CSRF protection", () => {
   it("adds the required header to mutations", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response());
