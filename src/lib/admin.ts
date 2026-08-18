@@ -67,6 +67,25 @@ export type {
 
 const ADMIN_PATH = "/admin";
 
+// Production may briefly run an older backend release which returns the
+// redeem list as a plain array. Keep the admin UI usable while frontend and
+// backend deployments roll out independently.
+export function normalizeRedeemItemPage(
+  data: RedeemItemPage | RedeemItem[],
+  limit: number,
+): RedeemItemPage {
+  if (!Array.isArray(data)) return data;
+
+  const total = data.length;
+  return {
+    items: data,
+    page: 1,
+    limit: Math.max(limit, total),
+    total,
+    total_pages: 1,
+  };
+}
+
 async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await apiFetch(apiUrl(`${ADMIN_PATH}${path}`), {
     ...options,
@@ -281,7 +300,9 @@ export const adminApi = {
     if (sort.sort_by) params.set("sort_by", sort.sort_by);
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
     const query = params.toString();
-    return adminRequest<RedeemItemPage>(`/redeem-menu/items${query ? `?${query}` : ""}`);
+    return adminRequest<RedeemItemPage | RedeemItem[]>(
+      `/redeem-menu/items${query ? `?${query}` : ""}`,
+    ).then((data) => normalizeRedeemItemPage(data, limit));
   },
   createRedeemItem: (payload: Partial<RedeemItem>) =>
     adminRequest<RedeemItem>("/redeem-menu/items", {
