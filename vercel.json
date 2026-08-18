@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://crisbro-backend.vercel.app/api/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

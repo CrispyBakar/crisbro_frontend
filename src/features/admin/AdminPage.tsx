@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getUser } from "@/lib/auth";
+import { apiProfile, type AuthUser } from "@/lib/auth";
 import {
   adminApi,
   type AdminActivityLog,
@@ -101,6 +101,8 @@ function isValidEmail(value: string) {
 export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [tab, setTab] = useState<Tab>("report");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userPage, setUserPage] = useState(1);
@@ -210,7 +212,6 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [customerSyncEnabled, setCustomerSyncEnabled] = useState(true);
   const notifiedCustomerImportJob = useRef<number | null>(null);
 
-  const currentUser = useMemo(() => getUser(), []);
   const canAccess =
     mode === "marketing"
       ? currentUser?.role === "admin" || currentUser?.role === "marketing"
@@ -806,9 +807,32 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
   }
 
+  // localStorage bukan sumber otorisasi dan tidak tersedia saat SSR. Validasi
+  // cookie HttpOnly ke server setelah hydration supaya refresh/direct visit ke
+  // /admin tidak menghasilkan halaman kosong atau mempercayai role yang stale.
   useEffect(() => {
+    let cancelled = false;
+
+    void apiProfile()
+      .then((user) => {
+        if (!cancelled) setCurrentUser(user);
+      })
+      .catch(() => {
+        if (!cancelled) void navigate({ to: "/login", replace: true });
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecking(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (authChecking) return;
     if (!canAccess) {
-      navigate({ to: "/login" });
+      void navigate({ to: "/login", replace: true });
       return;
     }
     if (
@@ -831,7 +855,15 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     }
     loadActiveTab();
     // Run only when access or the active tab changes. Filter/search inputs fetch via their buttons.
-  }, [canAccess, canViewActivityLogs, isMarketingConsole, loadActiveTab, navigate, tab]);
+  }, [
+    authChecking,
+    canAccess,
+    canViewActivityLogs,
+    isMarketingConsole,
+    loadActiveTab,
+    navigate,
+    tab,
+  ]);
 
   useEffect(() => {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
@@ -1397,7 +1429,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       </Suspense>
     );
 
-  if (!canAccess) return null;
+  if (authChecking || !canAccess) return <AdminPageSkeleton tab={tab} />;
 
   return (
     <main className="px-4 mt-8">
