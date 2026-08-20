@@ -3,6 +3,13 @@ import { useEffect, useState, type FormEvent, type HTMLAttributes, type ReactNod
 import { CalendarDays, MapPin, Save, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/profile")({
@@ -126,17 +133,17 @@ function CustomerProfilePage() {
             />
             <label className="block">
               <span className="text-sm font-bold text-foreground/80">Gender</span>
-              <select
-                value={form.gender}
-                onChange={(event) => updateField("gender", event.target.value)}
-                className="mt-2 h-12 w-full rounded-2xl border-2 border-input bg-background px-3 text-base"
-              >
-                <option value="">Pilih gender</option>
-                <option value="male">Laki-laki</option>
-                <option value="female">Perempuan</option>
-                <option value="other">Lainnya</option>
-                <option value="prefer_not_to_say">Tidak ingin menyebutkan</option>
-              </select>
+              <Select value={form.gender} onValueChange={(value) => updateField("gender", value)}>
+                <SelectTrigger className="mt-2 h-12 rounded-2xl border-2 border-input bg-background px-3 text-base font-medium shadow-none">
+                  <SelectValue placeholder="Pilih gender" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border-2">
+                  <SelectItem value="male">Laki-laki</SelectItem>
+                  <SelectItem value="female">Perempuan</SelectItem>
+                  <SelectItem value="other">Lainnya</SelectItem>
+                  <SelectItem value="prefer_not_to_say">Tidak ingin menyebutkan</SelectItem>
+                </SelectContent>
+              </Select>
             </label>
             <ProfileInput
               label="Tanggal Lahir"
