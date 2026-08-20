@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, UserPlus } from "lucide-react";
-import { apiRequestActivation } from "@/lib/auth";
+import { Eye, EyeOff, Sparkles, UserPlus } from "lucide-react";
+import { apiRegister } from "@/lib/auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -36,6 +36,9 @@ function requiredFieldsMessage(fields: string[]) {
 function RegisterPage() {
   const [name, setName] = useState("");
   const [tel, setTel] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
@@ -52,6 +55,8 @@ function RegisterPage() {
 
     if (!name.trim()) missingFields.push("Nama Lengkap");
     if (!tel.trim()) missingFields.push("Nomor Telepon");
+    if (!email.trim()) missingFields.push("Email");
+    if (!password) missingFields.push("Password");
 
     if (missingFields.length > 0) {
       setError(requiredFieldsMessage(missingFields));
@@ -63,9 +68,24 @@ function RegisterPage() {
       return;
     }
 
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError("Format email tidak valid.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password minimal 6 karakter.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await apiRequestActivation(name.trim(), normalized);
+      const result = await apiRegister({
+        name: name.trim(),
+        phone_number: normalized,
+        email: email.trim().toLowerCase(),
+        password,
+      });
       setNotice(result.message);
       setWhatsappUrl(result.whatsappUrl);
     } catch (err: unknown) {
@@ -94,7 +114,7 @@ function RegisterPage() {
             Gabung <span className="text-primary">Crispy Club!</span> 🍗
           </h1>
           <p className="text-muted-foreground mt-3">
-            Sudah jadi member di outlet? Minta tautan aktivasi untuk membuat password akunmu.
+            Daftarkan akunmu untuk mulai mengumpulkan poin dan menikmati reward Crisbar.
           </p>
         </div>
 
@@ -135,10 +155,43 @@ function RegisterPage() {
             </div>
           </label>
 
-          <p className="rounded-2xl bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
-            Buat password melalui tautan aktivasi di email agar akun tidak diklaim orang lain yang
-            tahu nomor Anda.
-          </p>
+          <label className="block">
+            <span className="text-sm font-bold text-foreground/80">
+              Email <span className="text-destructive">*</span>
+            </span>
+            <Input
+              type="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-2 rounded-2xl h-12 bg-background border-2 text-base"
+              autoComplete="email"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-bold text-foreground/80">
+              Password <span className="text-destructive">*</span>
+            </span>
+            <div className="relative mt-2">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="minimal 6 karakter"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="rounded-2xl h-12 bg-background border-2 pr-12 text-base"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+          </label>
 
           {notice && (
             <div className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm font-medium text-secondary-foreground">
@@ -179,7 +232,7 @@ function RegisterPage() {
             disabled={loading}
             className="w-full rounded-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-(--shadow-pop)"
           >
-            <UserPlus className="h-5 w-5" /> {loading ? "Memproses..." : "Kirim Tautan Aktivasi"}
+            <UserPlus className="h-5 w-5" /> {loading ? "Memproses..." : "Daftar Sekarang"}
           </Button>
         </form>
 

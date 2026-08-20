@@ -253,17 +253,20 @@ export async function apiChangePassword(currentPassword: string, newPassword: st
   return data as { message: string };
 }
 
-// Meminta tautan aktivasi, bukan membuat password.
-//
-// Password sengaja tidak dikirim: akun hanya boleh diaktifkan lewat token
-// aktivasi yang dikirim ke email pada akun. Balasan server selalu sama untuk
-// nomor yang terdaftar maupun tidak, jadi jangan pernah menyimpulkan status
-// sebuah nomor dari respons ini.
-export async function apiRequestActivation(name: string, phone_number: string) {
+export type RegisterPayload = {
+  name: string;
+  phone_number: string;
+  email: string;
+  password: string;
+};
+
+// Kontrak frontend untuk endpoint register. Implementasi backend yang menerima
+// email dan password akan ditambahkan secara terpisah.
+export async function apiRegister(payload: RegisterPayload) {
   const res = await apiFetch(apiUrl("/register"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, phone_number }),
+    body: JSON.stringify(payload),
   });
   const data = await readJsonResponse(res, "Permintaan aktivasi gagal");
 
