@@ -27,6 +27,29 @@ const dateFormat = (value: string) =>
     year: "numeric",
   }).format(new Date(value));
 
+export function buildRewardHistoryYAxis(data: NonNullable<LoyaltySummary["redemption_trend"]>) {
+  const exactValues = data.flatMap((item) => [item.redemption_count, item.points_spent]);
+  const maximum = Math.max(0, ...exactValues);
+  if (maximum === 0) return { domainMax: 1, ticks: [0, 1] };
+
+  const roughStep = maximum / 5;
+  const magnitude = 10 ** Math.floor(Math.log10(roughStep || 1));
+  const normalizedStep = roughStep / magnitude;
+  const stepMultiplier =
+    normalizedStep <= 1 ? 1 : normalizedStep <= 2 ? 2 : normalizedStep <= 5 ? 5 : 10;
+  const step = stepMultiplier * magnitude;
+  const domainMax = Math.ceil(maximum / step) * step;
+  const regularTicks = Array.from(
+    { length: Math.floor(domainMax / step) + 1 },
+    (_, index) => index * step,
+  );
+
+  // Nilai aktual ikut menjadi tick agar setiap titik memiliki garis grid
+  // horizontal tepat menuju angka pada satu sumbu Y di sebelah kiri.
+  const ticks = [...new Set([...regularTicks, ...exactValues, domainMax])].sort((a, b) => a - b);
+  return { domainMax, ticks };
+}
+
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(false);
   useEffect(() => {
@@ -154,6 +177,7 @@ function RedemptionHistoryChartView({
   if (!chartData.length) {
     return <EmptyChart message="Belum ada data reward pada rentang tanggal ini." />;
   }
+  const { domainMax, ticks } = buildRewardHistoryYAxis(data);
   return (
     <ChartContainer
       config={{
@@ -166,31 +190,14 @@ function RedemptionHistoryChartView({
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={18} />
         <YAxis
-          yAxisId="count"
           allowDecimals={false}
-          tickFormatter={(value) => numberFormat(+value)}
-        />
-        <YAxis
-          yAxisId="points"
-          orientation="right"
-          allowDecimals={false}
+          domain={[0, domainMax]}
+          ticks={ticks}
           tickFormatter={(value) => numberFormat(+value)}
         />
         <ChartTooltip content={<ChartTooltipContent />} />
-        <Line
-          yAxisId="count"
-          type="monotone"
-          dataKey="redemption_count"
-          stroke="#E11D48"
-          strokeWidth={3}
-        />
-        <Line
-          yAxisId="points"
-          type="monotone"
-          dataKey="points_spent"
-          stroke="#0EA5E9"
-          strokeWidth={3}
-        />
+        <Line type="monotone" dataKey="redemption_count" stroke="#E11D48" strokeWidth={3} />
+        <Line type="monotone" dataKey="points_spent" stroke="#0EA5E9" strokeWidth={3} />
         <ChartLegend content={<ChartLegendContent />} />
       </LineChart>
     </ChartContainer>
