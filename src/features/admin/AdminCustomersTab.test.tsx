@@ -66,6 +66,7 @@ function baseProps(customers: AdminCustomer[]) {
     searchCustomers: vi.fn(),
     customerTotal: customers.length,
     customerPage: 1,
+    customerPageLoading: false,
     customerTotalPages: 1,
     customerLimit: 50,
     changeCustomerLimit: vi.fn(),
@@ -209,5 +210,23 @@ describe("AdminCustomersTab", () => {
     await user.type(screen.getByLabelText(/^Nama/), "budi");
 
     expect(numberFormatSpy).not.toHaveBeenCalled();
+  });
+
+  it("menampilkan spinner dan menonaktifkan pagination saat halaman customer dimuat", () => {
+    const props = {
+      ...baseProps([buildCustomer()]),
+      customerPageLoading: true,
+      customerTotal: 100,
+      customerTotalPages: 2,
+    };
+
+    render(
+      <AdminCustomersTab {...props} customerForm={emptyCustomerForm} setCustomerForm={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Memuat halaman customer...");
+    expect(screen.getByRole("button", { name: "Halaman 2" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+    expect(screen.getByLabelText("Nomor halaman tujuan")).toBeDisabled();
   });
 });

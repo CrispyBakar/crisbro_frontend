@@ -131,6 +131,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     sort_order: "desc",
   });
   const [customerPage, setCustomerPage] = useState(1);
+  const [customerPageLoading, setCustomerPageLoading] = useState(false);
   const [customerTotalPages, setCustomerTotalPages] = useState(1);
   const [customerTotal, setCustomerTotal] = useState(0);
   const [customerLimit, setCustomerLimit] = useState(50);
@@ -644,6 +645,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
 
   async function loadCustomersPage(page: number) {
     const nextPage = Math.min(Math.max(page, 1), customerTotalPages);
+    setCustomerPageLoading(true);
     setError("");
     try {
       const data = await adminApi.customers(
@@ -661,6 +663,8 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       setCustomerRegistrationRange(data.registration_range ?? { earliest: null, latest: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat customer");
+    } finally {
+      setCustomerPageLoading(false);
     }
   }
 
@@ -1633,6 +1637,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               searchCustomers={stableSearchCustomers}
               customerTotal={customerTotal}
               customerPage={customerPage}
+              customerPageLoading={customerPageLoading}
               customerTotalPages={customerTotalPages}
               customerLimit={customerLimit}
               changeCustomerLimit={stableChangeCustomerLimit}

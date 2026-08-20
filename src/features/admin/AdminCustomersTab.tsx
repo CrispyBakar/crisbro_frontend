@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Mail, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { LoaderCircle, Mail, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
   AdminBrand,
@@ -47,6 +47,7 @@ type CustomersListProps = {
   searchCustomers: (value: string) => void;
   customerTotal: number;
   customerPage: number;
+  customerPageLoading: boolean;
   customerTotalPages: number;
   customerLimit: number;
   changeCustomerLimit: (limit: number) => void;
@@ -88,6 +89,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
   searchCustomers,
   customerTotal,
   customerPage,
+  customerPageLoading,
   customerTotalPages,
   customerLimit,
   changeCustomerLimit,
@@ -312,225 +314,241 @@ const CustomersListPanel = memo(function CustomersListPanel({
           </p>
         </div>
       </div>
-      <TableScrollArea>
-        <table className="min-w-385 w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="p-2 whitespace-nowrap">ID Runchise</th>
-              <SortableHeader
-                label="Nama"
-                sortKey="name"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Kontak"
-                sortKey="phone_number"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Outlet"
-                sortKey="outlet"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Poin"
-                sortKey="points"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Status"
-                sortKey="status"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Status Akun"
-                sortKey="activation_status"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Sync Runchise"
-                sortKey="runchise_sync_status"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Tanggal Daftar"
-                sortKey="created_at"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <SortableHeader
-                label="Diperbarui di Runchise"
-                sortKey="updated_at"
-                sort={customerSort}
-                onSort={sortCustomers}
-              />
-              <th className="p-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.length === 0 && (
-              <tr className="border-t border-border">
-                <td colSpan={11} className="p-8 text-center">
-                  <p className="font-bold text-foreground">
-                    {appliedCustomerSearch
-                      ? "Kata kunci yang Anda cari tidak ditemukan"
-                      : "Belum ada data customer"}
-                  </p>
-                  {appliedCustomerSearch && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Tidak ada hasil untuk "{appliedCustomerSearch}".
-                    </p>
-                  )}
-                </td>
+      <div className="relative min-h-64" aria-busy={customerPageLoading}>
+        {customerPageLoading && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/75 backdrop-blur-[1px]"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-6 py-5 shadow-lg">
+              <LoaderCircle className="h-9 w-9 animate-spin text-primary" aria-hidden="true" />
+              <span className="text-sm font-bold">Memuat halaman customer...</span>
+            </div>
+          </div>
+        )}
+        <TableScrollArea>
+          <table
+            className={`min-w-385 w-full text-sm transition-opacity ${customerPageLoading ? "opacity-40" : "opacity-100"}`}
+          >
+            <thead>
+              <tr className="text-left text-muted-foreground">
+                <th className="p-2 whitespace-nowrap">ID Runchise</th>
+                <SortableHeader
+                  label="Nama"
+                  sortKey="name"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Kontak"
+                  sortKey="phone_number"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Outlet"
+                  sortKey="outlet"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Poin"
+                  sortKey="points"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Status"
+                  sortKey="status"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Status Akun"
+                  sortKey="activation_status"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Sync Runchise"
+                  sortKey="runchise_sync_status"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Tanggal Daftar"
+                  sortKey="created_at"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <SortableHeader
+                  label="Diperbarui di Runchise"
+                  sortKey="updated_at"
+                  sort={customerSort}
+                  onSort={sortCustomers}
+                />
+                <th className="p-2">Aksi</th>
               </tr>
-            )}
-            {customers.map((customer) => (
-              <tr key={customer.runchise_id ?? customer.id} className="border-t border-border">
-                <td className="p-2 font-mono">{customer.runchise_id ?? "-"}</td>
-                <td className="p-2 font-bold">{customer.name}</td>
-                <td className="p-2">
-                  {customer.phone_number ?? "-"}
-                  <br />
-                  <span className="text-xs text-muted-foreground">
-                    {customer.user.email ?? "-"}
-                  </span>
-                </td>
-                <td className="p-2">
-                  {customer.owner_location?.name ?? "-"}
-                  <br />
-                  <span className="text-xs text-muted-foreground">
-                    {customer.owner_location?.city ?? customer.city ?? "-"}
-                  </span>
-                  {(customer.location_ids?.length ?? 0) > 1 && (
-                    <div
-                      className="mt-1 text-xs text-muted-foreground"
-                      title={customer.customer_locations
-                        ?.map((item) => item.location?.name ?? `Outlet ID ${item.location_id}`)
-                        .join(", ")}
-                    >
-                      +{(customer.location_ids?.length ?? 1) - 1} outlet lainnya
-                    </div>
-                  )}
-                </td>
-                <td className="p-2">
-                  {numberFormat(customer.customer_point?.available_point ?? 0)}
-                </td>
-                <td className="p-2 capitalize">{customer.status ?? "-"}</td>
-                <td className="p-2">
-                  <span
-                    className={`inline-flex min-w-26 items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
-                      customer.user.activation_status === "pending_activation"
-                        ? "bg-amber-500/10 text-amber-700"
-                        : customer.user.activation_status === "not_linked"
-                          ? "bg-slate-500/10 text-slate-700"
-                          : "bg-emerald-500/10 text-emerald-700"
-                    }`}
-                  >
-                    {accountStatusLabel(customer.user.activation_status)}
-                  </span>
-                </td>
-                <td className="p-2">
-                  <div className="space-y-1">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${runchiseSyncClassName(
-                        getCustomerSyncStatus(customer),
-                      )}`}
-                    >
-                      {runchiseSyncLabel(getCustomerSyncStatus(customer))}
+            </thead>
+            <tbody>
+              {customers.length === 0 && (
+                <tr className="border-t border-border">
+                  <td colSpan={11} className="p-8 text-center">
+                    <p className="font-bold text-foreground">
+                      {appliedCustomerSearch
+                        ? "Kata kunci yang Anda cari tidak ditemukan"
+                        : "Belum ada data customer"}
+                    </p>
+                    {appliedCustomerSearch && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Tidak ada hasil untuk "{appliedCustomerSearch}".
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              )}
+              {customers.map((customer) => (
+                <tr key={customer.runchise_id ?? customer.id} className="border-t border-border">
+                  <td className="p-2 font-mono">{customer.runchise_id ?? "-"}</td>
+                  <td className="p-2 font-bold">{customer.name}</td>
+                  <td className="p-2">
+                    {customer.phone_number ?? "-"}
+                    <br />
+                    <span className="text-xs text-muted-foreground">
+                      {customer.user.email ?? "-"}
                     </span>
-                    {getCustomerSyncNotice(customer) && (
-                      <p className="max-w-55 text-xs font-semibold text-amber-700">
-                        {getCustomerSyncNotice(customer)}
-                      </p>
-                    )}
-                    {getCustomerSyncMessage(customer) && (
-                      <p className="max-w-55 text-xs text-muted-foreground">
-                        {getCustomerSyncMessage(customer)}
-                      </p>
-                    )}
-                    {customer.id > 0 && getCustomerSyncStatus(customer) !== "synced" && (
-                      <button
-                        className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
-                        disabled={saving || customer.id <= 0}
-                        onClick={() => retryCustomerRunchiseSync(customer)}
+                  </td>
+                  <td className="p-2">
+                    {customer.owner_location?.name ?? "-"}
+                    <br />
+                    <span className="text-xs text-muted-foreground">
+                      {customer.owner_location?.city ?? customer.city ?? "-"}
+                    </span>
+                    {(customer.location_ids?.length ?? 0) > 1 && (
+                      <div
+                        className="mt-1 text-xs text-muted-foreground"
+                        title={customer.customer_locations
+                          ?.map((item) => item.location?.name ?? `Outlet ID ${item.location_id}`)
+                          .join(", ")}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" /> Retry
-                      </button>
+                        +{(customer.location_ids?.length ?? 1) - 1} outlet lainnya
+                      </div>
                     )}
-                  </div>
-                </td>
-                <td className="p-2">
-                  {customer.created_at ? dateFormat(customer.created_at) : "-"}
-                </td>
-                <td className="p-2">
-                  {customer.runchise_updated_at ? dateFormat(customer.runchise_updated_at) : "-"}
-                </td>
-                <td className="p-2">
-                  <div className="flex items-center gap-3">
-                    {customer.id > 0 &&
-                      customer.user.activation_status === "pending_activation" && (
-                        <span
-                          className="inline-flex min-w-32.5 flex-col items-start gap-1"
-                          title={
-                            customer.user.email
-                              ? "Kirim ulang email aktivasi"
-                              : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
-                          }
+                  </td>
+                  <td className="p-2">
+                    {numberFormat(customer.customer_point?.available_point ?? 0)}
+                  </td>
+                  <td className="p-2 capitalize">{customer.status ?? "-"}</td>
+                  <td className="p-2">
+                    <span
+                      className={`inline-flex min-w-26 items-center justify-center rounded-full px-3 py-1 text-center text-xs font-black leading-tight ${
+                        customer.user.activation_status === "pending_activation"
+                          ? "bg-amber-500/10 text-amber-700"
+                          : customer.user.activation_status === "not_linked"
+                            ? "bg-slate-500/10 text-slate-700"
+                            : "bg-emerald-500/10 text-emerald-700"
+                      }`}
+                    >
+                      {accountStatusLabel(customer.user.activation_status)}
+                    </span>
+                  </td>
+                  <td className="p-2">
+                    <div className="space-y-1">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-black ${runchiseSyncClassName(
+                          getCustomerSyncStatus(customer),
+                        )}`}
+                      >
+                        {runchiseSyncLabel(getCustomerSyncStatus(customer))}
+                      </span>
+                      {getCustomerSyncNotice(customer) && (
+                        <p className="max-w-55 text-xs font-semibold text-amber-700">
+                          {getCustomerSyncNotice(customer)}
+                        </p>
+                      )}
+                      {getCustomerSyncMessage(customer) && (
+                        <p className="max-w-55 text-xs text-muted-foreground">
+                          {getCustomerSyncMessage(customer)}
+                        </p>
+                      )}
+                      {customer.id > 0 && getCustomerSyncStatus(customer) !== "synced" && (
+                        <button
+                          className="inline-flex items-center gap-1 text-xs font-bold text-primary disabled:opacity-50"
+                          disabled={saving || customer.id <= 0}
+                          onClick={() => retryCustomerRunchiseSync(customer)}
                         >
-                          <button
-                            className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={saving || !customer.user.email}
-                            onClick={() => resendActivation(customer)}
+                          <RefreshCw className="h-3.5 w-3.5" /> Retry
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-2">
+                    {customer.created_at ? dateFormat(customer.created_at) : "-"}
+                  </td>
+                  <td className="p-2">
+                    {customer.runchise_updated_at ? dateFormat(customer.runchise_updated_at) : "-"}
+                  </td>
+                  <td className="p-2">
+                    <div className="flex items-center gap-3">
+                      {customer.id > 0 &&
+                        customer.user.activation_status === "pending_activation" && (
+                          <span
+                            className="inline-flex min-w-32.5 flex-col items-start gap-1"
+                            title={
+                              customer.user.email
+                                ? "Kirim ulang email aktivasi"
+                                : "Customer belum punya email. Tambahkan email dulu untuk mengirim link aktivasi."
+                            }
                           >
-                            <Mail className="h-4 w-4" /> Aktivasi
-                          </button>
-                          {!customer.user.email && (
                             <button
-                              type="button"
-                              className="inline-flex max-w-37.5 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
-                              onClick={() => editCustomer(customer)}
+                              className="inline-flex items-center gap-1 font-bold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                              disabled={saving || !customer.user.email}
+                              onClick={() => resendActivation(customer)}
                             >
-                              Tambah email dulu
+                              <Mail className="h-4 w-4" /> Aktivasi
                             </button>
-                          )}
+                            {!customer.user.email && (
+                              <button
+                                type="button"
+                                className="inline-flex max-w-37.5 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-left text-[11px] font-black leading-tight text-amber-700 transition-colors hover:border-amber-500/50 hover:bg-amber-500/15"
+                                onClick={() => editCustomer(customer)}
+                              >
+                                Tambah email dulu
+                              </button>
+                            )}
+                          </span>
+                        )}
+                      {customer.id > 0 && (
+                        <>
+                          <button
+                            className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
+                            onClick={() => editCustomer(customer)}
+                          >
+                            <Pencil className="h-4 w-4" /> Edit
+                          </button>
+                          <button
+                            className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
+                            disabled={saving}
+                            onClick={() => requestDeleteCustomer(customer)}
+                          >
+                            <Trash2 className="h-4 w-4" /> Hapus
+                          </button>
+                        </>
+                      )}
+                      {customer.id <= 0 && (
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          Belum terhubung lokal
                         </span>
                       )}
-                    {customer.id > 0 && (
-                      <>
-                        <button
-                          className="inline-flex items-center gap-1 font-bold text-primary disabled:opacity-50"
-                          onClick={() => editCustomer(customer)}
-                        >
-                          <Pencil className="h-4 w-4" /> Edit
-                        </button>
-                        <button
-                          className="inline-flex items-center gap-1 font-bold text-destructive disabled:opacity-50"
-                          disabled={saving}
-                          onClick={() => requestDeleteCustomer(customer)}
-                        >
-                          <Trash2 className="h-4 w-4" /> Hapus
-                        </button>
-                      </>
-                    )}
-                    {customer.id <= 0 && (
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        Belum terhubung lokal
-                      </span>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableScrollArea>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScrollArea>
+      </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
         <div className="flex flex-wrap items-center gap-3 font-semibold text-muted-foreground">
           <span>
@@ -557,7 +575,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
           <Button
             type="button"
             variant="outline"
-            disabled={saving || customerPage <= 1}
+            disabled={saving || customerPageLoading || customerPage <= 1}
             onClick={() => loadCustomersPage(customerPage - 1)}
             className="rounded-full font-bold"
           >
@@ -573,7 +591,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
                 key={item}
                 type="button"
                 variant={item === customerPage ? "default" : "outline"}
-                disabled={saving}
+                disabled={saving || customerPageLoading || item === customerPage}
                 onClick={() => loadCustomersPage(item)}
                 className="h-9 min-w-9 rounded-full px-3 font-bold"
                 aria-label={`Halaman ${item}`}
@@ -586,7 +604,7 @@ const CustomersListPanel = memo(function CustomersListPanel({
           <Button
             type="button"
             variant="outline"
-            disabled={saving || customerPage >= customerTotalPages}
+            disabled={saving || customerPageLoading || customerPage >= customerTotalPages}
             onClick={() => loadCustomersPage(customerPage + 1)}
             className="rounded-full font-bold"
           >
@@ -605,10 +623,16 @@ const CustomersListPanel = memo(function CustomersListPanel({
               max={customerTotalPages}
               value={customerPageInput}
               onChange={(event) => setCustomerPageInput(event.target.value)}
+              disabled={customerPageLoading}
               className="w-20 rounded-lg border border-border bg-card px-2 py-2"
               aria-label="Nomor halaman tujuan"
             />
-            <Button type="submit" variant="outline" className="rounded-full font-bold">
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={customerPageLoading}
+              className="rounded-full font-bold"
+            >
               Pergi
             </Button>
           </form>
