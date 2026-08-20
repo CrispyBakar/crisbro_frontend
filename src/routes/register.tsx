@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Sparkles, UserPlus } from "lucide-react";
-import { apiRegister } from "@/lib/auth";
+import { apiRegister, saveAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -34,6 +34,7 @@ function requiredFieldsMessage(fields: string[]) {
 }
 
 function RegisterPage() {
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [tel, setTel] = useState("");
   const [email, setEmail] = useState("");
@@ -87,8 +88,19 @@ function RegisterPage() {
         email: email.trim().toLowerCase(),
         password,
       });
-      setNotice(result.message);
-      setWhatsappUrl(result.whatsappUrl);
+      if (result.user) {
+        saveAuth(result.user);
+      } else {
+        sessionStorage.setItem(
+          "crisbar_pending_profile",
+          JSON.stringify({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phoneNumber: normalized,
+          }),
+        );
+      }
+      void navigate({ to: "/profile" });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

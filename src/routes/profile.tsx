@@ -60,10 +60,26 @@ function CustomerProfilePage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyProfile);
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const user = getUser();
     if (!user) {
+      const pendingProfile = sessionStorage.getItem("crisbar_pending_profile");
+      if (pendingProfile) {
+        try {
+          const draft = JSON.parse(pendingProfile) as Partial<ProfileForm>;
+          setForm((current) => ({
+            ...current,
+            name: draft.name ?? "",
+            email: draft.email ?? "",
+            phoneNumber: draft.phoneNumber ?? "",
+          }));
+          return;
+        } catch {
+          sessionStorage.removeItem("crisbar_pending_profile");
+        }
+      }
       void navigate({ to: "/login" });
       return;
     }
@@ -82,11 +98,31 @@ function CustomerProfilePage() {
 
   function updateField(field: keyof ProfileForm, value: string) {
     setNotice("");
+    setError("");
     setForm((current) => ({ ...current, [field]: value }));
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    setError("");
+    setNotice("");
+
+    const missingFields: string[] = [];
+    if (!form.name.trim()) missingFields.push("Nama");
+    if (!form.email.trim()) missingFields.push("Email");
+    if (!form.gender) missingFields.push("Gender");
+    if (!form.birthDate) missingFields.push("Tanggal Lahir");
+
+    if (missingFields.length > 0) {
+      setError(`Wajib isi ${missingFields.join(", ")} terlebih dahulu.`);
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+      setError("Format email tidak valid.");
+      return;
+    }
+
     setNotice("Form profile sudah siap. Penyimpanan data menunggu integrasi backend.");
   }
 
@@ -107,6 +143,7 @@ function CustomerProfilePage() {
 
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="space-y-6 rounded-3xl border border-border bg-card p-6 shadow-(--shadow-soft) md:p-8"
         >
           <ProfileSection icon={<UserRound className="h-5 w-5" />} title="Identitas">
@@ -115,6 +152,7 @@ function CustomerProfilePage() {
               value={form.name}
               onChange={(value) => updateField("name", value)}
               autoComplete="name"
+              required
             />
             <ProfileInput
               label="Email"
@@ -122,6 +160,7 @@ function CustomerProfilePage() {
               value={form.email}
               onChange={(value) => updateField("email", value)}
               autoComplete="email"
+              required
             />
             <ProfileInput
               label="Nomor HP"
@@ -132,9 +171,14 @@ function CustomerProfilePage() {
               readOnly
             />
             <label className="block">
-              <span className="text-sm font-bold text-foreground/80">Gender</span>
+              <span className="text-sm font-bold text-foreground/80">
+                Gender <span className="text-destructive">*</span>
+              </span>
               <Select value={form.gender} onValueChange={(value) => updateField("gender", value)}>
-                <SelectTrigger className="mt-2 h-12 rounded-2xl border-2 border-input bg-background px-3 text-base font-medium shadow-none">
+                <SelectTrigger
+                  aria-required="true"
+                  className="mt-2 h-12 rounded-2xl border-2 border-input bg-background px-3 text-base font-medium shadow-none"
+                >
                   <SelectValue placeholder="Pilih gender" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl border-2">
@@ -152,6 +196,7 @@ function CustomerProfilePage() {
               onChange={(value) => updateField("birthDate", value)}
               autoComplete="bday"
               icon={<CalendarDays className="h-4 w-4" />}
+              required
             />
           </ProfileSection>
 
@@ -194,6 +239,15 @@ function CustomerProfilePage() {
           {notice && (
             <div className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm font-bold text-secondary-foreground">
               {notice}
+            </div>
+          )}
+
+          {error && (
+            <div
+              role="alert"
+              className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm font-bold text-destructive"
+            >
+              {error}
             </div>
           )}
 
@@ -240,6 +294,7 @@ function ProfileInput({
   icon,
   readOnly = false,
   helperText,
+  required = false,
 }: {
   label: string;
   value: string;
@@ -250,11 +305,12 @@ function ProfileInput({
   icon?: ReactNode;
   readOnly?: boolean;
   helperText?: string;
+  required?: boolean;
 }) {
   return (
     <label className="block">
       <span className="flex items-center gap-1.5 text-sm font-bold text-foreground/80">
-        {icon} {label}
+        {icon} {label} {required && <span className="text-destructive">*</span>}
       </span>
       <Input
         type={type}
@@ -264,6 +320,8 @@ function ProfileInput({
         inputMode={inputMode}
         readOnly={readOnly}
         aria-readonly={readOnly}
+        required={required}
+        aria-required={required}
         className={`mt-2 h-12 rounded-2xl border-2 text-base ${
           readOnly ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-background"
         }`}

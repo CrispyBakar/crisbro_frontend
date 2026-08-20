@@ -277,5 +277,6 @@ export async function apiRegister(payload: RegisterPayload) {
   return {
     message: data.message,
     whatsappUrl: typeof data.whatsappUrl === "string" ? data.whatsappUrl : "",
+    user: isRecord(data.user) ? (data.user as AuthUser) : null,
   };
 }
