@@ -86,6 +86,25 @@ export function normalizeRedeemItemPage(
   };
 }
 
+// Admin-user pagination was introduced after the first production version of
+// this endpoint. Older deployed backends return AdminUser[] directly, so
+// normalize both shapes here while frontend and backend releases overlap.
+export function normalizeAdminUserPage(
+  data: AdminUserPage | AdminUser[],
+  limit: number,
+): AdminUserPage {
+  if (!Array.isArray(data)) return data;
+
+  const total = data.length;
+  return {
+    items: data,
+    page: 1,
+    limit: Math.max(limit, total),
+    total,
+    total_pages: 1,
+  };
+}
+
 async function adminRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await apiFetch(apiUrl(`${ADMIN_PATH}${path}`), {
     ...options,
@@ -181,7 +200,9 @@ export const adminApi = {
     if (sort.sort_by) params.set("sort_by", sort.sort_by);
     if (sort.sort_order) params.set("sort_order", sort.sort_order);
     const query = params.toString();
-    return adminRequest<AdminUserPage>(`/users${query ? `?${query}` : ""}`);
+    return adminRequest<AdminUserPage | AdminUser[]>(`/users${query ? `?${query}` : ""}`).then(
+      (data) => normalizeAdminUserPage(data, limit),
+    );
   },
   createUser: (payload: AdminUserPayload) =>
     adminRequest<AdminUser>("/users", { method: "POST", body: JSON.stringify(payload) }),
