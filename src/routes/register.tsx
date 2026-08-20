@@ -38,6 +38,7 @@ function RegisterPage() {
   const [tel, setTel] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -191,6 +192,21 @@ function RegisterPage() {
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-bold text-foreground/80">Kode Referral</span>
+            <Input
+              type="text"
+              placeholder="masukkan kode referral (opsional)"
+              value={referralCode}
+              onChange={(event) => setReferralCode(event.target.value)}
+              className="mt-2 h-12 rounded-2xl border-2 bg-background text-base uppercase"
+              autoComplete="off"
+            />
+            <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
+              Kosongkan jika kamu tidak memiliki kode referral.
+            </span>
           </label>
 
           {notice && (

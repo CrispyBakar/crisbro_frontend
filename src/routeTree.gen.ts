@@ -20,6 +20,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LokasiRouteImport } from './routes/lokasi'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as MenuRouteImport } from './routes/menu'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PromoRouteImport } from './routes/promo'
 import { Route as RegisterRouteImport } from './routes/register'
 
@@ -78,6 +79,11 @@ const MenuRoute = MenuRouteImport.update({
   path: '/menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PromoRoute = PromoRouteImport.update({
   id: '/promo',
   path: '/promo',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/lokasi': typeof LokasiRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/profile': typeof ProfileRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
 }
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/lokasi': typeof LokasiRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/profile': typeof ProfileRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
 }
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/lokasi': typeof LokasiRoute
   '/marketing': typeof MarketingRoute
   '/menu': typeof MenuRoute
+  '/profile': typeof ProfileRoute
   '/promo': typeof PromoRoute
   '/register': typeof RegisterRoute
 }
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/lokasi'
     | '/marketing'
     | '/menu'
+    | '/profile'
     | '/promo'
     | '/register'
   fileRoutesByTo: FileRoutesByTo
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/lokasi'
     | '/marketing'
     | '/menu'
+    | '/profile'
     | '/promo'
     | '/register'
   id:
@@ -179,6 +190,7 @@ export interface FileRouteTypes {
     | '/lokasi'
     | '/marketing'
     | '/menu'
+    | '/profile'
     | '/promo'
     | '/register'
   fileRoutesById: FileRoutesById
@@ -195,6 +207,7 @@ export interface RootRouteChildren {
   LokasiRoute: typeof LokasiRoute
   MarketingRoute: typeof MarketingRoute
   MenuRoute: typeof MenuRoute
+  ProfileRoute: typeof ProfileRoute
   PromoRoute: typeof PromoRoute
   RegisterRoute: typeof RegisterRoute
 }
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/promo': {
       id: '/promo'
       path: '/promo'
@@ -307,6 +327,7 @@ const rootRouteChildren: RootRouteChildren = {
   LokasiRoute: LokasiRoute,
   MarketingRoute: MarketingRoute,
   MenuRoute: MenuRoute,
+  ProfileRoute: ProfileRoute,
   PromoRoute: PromoRoute,
   RegisterRoute: RegisterRoute,
 }
