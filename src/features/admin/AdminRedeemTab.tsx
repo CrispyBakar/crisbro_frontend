@@ -45,7 +45,7 @@ const RedeemListPanel = memo(function RedeemListPanel({
   saving,
 }: RedeemListProps) {
   return (
-    <Panel title="Menu Redeem Aktif dan Draft">
+    <Panel title="Menu Redeem Aktif dan Draft" className="flex h-full flex-col">
       <Button
         type="button"
         onClick={openCreateRedeemForm}
@@ -53,7 +53,7 @@ const RedeemListPanel = memo(function RedeemListPanel({
       >
         Tambah Menu Redeem
       </Button>
-      <TableScrollArea>
+      <TableScrollArea className="min-h-72 flex-1 xl:max-h-none">
         <table className="min-w-260 w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground">

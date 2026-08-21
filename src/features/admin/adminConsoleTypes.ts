@@ -8,6 +8,7 @@ export type ConsoleTab =
   | "users"
   | "customers"
   | "referral-codes"
+  | "notifications"
   | "redeem"
   | "activity";
 

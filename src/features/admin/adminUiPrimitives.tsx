@@ -28,9 +28,19 @@ export function RequiredLabel({ label, required }: { label: string; required?: b
   );
 }
 
-export function Panel({ title, children }: { title: string; children: ReactNode }) {
+export function Panel({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft)">
+    <section
+      className={`min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-(--shadow-soft) ${className}`}
+    >
       <h2 className="mb-4 text-lg font-black">{title}</h2>
       {children}
     </section>
@@ -124,15 +134,17 @@ export function Select({
 export function TableScrollArea({
   children,
   maxHeight,
+  className = "",
 }: {
   children: ReactNode;
   maxHeight?: number;
+  className?: string;
 }) {
   return (
     <div
       className={`table-scroll-area -mx-1 min-w-0 max-w-full overflow-auto overscroll-x-contain overscroll-y-auto px-1 pb-3 ${
         maxHeight ? "" : "max-h-[70dvh]"
-      }`}
+      } ${className}`}
       style={maxHeight ? { maxHeight } : undefined}
     >
       {children}

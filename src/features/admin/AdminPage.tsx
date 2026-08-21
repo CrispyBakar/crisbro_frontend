@@ -28,7 +28,7 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, History, ListChecks, RefreshCw, ReceiptText, Share2, Users } from "lucide-react";
+import { BarChart3, Bell, History, ListChecks, RefreshCw, ReceiptText, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSyncMessage,
@@ -56,6 +56,7 @@ const AdminSalesTransactionsTab = lazy(adminTabLoaders.sales);
 const AdminUsersTab = lazy(adminTabLoaders.users);
 const AdminCustomersTab = lazy(adminTabLoaders.customers);
 const AdminReferralCodesTab = lazy(adminTabLoaders.referrals);
+const AdminNotificationsTab = lazy(adminTabLoaders.notifications);
 const AdminRedeemTab = lazy(adminTabLoaders.redeem);
 const ConfirmDeleteDialog = lazy(() =>
   import("./AdminDialogs").then((module) => ({ default: module.ConfirmDeleteDialog })),
@@ -467,6 +468,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       loadedTabs.current["referral-codes"] = true;
       return;
     }
+    if (tab === "notifications") {
+      setLoading(false);
+      loadedTabs.current.notifications = true;
+      return;
+    }
     if (tab === "activity") {
       if (canViewActivityLogs) await loadActivityLogs();
       return;
@@ -851,6 +857,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       tab !== "sales-transactions" &&
       tab !== "customers" &&
       tab !== "referral-codes" &&
+      tab !== "notifications" &&
       tab !== "redeem"
     ) {
       setTab("report");
@@ -1493,6 +1500,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             label="Kode Referral"
           />
           <TabButton
+            active={tab === "notifications"}
+            onClick={() => setTab("notifications")}
+            icon={<Bell className="h-4 w-4" />}
+            label="Notifikasi"
+          />
+          <TabButton
             active={tab === "redeem"}
             onClick={() => setTab("redeem")}
             icon={<ListChecks className="h-4 w-4" />}
@@ -1688,6 +1701,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             }
           >
             <AdminReferralCodesTab />
+          </Suspense>
+        )}
+
+        {!loading && tab === "notifications" && (
+          <Suspense
+            fallback={
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat pengaturan notifikasi" />
+            }
+          >
+            <AdminNotificationsTab />
           </Suspense>
         )}
 
