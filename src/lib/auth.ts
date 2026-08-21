@@ -28,6 +28,8 @@ export type AuthUser = {
     id: number;
     name: string;
     balance: number;
+    // Opsional sampai backend menyertakannya pada payload profil customer.
+    referral_code?: string | null;
     customer_point?: {
       total_point: number;
       available_point: number;

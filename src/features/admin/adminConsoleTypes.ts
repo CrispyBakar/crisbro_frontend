@@ -7,6 +7,7 @@ export type ConsoleTab =
   | "sales-transactions"
   | "users"
   | "customers"
+  | "referral-codes"
   | "redeem"
   | "activity";
 

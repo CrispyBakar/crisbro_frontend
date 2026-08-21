@@ -2,7 +2,16 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownLeft, ArrowUpRight, Sparkles, LogOut, Gift } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  Copy,
+  Gift,
+  LogOut,
+  Share2,
+  Sparkles,
+} from "lucide-react";
 import { apiUrl } from "@/lib/api";
 import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
 import coinMembershipCard from "@/assets/coin-membership-card.png";
@@ -86,6 +95,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [referralCopied, setReferralCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,6 +187,7 @@ function DashboardPage() {
   // belum punya datanya. Dibedakan agar tidak salah bilang "tidak ada reward".
   const rewardInfoReady = user.customer?.redeemable_reward_count !== undefined;
   const redeemableRewardCount = user.customer?.redeemable_reward_count ?? 0;
+  const referralCode = user.customer?.referral_code?.trim() ?? "";
   const progress = nextReward
     ? Math.min(100, Math.round((availablePoint / nextReward.points_required) * 100))
     : rewardInfoReady && redeemableRewardCount > 0
@@ -186,6 +197,18 @@ function DashboardPage() {
   const handleLogout = async () => {
     await logout();
     navigate({ to: "/" });
+  };
+
+  const handleCopyReferral = async () => {
+    if (!referralCode) return;
+
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      setReferralCopied(true);
+      window.setTimeout(() => setReferralCopied(false), 2000);
+    } catch {
+      setError("Kode referral gagal disalin. Silakan coba lagi.");
+    }
   };
 
   return (
@@ -290,6 +313,52 @@ function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Referral benefit */}
+        <section className="relative mt-5 overflow-hidden rounded-3xl border-2 border-primary/20 bg-linear-to-br from-primary/10 via-card to-secondary/60 p-5 shadow-(--shadow-soft) sm:p-6">
+          <div
+            aria-hidden="true"
+            className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl"
+          />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3.5">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                <Share2 className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-primary">
+                  Kode Referral Kamu
+                </p>
+                <h2 className="mt-1 text-lg font-black">Ajak teman bergabung</h2>
+                <p className="mt-1 max-w-md text-sm font-medium leading-relaxed text-muted-foreground">
+                  Bagikan kode ini kepada teman untuk digunakan saat mereka mendaftar.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-stretch gap-2 rounded-2xl border border-border/80 bg-background/90 p-2 shadow-sm backdrop-blur-sm sm:min-w-70">
+              <div className="flex min-w-0 flex-1 items-center px-2 sm:px-3">
+                <span
+                  className={`truncate font-mono text-lg font-black tracking-widest ${
+                    referralCode ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {referralCode || "Belum tersedia"}
+                </span>
+              </div>
+              <Button
+                type="button"
+                onClick={() => void handleCopyReferral()}
+                disabled={!referralCode}
+                aria-label="Salin kode referral"
+                className="h-11 shrink-0 rounded-xl px-3 font-bold sm:px-4"
+              >
+                {referralCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                <span className="hidden sm:inline">{referralCopied ? "Disalin" : "Salin"}</span>
+              </Button>
+            </div>
+          </div>
+        </section>
 
         {/* Quick actions */}
         <div className="mt-5">

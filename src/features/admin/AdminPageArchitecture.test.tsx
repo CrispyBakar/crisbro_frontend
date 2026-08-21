@@ -4,7 +4,7 @@ import { adminTabLoaders } from "./adminTabLoaders";
 describe("H-5 admin code splitting", () => {
   it("setiap loader tab benar-benar memuat modul React yang dapat dirender", async () => {
     const modules = await Promise.all(Object.values(adminTabLoaders).map((load) => load()));
-    expect(modules).toHaveLength(6);
+    expect(modules).toHaveLength(7);
     for (const loadedModule of modules) {
       expect(typeof loadedModule.default).toBe("function");
     }

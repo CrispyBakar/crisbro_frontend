@@ -28,7 +28,7 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, History, ListChecks, RefreshCw, ReceiptText, Users } from "lucide-react";
+import { BarChart3, History, ListChecks, RefreshCw, ReceiptText, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSyncMessage,
@@ -55,6 +55,7 @@ const AdminReportTab = lazy(adminTabLoaders.report);
 const AdminSalesTransactionsTab = lazy(adminTabLoaders.sales);
 const AdminUsersTab = lazy(adminTabLoaders.users);
 const AdminCustomersTab = lazy(adminTabLoaders.customers);
+const AdminReferralCodesTab = lazy(adminTabLoaders.referrals);
 const AdminRedeemTab = lazy(adminTabLoaders.redeem);
 const ConfirmDeleteDialog = lazy(() =>
   import("./AdminDialogs").then((module) => ({ default: module.ConfirmDeleteDialog })),
@@ -461,6 +462,11 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       await Promise.all([loadSalesTransactions(), loadSalesTransactionOutlets()]);
       return;
     }
+    if (tab === "referral-codes") {
+      setLoading(false);
+      loadedTabs.current["referral-codes"] = true;
+      return;
+    }
     if (tab === "activity") {
       if (canViewActivityLogs) await loadActivityLogs();
       return;
@@ -844,6 +850,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       tab !== "report" &&
       tab !== "sales-transactions" &&
       tab !== "customers" &&
+      tab !== "referral-codes" &&
       tab !== "redeem"
     ) {
       setTab("report");
@@ -1480,6 +1487,12 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
             />
           )}
           <TabButton
+            active={tab === "referral-codes"}
+            onClick={() => setTab("referral-codes")}
+            icon={<Share2 className="h-4 w-4" />}
+            label="Kode Referral"
+          />
+          <TabButton
             active={tab === "redeem"}
             onClick={() => setTab("redeem")}
             icon={<ListChecks className="h-4 w-4" />}
@@ -1665,6 +1678,16 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
               retryCustomerRunchiseSync={stableRetryCustomerRunchiseSync}
               saving={saving}
             />
+          </Suspense>
+        )}
+
+        {!loading && tab === "referral-codes" && (
+          <Suspense
+            fallback={
+              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat kode referral" />
+            }
+          >
+            <AdminReferralCodesTab />
           </Suspense>
         )}
 

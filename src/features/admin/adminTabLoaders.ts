@@ -4,5 +4,6 @@ export const adminTabLoaders = {
   sales: () => import("./AdminSalesTransactionsTab"),
   users: () => import("./AdminUsersTab"),
   customers: () => import("./AdminCustomersTab"),
+  referrals: () => import("./AdminReferralCodesTab"),
   redeem: () => import("./AdminRedeemTab"),
 };
