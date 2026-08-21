@@ -21,7 +21,7 @@ export function TabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`relative inline-flex min-h-11 shrink-0 snap-start items-center justify-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-center text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset lg:min-w-0 lg:flex-1 ${
+      className={`relative inline-flex min-h-11 min-w-36 flex-1 shrink-0 snap-center items-center justify-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-center text-sm font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
         active
           ? "border-primary text-primary"
           : "border-transparent text-muted-foreground hover:text-foreground"

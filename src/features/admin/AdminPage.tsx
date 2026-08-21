@@ -28,7 +28,16 @@ import {
   type LoyaltySummary,
   type RedeemItem,
 } from "@/lib/admin";
-import { BarChart3, Bell, History, ListChecks, RefreshCw, ReceiptText, Share2, Users } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  History,
+  ListChecks,
+  RefreshCw,
+  ReceiptText,
+  Share2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSyncMessage,
@@ -106,6 +115,7 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [tab, setTab] = useState<Tab>("report");
+  const tabNavigationRef = useRef<HTMLElement | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [userPage, setUserPage] = useState(1);
   const [userTotalPages, setUserTotalPages] = useState(1);
@@ -887,6 +897,26 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
     if (tab === "redeem" && catalogCategories.length === 0) searchCatalog();
   }, [catalogCategories.length, searchCatalog, tab]);
 
+  // Mengikuti perilaku navigasi kategori di katalog: ketika tab aktif berubah,
+  // geser strip secara halus agar tab tersebut tetap terlihat dan berada dekat
+  // tengah viewport. Ini juga menjaga navigasi siap saat jumlah tab bertambah.
+  useEffect(() => {
+    const navigation = tabNavigationRef.current;
+    const activeButton = navigation?.querySelector<HTMLButtonElement>(
+      '[role="tab"][aria-selected="true"]',
+    );
+
+    if (!navigation || !activeButton) return;
+
+    const targetLeft =
+      activeButton.offsetLeft - navigation.clientWidth / 2 + activeButton.clientWidth / 2;
+
+    navigation.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: "smooth",
+    });
+  }, [tab]);
+
   function resetRedeemForm() {
     setRedeemForm({
       id: 0,
@@ -1467,64 +1497,67 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         </div>
 
         <nav
+          ref={tabNavigationRef}
           aria-label="Menu dashboard admin"
-          className="scrollbar-none mb-5 flex snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain border-b border-border"
+          className="scrollbar-none mb-5 overflow-x-auto overscroll-x-contain border-b border-border"
           role="tablist"
         >
-          <TabButton
-            active={tab === "report"}
-            onClick={() => setTab("report")}
-            icon={<BarChart3 className="h-4 w-4" />}
-            label="Laporan"
-          />
-          {canManageUsers && !isMarketingConsole && (
+          <div className="flex w-max min-w-full snap-x snap-mandatory items-center gap-1">
             <TabButton
-              active={tab === "users"}
-              onClick={() => setTab("users")}
-              icon={<Users className="h-4 w-4" />}
-              label="User Admin"
+              active={tab === "report"}
+              onClick={() => setTab("report")}
+              icon={<BarChart3 className="h-4 w-4" />}
+              label="Laporan"
             />
-          )}
-          {canViewCustomers && (
+            {canManageUsers && !isMarketingConsole && (
+              <TabButton
+                active={tab === "users"}
+                onClick={() => setTab("users")}
+                icon={<Users className="h-4 w-4" />}
+                label="User Admin"
+              />
+            )}
+            {canViewCustomers && (
+              <TabButton
+                active={tab === "customers"}
+                onClick={() => setTab("customers")}
+                icon={<Users className="h-4 w-4" />}
+                label="Customers"
+              />
+            )}
             <TabButton
-              active={tab === "customers"}
-              onClick={() => setTab("customers")}
-              icon={<Users className="h-4 w-4" />}
-              label="Customers"
+              active={tab === "referral-codes"}
+              onClick={() => setTab("referral-codes")}
+              icon={<Share2 className="h-4 w-4" />}
+              label="Kode Referral"
             />
-          )}
-          <TabButton
-            active={tab === "referral-codes"}
-            onClick={() => setTab("referral-codes")}
-            icon={<Share2 className="h-4 w-4" />}
-            label="Kode Referral"
-          />
-          <TabButton
-            active={tab === "notifications"}
-            onClick={() => setTab("notifications")}
-            icon={<Bell className="h-4 w-4" />}
-            label="Notifikasi"
-          />
-          <TabButton
-            active={tab === "redeem"}
-            onClick={() => setTab("redeem")}
-            icon={<ListChecks className="h-4 w-4" />}
-            label="Menu Redeem"
-          />
-          <TabButton
-            active={tab === "sales-transactions"}
-            onClick={() => setTab("sales-transactions")}
-            icon={<ReceiptText className="h-4 w-4" />}
-            label="Transaksi Customer"
-          />
-          {canViewActivityLogs && (
             <TabButton
-              active={tab === "activity"}
-              onClick={() => setTab("activity")}
-              icon={<History className="h-4 w-4" />}
-              label="Activity Log"
+              active={tab === "notifications"}
+              onClick={() => setTab("notifications")}
+              icon={<Bell className="h-4 w-4" />}
+              label="Notifikasi"
             />
-          )}
+            <TabButton
+              active={tab === "redeem"}
+              onClick={() => setTab("redeem")}
+              icon={<ListChecks className="h-4 w-4" />}
+              label="Menu Redeem"
+            />
+            <TabButton
+              active={tab === "sales-transactions"}
+              onClick={() => setTab("sales-transactions")}
+              icon={<ReceiptText className="h-4 w-4" />}
+              label="Transaksi Customer"
+            />
+            {canViewActivityLogs && (
+              <TabButton
+                active={tab === "activity"}
+                onClick={() => setTab("activity")}
+                icon={<History className="h-4 w-4" />}
+                label="Activity Log"
+              />
+            )}
+          </div>
         </nav>
 
         {error && (
@@ -1707,7 +1740,10 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
         {!loading && tab === "notifications" && (
           <Suspense
             fallback={
-              <Skeleton className="h-105 w-full rounded-2xl" aria-label="Memuat pengaturan notifikasi" />
+              <Skeleton
+                className="h-105 w-full rounded-2xl"
+                aria-label="Memuat pengaturan notifikasi"
+              />
             }
           >
             <AdminNotificationsTab />
