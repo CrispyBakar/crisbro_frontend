@@ -30,7 +30,7 @@ function MarketingRoute() {
 
 function ConsoleLoadingFallback() {
   return (
-    <main className="min-h-screen bg-background px-4 py-8" aria-busy="true">
+    <main className="min-h-screen bg-background px-4 pb-12 pt-8" aria-busy="true">
       <div className="mx-auto max-w-7xl animate-pulse space-y-4">
         <div className="h-12 rounded-2xl bg-muted" />
         <div className="h-20 rounded-2xl bg-muted" />

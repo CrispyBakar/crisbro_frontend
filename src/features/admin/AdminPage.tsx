@@ -1477,10 +1477,36 @@ export function AdminPage({ mode = "admin" }: { mode?: ConsoleMode }) {
       </Suspense>
     );
 
-  if (authChecking || !canAccess) return <AdminPageSkeleton tab={tab} />;
+  if (authChecking || !canAccess) {
+    return (
+      <main className="mt-8 px-4 pb-12">
+        <section className="mx-auto max-w-7xl">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-muted-foreground">
+                {isMarketingConsole ? "Marketing Console" : "Admin Console"}
+              </p>
+              <h1 className="text-3xl font-black tracking-tight">
+                {isMarketingConsole ? "Laporan & Menu Redeem" : "Program Loyalty"}
+              </h1>
+            </div>
+            <Button disabled className="rounded-full font-bold" aria-label="Memuat dashboard">
+              <RefreshCw className="h-4 w-4 animate-spin" /> Memuat
+            </Button>
+          </div>
+
+          <div
+            className="mb-5 h-12 rounded-xl border-b border-border bg-muted/45"
+            aria-hidden="true"
+          />
+          <AdminPageSkeleton tab={tab} />
+        </section>
+      </main>
+    );
+  }
 
   return (
-    <main className="px-4 mt-8">
+    <main className="mt-8 px-4 pb-12">
       <section className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
