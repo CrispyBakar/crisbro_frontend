@@ -2,7 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff, Sparkles, UserPlus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, EyeOff, MapPin, Sparkles, UserPlus } from "lucide-react";
 import { apiRegister, saveAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/register")({
@@ -22,6 +29,13 @@ type RegisterError = Error & {
   whatsappUrl?: string;
 };
 
+const OUTLET_OPTIONS = [
+  { value: "widyatama", label: "Crisbar Widyatama", area: "Bandung" },
+  { value: "dipatiukur", label: "Crisbar Dipatiukur", area: "Bandung" },
+  { value: "antapani", label: "Crisbar Antapani", area: "Bandung" },
+  { value: "cimahi", label: "Crisbar Cimahi", area: "Cimahi" },
+];
+
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.startsWith("62")) return digits.slice(2);
@@ -40,6 +54,7 @@ function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [nearestOutlet, setNearestOutlet] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -220,6 +235,36 @@ function RegisterPage() {
               Kosongkan jika kamu tidak memiliki kode referral.
             </span>
           </label>
+
+          <div className="block">
+            <label
+              htmlFor="nearest-outlet"
+              className="text-sm font-bold text-foreground/80"
+            >
+              Outlet Terdekat
+            </label>
+            <Select value={nearestOutlet} onValueChange={setNearestOutlet}>
+              <SelectTrigger
+                id="nearest-outlet"
+                className="mt-2 h-12 rounded-2xl border-2 border-input bg-background px-3 text-base font-medium shadow-none"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <MapPin className="h-4 w-4 shrink-0 text-primary" />
+                  <SelectValue placeholder="Pilih outlet terdekat" />
+                </span>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-2">
+                {OUTLET_OPTIONS.map((outlet) => (
+                  <SelectItem key={outlet.value} value={outlet.value}>
+                    {outlet.label} — {outlet.area}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="mt-1.5 block text-xs font-medium text-muted-foreground">
+              Pilih lokasi outlet yang paling dekat denganmu.
+            </span>
+          </div>
 
           {notice && (
             <div className="rounded-2xl bg-secondary/60 px-4 py-3 text-sm font-medium text-secondary-foreground">
