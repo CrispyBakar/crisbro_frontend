@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getUser } from "@/lib/auth";
+import { getUser, isPhoneVerified } from "@/lib/auth";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -85,6 +85,10 @@ function CustomerProfilePage() {
     }
     if (user.role !== "customer") {
       void navigate({ to: user.role === "admin" ? "/admin" : "/marketing" });
+      return;
+    }
+    if (!isPhoneVerified(user)) {
+      void navigate({ to: "/otp" });
       return;
     }
 

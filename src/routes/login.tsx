@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, LogIn, Eye, EyeOff } from "lucide-react";
-import { apiLogin, saveAuth } from "@/lib/auth";
+import { apiLogin, isPhoneVerified, saveAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -69,7 +69,9 @@ function LoginPage() {
             ? "/admin"
             : user.role === "marketing"
               ? "/marketing"
-              : "/dashboard",
+              : isPhoneVerified(user)
+                ? "/dashboard"
+                : "/otp",
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login gagal, coba lagi.");

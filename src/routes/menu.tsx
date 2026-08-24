@@ -4,7 +4,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiUrl } from "@/lib/api";
-import { getUser } from "@/lib/auth";
+import { getUser, isPhoneVerified } from "@/lib/auth";
 import { ArrowUp, Coins, Sparkles, X } from "lucide-react";
 
 export const Route = createFileRoute("/menu")({
@@ -114,6 +114,10 @@ function MenuPage() {
 
     if (!user) {
       navigate({ to: "/login" });
+      return;
+    }
+    if (!isPhoneVerified(user)) {
+      navigate({ to: "/otp" });
       return;
     }
 

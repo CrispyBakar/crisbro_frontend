@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiChangePassword, getUser, logout } from "@/lib/auth";
+import { apiChangePassword, getUser, isPhoneVerified, logout } from "@/lib/auth";
 import { CheckCircle2, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/change-password")({
@@ -26,8 +26,13 @@ function ChangePasswordPage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (!getUser()) {
+    const user = getUser();
+    if (!user) {
       navigate({ to: "/login" });
+      return;
+    }
+    if (!isPhoneVerified(user)) {
+      navigate({ to: "/otp" });
     }
   }, [navigate]);
 

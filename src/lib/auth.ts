@@ -23,6 +23,9 @@ export type AuthUser = {
   id: number;
   email?: string;
   phone_number?: string;
+  phone_verified?: boolean;
+  is_phone_verified?: boolean;
+  phone_verified_at?: string | null;
   role: string;
   customer?: {
     id: number;
@@ -46,6 +49,13 @@ export type AuthUser = {
     redeemable_reward_count?: number;
   } | null;
 };
+
+export function isPhoneVerified(user: AuthUser): boolean {
+  if (user.role !== "customer") return true;
+  if (typeof user.phone_verified === "boolean") return user.phone_verified;
+  if (typeof user.is_phone_verified === "boolean") return user.is_phone_verified;
+  return typeof user.phone_verified_at === "string" && user.phone_verified_at.length > 0;
+}
 
 export function saveAuth(user: AuthUser) {
   localStorage.removeItem(LEGACY_TOKEN_KEY);
@@ -137,6 +147,11 @@ function isAuthUser(value: unknown): value is AuthUser {
     Number.isFinite(value.id) &&
     (value.email === undefined || typeof value.email === "string") &&
     (value.phone_number === undefined || typeof value.phone_number === "string") &&
+    (value.phone_verified === undefined || typeof value.phone_verified === "boolean") &&
+    (value.is_phone_verified === undefined || typeof value.is_phone_verified === "boolean") &&
+    (value.phone_verified_at === undefined ||
+      value.phone_verified_at === null ||
+      typeof value.phone_verified_at === "string") &&
     typeof value.role === "string" &&
     (customer === undefined || customer === null || isAuthCustomer(customer))
   );

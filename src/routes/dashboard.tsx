@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
-import { apiProfile, getUser, logout, type AuthUser } from "@/lib/auth";
+import { apiProfile, getUser, isPhoneVerified, logout, type AuthUser } from "@/lib/auth";
 import coinMembershipCard from "@/assets/coin-membership-card.png";
 import membershipCardBg from "@/assets/membership-card-bg.png";
 
@@ -105,6 +105,10 @@ function DashboardPage() {
       navigate({ to: "/login" });
       return;
     }
+    if (!isPhoneVerified(cachedUser)) {
+      navigate({ to: "/otp" });
+      return;
+    }
     setUser(cachedUser);
 
     async function refreshProfile({ silent = false } = {}) {
@@ -121,6 +125,11 @@ function DashboardPage() {
         ]);
 
         if (cancelled) return;
+
+        if (!isPhoneVerified(freshUser)) {
+          navigate({ to: "/otp" });
+          return;
+        }
 
         setUser(freshUser);
         setPointHistory(freshPointHistory.items);

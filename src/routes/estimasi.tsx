@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ArrowLeft, Camera } from "lucide-react";
-import { getUser, type AuthUser } from "@/lib/auth";
+import { getUser, isPhoneVerified, type AuthUser } from "@/lib/auth";
 
 // State yang dikirim dari cart saat checkout berhasil
 export type EstimasiState = {
@@ -73,6 +73,10 @@ function EstimasiPage() {
     const u = getUser();
     if (!u) {
       navigate({ to: "/login" });
+      return;
+    }
+    if (!isPhoneVerified(u)) {
+      navigate({ to: "/otp" });
       return;
     }
     setUser(u);

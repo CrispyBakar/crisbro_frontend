@@ -115,7 +115,7 @@ function RegisterPage() {
           }),
         );
       }
-      void navigate({ to: "/profile" });
+      void navigate({ to: "/otp" });
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

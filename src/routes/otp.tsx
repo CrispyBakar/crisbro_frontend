@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from "react";
 import { ArrowLeft, CheckCircle2, KeyRound, Mail, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUser, isPhoneVerified, saveAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/otp")({
   head: () => ({
@@ -17,12 +18,20 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 function OtpPage() {
+  const navigate = useNavigate();
   const [otp, setOtp] = useState(() => Array<string>(OTP_LENGTH).fill(""));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    const user = getUser();
+    if (user && isPhoneVerified(user)) {
+      void navigate({ to: "/dashboard" });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -80,6 +89,14 @@ function OtpPage() {
 
     setSubmitting(true);
     window.setTimeout(() => {
+      const user = getUser();
+      if (user) {
+        saveAuth({
+          ...user,
+          phone_verified: true,
+          phone_verified_at: new Date().toISOString(),
+        });
+      }
       setSubmitting(false);
       setSuccess(true);
     }, 700);
@@ -124,7 +141,7 @@ function OtpPage() {
                 Kode OTP berhasil diverifikasi. Kamu dapat melanjutkan ke tahap berikutnya.
               </p>
               <Button asChild className="mt-6 h-12 w-full rounded-full font-bold">
-                <Link to="/login">Lanjutkan</Link>
+                <Link to={getUser() ? "/dashboard" : "/profile"}>Lanjutkan</Link>
               </Button>
             </div>
           ) : (
