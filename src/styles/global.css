@@ -1,0 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand palette */
+  --color-berry-red: #e60c19;
+  --color-sunshine-yellow: #ffd815;
+  --color-orange: #ff9100;
+  --color-cream: #fcfbf8;
+  --color-peach: #ffd8bb;
+  --color-chocolate: #361715;
+  --color-muted: #82564f;
+  --color-border: #f8d7be;
+  --color-input: #fcecd9;
+  --color-success: #168a45;
+}
+
+/*
+ * Sweet Gradient (#FFD815 -> #FF9100 -> #E60C19):
+ * bg-linear-to-r from-sunshine-yellow via-orange to-berry-red
+ */

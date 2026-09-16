@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -A \"Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 Chrome/120.0 Safari/537.36\" \"https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap\")",
+      "Bash(curl -s -A \"Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 Chrome/120.0 Safari/537.36\" \"https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/react-router/package.json'\\).version\\)\")",
+      "Bash(node -e \"const e=require\\('./node_modules/react-router/dist/development/index.cjs'\\); console.log\\(['createBrowserRouter','RouterProvider','Outlet','Navigate','Link','createContext'].map\\(k=>k+':'+\\(k in e\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({exports:Object.keys\\(p.exports||{}\\), types:p.types, main:p.main, module:p.module},null,1\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(chromium-cli --session app)",
+      "Bash(mkdir -p /tmp/pw-debug)",
+      "Read(//tmp/**)",
+      "Bash(npm init *)",
+      "Bash(npm i *)",
+      "Bash(node -e \"console.log\\(require\\('/tmp/pw-debug/node_modules/playwright/package.json'\\).version\\)\")",
+      "Bash(node debug.mjs)",
+      "Bash(grep -n \"logout\\\\|/login\\\\|/me\" \"/Users/user/My Drive/Dev Projects/PT Reka Cipta Selera/crisbro/backend/src/routes/auth.routes.js\")",
+      "Read(//Users/user/My Drive/Dev Projects/PT Reka Cipta Selera/crisbro/backend/src/routes/**)"
+    ],
+    "additionalDirectories": [
+      "/tmp/pw-debug",
+      "/private/tmp/pw-debug"
+    ]
+  }
+}
