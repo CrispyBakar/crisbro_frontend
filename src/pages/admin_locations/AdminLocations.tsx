@@ -18,11 +18,7 @@ const AdminLocations = () => {
     query: search,
   });
 
-  const {
-    mutate: deleteLocation,
-    isPending: deletePending,
-    error: deleteError,
-  } = useDeleteLocation();
+  const { mutate: deleteLocation } = useDeleteLocation();
 
   const {
     mutate: generateLocation,

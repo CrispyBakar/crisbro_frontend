@@ -10,6 +10,7 @@ import GuestRoute from "@/components/guards/GuestRoute";
 import ProtectedRoute from "@/components/guards/ProtectedRoute";
 import AdminCustomers from "@/pages/admin_customers/AdminCustomers";
 import CustomerDetails from "@/pages/admin_customers/CustomerDetails";
+import AdminProducts from "@/pages/admin_products/AdminProducts";
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,11 @@ const router = createBrowserRouter([
               { index: true, Component: AdminCustomers },
               { path: ":customer_id", Component: CustomerDetails },
             ],
+          },
+          {
+            path: "products",
+            element: <AdminRootLayout />,
+            children: [{ index: true, Component: AdminProducts }],
           },
         ],
       },

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import type { ParamsCustomers } from "@/services/customers";
 import {
+  changeCustomerStatus,
   getCustomerById,
   getCustomerPointHistory,
   getCustomers,
@@ -53,6 +54,20 @@ export const useUpdateCustomer = () => {
     onSuccess: (customer) => {
       queryClient.invalidateQueries({
         queryKey: ["customer", customer.customer_id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+export const useChangeStatusCustomer = (customer_id: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => changeCustomerStatus(customer_id),
+    onSuccess: (customer) => {
+      queryClient.invalidateQueries({
+        queryKey: ["customer", customer],
       });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },

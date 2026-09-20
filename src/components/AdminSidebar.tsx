@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   TicketPercent,
   Users,
+  Utensils,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router";
@@ -53,14 +54,14 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
   {
     label: "Products",
     items: [
+      { icon: Utensils, label: "Products", endpoint: "/admin/products" },
       {
         icon: ShoppingCart,
         label: "Loyalty Products",
         badge: "99+",
-        endpoint: "/admin/products",
+        endpoint: "/admin/loyalty-products",
       },
       { icon: TicketPercent, label: "Promos", endpoint: "/admin/promos" },
-      { icon: Link2, label: "Integration", endpoint: "/admin/integrations" },
       { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
     ],
   },

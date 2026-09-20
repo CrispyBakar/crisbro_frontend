@@ -204,3 +204,23 @@ export const updateCustomer = async ({
 
   return data.data;
 };
+
+export const changeCustomerStatus = async (customer_id: string) => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/customers/${customer_id}/status`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "x-csrf-protection": "1",
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Gagal mengubah status customer");
+  }
+
+  return true;
+};

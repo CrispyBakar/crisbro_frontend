@@ -7,6 +7,7 @@ import {
   MoreVertical,
   Pencil,
   Phone,
+  Power,
   RefreshCw,
   Search,
   UserPlus,
@@ -196,7 +197,9 @@ const EmptyState = ({
   <div className="mt-6 flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border p-10 text-center">
     <Search size={20} className="text-gray-400" />
     <span className="text-sm font-semibold text-chocolate">{title}</span>
-    {description && <span className="text-xs text-gray-500">{description}</span>}
+    {description && (
+      <span className="text-xs text-gray-500">{description}</span>
+    )}
   </div>
 );
 
@@ -286,9 +289,11 @@ const POINT_COLUMNS = [
 ] as const;
 
 const PointsTab = ({ customerId }: { customerId: string }) => {
-  const { data: histories, isPending, error } = useCustomerPointHistory(
-    customerId,
-  );
+  const {
+    data: histories,
+    isPending,
+    error,
+  } = useCustomerPointHistory(customerId);
 
   if (isPending || error || !histories || histories.length === 0) {
     return (
@@ -349,9 +354,11 @@ const PointsTab = ({ customerId }: { customerId: string }) => {
 };
 
 const TransactionsTab = ({ customerId }: { customerId: string }) => {
-  const { data: transactions, isPending, error } = useSaleTransaction(
-    customerId,
-  );
+  const {
+    data: transactions,
+    isPending,
+    error,
+  } = useSaleTransaction(customerId);
 
   if (isPending || error || !transactions || transactions.length === 0) {
     return (
@@ -547,9 +554,7 @@ const EditCustomerModal = ({
 
   const setField =
     (field: keyof CustomerForm) =>
-    (
-      event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-    ): void => {
+    (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
       setForm((prev) => ({ ...prev, [field]: event.target.value }));
     };
 
@@ -692,7 +697,7 @@ const EditCustomerModal = ({
               </select>
             </FormField>
 
-            <FormField label="Status">
+            {/* <FormField label="Status">
               <select
                 value={form.status}
                 onChange={setField("status")}
@@ -701,7 +706,7 @@ const EditCustomerModal = ({
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-            </FormField>
+            </FormField> */}
 
             <FormField label="Owner location">
               <select
@@ -755,6 +760,10 @@ const CustomerDetails = () => {
   const { data: customer, isPending, error } = useCustomer(customerId);
 
   const [activeTab, setActiveTab] = useState<Tab>("Activity Log");
+  const [showChangeStatus, setShowChangeStatus] = useState<boolean>(false);
+  const [currentStatus, setCurrentStatus] = useState<string | undefined>(
+    customer?.status,
+  );
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -817,6 +826,27 @@ const CustomerDetails = () => {
             )}
             {copied ? "ID Tersalin" : "Copy ID"}
           </button>
+
+          <div
+            onClick={() => setShowChangeStatus(!showChangeStatus)}
+            className="relative"
+          >
+            <button className="flex items-center gap-2 rounded-3xl border border-gray-100 bg-white py-2 px-5 text-sm font-semibold text-chocolate transtiton-colors hover:bg-cream activate:bg-gray-100 cursor-pointer">
+              <Power size={16} />
+              Ubah Status
+            </button>
+
+            <div
+              className={`${!showChangeStatus ? "hidden" : ""} absolute mt-1 w-full p-0.5 bg-white border border-gray-100 shadow-sm rounded-2xl`}
+            >
+              <ul className="px-2 py-1.5 hover:bg-gray-200 rounded-2xl text-sm">
+                Activate
+              </ul>
+              <ul className="px-2 py-1.5 hover:bg-gray-200 rounded-2xl text-sm">
+                Deactivate
+              </ul>
+            </div>
+          </div>
 
           <button
             onClick={() => setIsEditOpen(true)}

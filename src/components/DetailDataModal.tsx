@@ -53,7 +53,7 @@ const DetailDataModal = ({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-chocolate/50"
+      className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/45"
       onClick={onClose}
     >
       <div
