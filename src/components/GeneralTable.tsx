@@ -66,7 +66,6 @@ const GeneralTable = <T extends TableRow>({
   detailHiddenKeys,
   handleDelete,
   canDelete,
-  canUpdate,
   canDetail,
   canShow,
   handleDetail,
@@ -362,6 +361,7 @@ const GeneralTable = <T extends TableRow>({
       {detailRow && (
         <DetailDataModal
           title={`Detail ${tableTitle}`}
+          imageUrl={detailRow?.image_url as string}
           dataHeads={detailHeads}
           hiddenKeys={detailHiddenKeys}
           row={detailRow}

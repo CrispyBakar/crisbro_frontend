@@ -1,33 +1,26 @@
 import {
   CircleQuestionMark,
-  CreditCard,
-  HandCoins,
   LayoutGrid,
-  Link2,
   LogOut,
   Map,
   Settings,
   ShoppingCart,
-  TicketPercent,
   Users,
   Utensils,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
-import { useNavigate } from "react-router";
 
 type SidebarItem = {
   icon: LucideIcon;
   label: string;
-  active?: boolean;
   badge?: string;
   logout?: boolean;
   endpoint: string;
 };
 
-// TODO: ganti item aktif berdasarkan route (NavLink) saat routing siap
 const sidebarSections: { label: string; items: SidebarItem[] }[] = [
   {
     label: "Menu",
@@ -59,10 +52,10 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
         icon: ShoppingCart,
         label: "Loyalty Products",
         badge: "99+",
-        endpoint: "/admin/loyalty-products",
+        endpoint: "/admin/products-loyalty",
       },
-      { icon: TicketPercent, label: "Promos", endpoint: "/admin/promos" },
-      { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
+      // { icon: TicketPercent, label: "Promos", endpoint: "/admin/promos" },
+      // { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
     ],
   },
   {
@@ -111,22 +104,6 @@ const AdminSidebar = () => {
             {section.items.map((item) => {
               const Icon = item.icon;
 
-              // Item aktif: pill oranye, ikon putih di lingkaran merah
-              if (item.active) {
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-2xl bg-berry-red px-5 py-3"
-                  >
-                    <Icon size={16} color="white" />
-                    <span className="text-sm font-bold text-white">
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              }
-
               // Log out: pill abu-abu, teks & ikon merah
               if (item.logout) {
                 return (
@@ -146,26 +123,43 @@ const AdminSidebar = () => {
                 );
               }
 
-              // Item biasa
+              // Item menu: aktif mengikuti route, pill merah dengan teks putih
               return (
-                <Link
-                  to={{
-                    pathname: item.endpoint,
-                  }}
+                <NavLink
+                  to={item.endpoint}
                   key={item.label}
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl px-5 py-3 transition-colors hover:bg-gray-50"
+                  className={({ isActive }) =>
+                    `flex w-full items-center gap-3 rounded-2xl px-5 py-3 transition-colors ${
+                      isActive ? "bg-berry-red" : "hover:bg-gray-50"
+                    }`
+                  }
                 >
-                  <Icon size={16} />
-                  <span className="text-sm font-semibold text-chocolate">
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="ml-auto rounded-full bg-berry-red px-2 py-0.5 text-[11px] font-bold leading-none text-white">
-                      {item.badge}
-                    </span>
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={16} color={isActive ? "white" : undefined} />
+                      <span
+                        className={`text-sm ${
+                          isActive
+                            ? "font-bold text-white"
+                            : "font-semibold text-chocolate"
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      {item.badge && (
+                        <span
+                          className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold leading-none ${
+                            isActive
+                              ? "bg-white text-berry-red"
+                              : "bg-berry-red text-white"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
                   )}
-                </Link>
+                </NavLink>
               );
             })}
           </div>

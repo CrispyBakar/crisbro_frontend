@@ -1,10 +1,13 @@
 import GeneralTable from "@/components/GeneralTable";
 import HeaderMain from "@/components/HeaderMain";
 import { useCustomers } from "@/hooks/use-customers";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
 const AdminCustomers = () => {
+  usePageTitle("Customer");
+
   const [search, setSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
 

@@ -1,5 +1,4 @@
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
-import { lazy, Suspense } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router";
 import AdminAuthLayout from "../components/layouts/AdminAuthLayout";
 import ErrorPage from "@/pages/error/ErrorPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
@@ -11,6 +10,7 @@ import ProtectedRoute from "@/components/guards/ProtectedRoute";
 import AdminCustomers from "@/pages/admin_customers/AdminCustomers";
 import CustomerDetails from "@/pages/admin_customers/CustomerDetails";
 import AdminProducts from "@/pages/admin_products/AdminProducts";
+import AdminProductsLoyalty from "@/pages/admin_products_loyalty/AdminProductsLoyalty";
 
 const router = createBrowserRouter([
   {
@@ -53,6 +53,13 @@ const router = createBrowserRouter([
             element: <AdminRootLayout />,
             children: [{ index: true, Component: AdminProducts }],
           },
+          {
+            path: "products-loyalty",
+            element: <AdminRootLayout />,
+            children: [
+              {index: true, Component: AdminProductsLoyalty}
+            ]
+          }
         ],
       },
     ],

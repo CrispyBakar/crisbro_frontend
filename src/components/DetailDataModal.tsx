@@ -4,6 +4,7 @@ import type { TableHead, TableRow } from "./GeneralTable";
 
 type DetailDataModalProps = {
   title?: string;
+  imageUrl?: string;
   // Jika tidak diberikan, kolom diturunkan dari seluruh field pada `row`.
   dataHeads?: TableHead[];
   // Field yang dilewati saat kolom diturunkan otomatis dari `row`.
@@ -26,6 +27,7 @@ const formatValue = (value: unknown): string => {
 
 const DetailDataModal = ({
   title = "Detail Data",
+  imageUrl,
   dataHeads,
   hiddenKeys,
   row,
@@ -70,6 +72,14 @@ const DetailDataModal = ({
             <X size={16} />
           </button>
         </div>
+
+        {imageUrl && imageUrl !== '' && (
+        <div className="flex w-full justify-center items-center mt-4 -mb-10">
+          <div className="w-36 h-36">
+          <img src={imageUrl} alt="" className="object-cover rounded-xl w-fit h-fit" />
+          </div>
+        </div>
+        )}
 
         {/* Detail fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 max-h-[70vh] overflow-y-auto">

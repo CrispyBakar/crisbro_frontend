@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useLogin } from "@/hooks/use-login";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
 import logoCrisbar from "../../assets/logo_c_crisbar.png";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const AdminLoginPage = () => {
+  usePageTitle("Login");
+
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);

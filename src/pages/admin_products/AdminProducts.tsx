@@ -1,10 +1,13 @@
 import GeneralTable from "@/components/GeneralTable";
 import HeaderMain from "@/components/HeaderMain";
 import { useProducts, useSyncProducts } from "@/hooks/use-products";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 import imageFallback from "../../assets/ProductImageFallback.png";
 
 const AdminProducts = () => {
+  usePageTitle("Produk");
+
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState<string>("");
@@ -28,8 +31,6 @@ const AdminProducts = () => {
 
   const totalPages = products?.total_page;
   const total = products?.total;
-
-  console.log(products);
 
   return (
     <main className="w-full space-y-6">
@@ -61,7 +62,7 @@ const AdminProducts = () => {
       ) : (
         <GeneralTable
           deleteBulk={false}
-          tableTitle="Locations"
+          tableTitle="Products"
           dataHeads={[
             { key: "runchise_id", label: "Runchise Id" },
             {
@@ -126,7 +127,7 @@ const AdminProducts = () => {
           setCurrentPage={setCurrentPage}
           detailHiddenKeys={["sub_brands", "id"]}
           handleDelete={() => {}}
-          canDelete={true}
+          canDelete={false}
           canUpdate={false}
           canShow={true}
           canDetail={false}

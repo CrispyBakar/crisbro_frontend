@@ -22,6 +22,7 @@ import {
   useUpdateCustomer,
 } from "@/hooks/use-customers";
 import { useLocations } from "@/hooks/use-locations";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useSaleTransaction } from "@/hooks/use-sale-transactions";
 import type { Customer } from "@/services/customers";
 
@@ -758,6 +759,8 @@ const EditCustomerModal = ({
 const CustomerDetails = () => {
   const { customer_id: customerId = "" } = useParams();
   const { data: customer, isPending, error } = useCustomer(customerId);
+
+  usePageTitle(customer?.name ?? "Detail Customer");
 
   const [activeTab, setActiveTab] = useState<Tab>("Activity Log");
   const [showChangeStatus, setShowChangeStatus] = useState<boolean>(false);

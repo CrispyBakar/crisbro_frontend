@@ -5,9 +5,12 @@ import {
   useGenerateLocations,
   useLocations,
 } from "@/hooks/use-locations";
+import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 
 const AdminLocations = () => {
+  usePageTitle("Lokasi");
+
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -97,7 +100,7 @@ const AdminLocations = () => {
           setCurrentPage={setCurrentPage}
           detailHiddenKeys={["sub_brands", "id"]}
           handleDelete={handleDelete}
-          canDelete={true}
+          canDelete={false}
           canUpdate={false}
           canShow={true}
           canDetail={false}
