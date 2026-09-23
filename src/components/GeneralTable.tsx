@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Eye,
   ListSortDescending,
+  MoreHorizontal,
   Search,
   Trash2,
 } from "lucide-react";
@@ -103,6 +104,28 @@ const GeneralTable = <T extends TableRow>({
     : filteredData;
 
   const page = Math.max(1, Math.min(currentPage, totalPages));
+
+  // Daftar nomor halaman yang ditampilkan: selalu halaman pertama, terakhir,
+  // dan halaman di sekitar halaman aktif; sisanya diringkas jadi elipsis agar
+  // tidak merender ribuan tombol saat data sangat banyak.
+  const getPageNumbers = (): (number | "dots")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    const pages: (number | "dots")[] = [1];
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+
+    if (start > 2) pages.push("dots");
+    for (let pageNumber = start; pageNumber <= end; pageNumber++) {
+      pages.push(pageNumber);
+    }
+    if (end < totalPages - 1) pages.push("dots");
+
+    pages.push(totalPages);
+    return pages;
+  };
 
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) =>
@@ -315,7 +338,7 @@ const GeneralTable = <T extends TableRow>({
       </table>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">
         <span className="text-sm text-gray-500">
           {sortedData.length === 0
             ? "No entries to show"
@@ -324,7 +347,7 @@ const GeneralTable = <T extends TableRow>({
                 total,
               )} of ${total} entries`}
         </span>
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex flex-wrap justify-center sm:justify-end items-center gap-1.5">
           <button
             onClick={() => setCurrentPage(Math.max(page - 1, 1))}
             disabled={page === 1}
@@ -332,12 +355,19 @@ const GeneralTable = <T extends TableRow>({
           >
             <ChevronLeft size={14} />
           </button>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-            (pageNumber) => (
+          {getPageNumbers().map((pageNumber, index) =>
+            pageNumber === "dots" ? (
+              <span
+                key={`dots-${index}`}
+                className="flex items-center justify-center min-w-8 py-1 text-gray-400"
+              >
+                <MoreHorizontal size={14} />
+              </span>
+            ) : (
               <button
                 key={pageNumber}
                 onClick={() => setCurrentPage(pageNumber)}
-                className={`px-3 py-1 rounded-full text-sm font-semibold cursor-pointer ${
+                className={`min-w-8 px-2 py-1 rounded-full text-sm font-semibold cursor-pointer ${
                   pageNumber === page
                     ? "bg-orange text-white"
                     : "text-gray-500 hover:bg-gray-50"

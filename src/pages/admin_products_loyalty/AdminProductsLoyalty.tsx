@@ -7,6 +7,7 @@ import {
 import { Search } from "lucide-react";
 import { useState } from "react";
 import imageFallback from "../../assets/ProductImageFallback.png";
+import { useLocations } from "@/hooks/use-locations";
 
 const AdminProductsLoyalty = () => {
   usePageTitle("Produk Loyalty");
@@ -14,6 +15,7 @@ const AdminProductsLoyalty = () => {
   const itemsPerPage = 12;
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState<string>("");
+  const [location, setLocation] = useState<string>("all");
 
   const {
     mutate: syncLoyalty,
@@ -30,12 +32,22 @@ const AdminProductsLoyalty = () => {
     take: itemsPerPage,
     skip: (currentPage - 1) * itemsPerPage,
     query: search,
+    locationId: location === "all" ? undefined : location,
+  });
+
+  const { data: locations } = useLocations({
+    take: 100,
   });
 
   const totalPages = loyaltyProducts?.total_page;
   const total = loyaltyProducts?.total;
   const products = loyaltyProducts?.loyalty_products ?? [];
   const page = Math.max(1, Math.min(currentPage, totalPages ?? 1));
+
+  const handleChangeLocation = (value: string) => {
+    setLocation(value);
+    setCurrentPage(1);
+  };
 
   return (
     <main className="w-full space-y-6">
@@ -72,8 +84,16 @@ const AdminProductsLoyalty = () => {
           />
         </div>
         <div className="relative">
-          <select className="w-full p-2 border border-gray-100 shadow-sm text-xs rounded-xl max-w-xs">
+          <select
+            value={location}
+            onChange={(e) => handleChangeLocation(e.target.value)}
+            className="w-full p-2 border border-gray-100 shadow-sm text-xs rounded-xl max-w-xs"
+          >
             <option value="all">All Locations</option>
+            {Array.isArray(locations?.locations) &&
+              locations.locations.map((location) => (
+                <option value={location.location_id}>{location.name}</option>
+              ))}
           </select>
         </div>
       </div>
@@ -137,23 +157,26 @@ const AdminProductsLoyalty = () => {
               >
                 Prev
               </button>
-              {Array.from({ length: totalPages ?? 0 }, (_, index) => index + 1).map(
-                (pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    onClick={() => setCurrentPage(pageNumber)}
-                    className={`px-3 py-1 text-xs rounded-lg border ${
-                      pageNumber === page
-                        ? "bg-orange text-white border-orange"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    {pageNumber}
-                  </button>
-                ),
-              )}
+              {Array.from(
+                { length: totalPages ?? 0 },
+                (_, index) => index + 1,
+              ).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  onClick={() => setCurrentPage(pageNumber)}
+                  className={`px-3 py-1 text-xs rounded-lg border ${
+                    pageNumber === page
+                      ? "bg-orange text-white border-orange"
+                      : "border-gray-200"
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ))}
               <button
-                onClick={() => setCurrentPage(Math.min(page + 1, totalPages ?? 1))}
+                onClick={() =>
+                  setCurrentPage(Math.min(page + 1, totalPages ?? 1))
+                }
                 disabled={page >= (totalPages ?? 1)}
                 className="px-3 py-1 text-xs rounded-lg border border-gray-200 disabled:opacity-50"
               >

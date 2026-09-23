@@ -14,10 +14,11 @@ export const useLoyaltyProducts = ({
   skip,
   take,
   query,
+  locationId,
 }: GetLoyaltyProductsProps) => {
   return useQuery({
-    queryKey: ["loyalty-products", { skip, take, query }],
-    queryFn: () => getLoyaltyProducts({ skip, take, query }),
+    queryKey: ["loyalty-products", { skip, take, query, locationId }],
+    queryFn: () => getLoyaltyProducts({ skip, take, query, locationId }),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
   });

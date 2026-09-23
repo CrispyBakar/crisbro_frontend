@@ -26,17 +26,20 @@ export type GetLoyaltyProductsProps = {
   take?: number;
   skip?: number;
   query?: string;
+  locationId?: string;
 };
 
 export const getLoyaltyProducts = async ({
   take,
   skip,
   query,
+  locationId,
 }: GetLoyaltyProductsProps): Promise<GetLoyaltyProducts> => {
   const params = new URLSearchParams({
     ...(take ? { take: String(take) } : {}),
     ...(skip ? { skip: String(skip) } : {}),
     ...(query ? { query: String(query) } : {}),
+    ...(locationId ? { location_id: locationId } : {}),
   });
 
   const res = await fetch(
