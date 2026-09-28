@@ -59,3 +59,33 @@ export const getCurrentUser = async (): Promise<CurrentUser | null> => {
   const user: CurrentUser = await res.json();
   return user;
 };
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+// Backend mencabut semua sesi setelah password diganti — user wajib login ulang
+export const changePassword = async (
+  payload: ChangePasswordPayload,
+): Promise<{ message: string }> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/change-password`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-protection": "1",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Gagal mengganti password");
+  }
+
+  return res.json();
+};

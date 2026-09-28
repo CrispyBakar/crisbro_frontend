@@ -205,7 +205,10 @@ export const updateCustomer = async ({
   return data.data;
 };
 
-export const changeCustomerStatus = async (customer_id: string) => {
+export const changeCustomerStatus = async (
+  customer_id: string,
+  status: string,
+) => {
   const res = await fetch(
     `${import.meta.env.VITE_API_BASE_URL}/customers/${customer_id}/status`,
     {
@@ -214,6 +217,9 @@ export const changeCustomerStatus = async (customer_id: string) => {
       headers: {
         "x-csrf-protection": "1",
       },
+      body: JSON.stringify({
+        status,
+      }),
     },
   );
 

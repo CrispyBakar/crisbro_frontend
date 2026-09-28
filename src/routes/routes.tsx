@@ -11,6 +11,8 @@ import AdminCustomers from "@/pages/admin_customers/AdminCustomers";
 import CustomerDetails from "@/pages/admin_customers/CustomerDetails";
 import AdminProducts from "@/pages/admin_products/AdminProducts";
 import AdminProductsLoyalty from "@/pages/admin_products_loyalty/AdminProductsLoyalty";
+import AdminSettings from "@/pages/admin_settings/AdminSettings";
+import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
 
 const router = createBrowserRouter([
   {
@@ -56,10 +58,16 @@ const router = createBrowserRouter([
           {
             path: "products-loyalty",
             element: <AdminRootLayout />,
+            children: [{ index: true, Component: AdminProductsLoyalty }],
+          },
+          {
+            path: "settings",
+            element: <AdminRootLayout />,
             children: [
-              {index: true, Component: AdminProductsLoyalty}
-            ]
-          }
+              { index: true, Component: AdminSettings },
+              { path: "profile", Component: AdminProfile },
+            ],
+          },
         ],
       },
     ],

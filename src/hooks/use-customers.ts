@@ -60,14 +60,17 @@ export const useUpdateCustomer = () => {
   });
 };
 
-export const useChangeStatusCustomer = (customer_id: string) => {
+export const useChangeStatusCustomer = (
+  customer_id: string,
+  status: string,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => changeCustomerStatus(customer_id),
-    onSuccess: (customer) => {
+    mutationFn: () => changeCustomerStatus(customer_id, status),
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["customer", customer],
+        queryKey: ["customer", customer_id],
       });
       queryClient.invalidateQueries({ queryKey: ["customers"] });
     },

@@ -1,7 +1,19 @@
+import { useCurrentUser } from "@/hooks/use-current-user";
 import crisbarCircleLogo from "../assets/crisbar_circle_logo.png";
-import { Bell, ChevronDown, CircleQuestionMark } from "lucide-react";
+import { Bell, CircleQuestionMark } from "lucide-react";
+import AdminUserMenu from "./AdminUserMenu";
+
+const getInitials = (name: string) =>
+  name
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("") || "-";
 
 const AdminNavbar = () => {
+  const { data: user } = useCurrentUser();
+
   return (
     <nav className="w-full rounded-4xl bg-white py-3 px-4 shadow-xs border border-gray-100">
       <div className="flex justify-between items-center">
@@ -28,20 +40,16 @@ const AdminNavbar = () => {
           </div>
 
           <div className="bg-gray-50 rounded-full p-1.5 flex justify-start items-center gap-1.5">
-            <div className="w-11 h-11 rounded-full overflow-hidden">
-              <img
-                src={
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzf43XR5BIiicrhhBHy3IwYZb4hfRYxwL0VQaEbhK5YYWAsWAtpoMNf2c&s=10"
-                }
-                alt="Logo Crisbar"
-                className="w-full h-full object-cover scale-126" // atau scale-150 sesuai kebutuhan
-              />
+            <div className="relative">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-r from-sunshine-yellow via-orange to-berry-red text-3xl font-bold text-white">
+                {getInitials(user?.username as string)}
+              </div>
             </div>
             <div>
               <p className="text-sm font-semibold">Crisbro Studio</p>
-              <p className="text-xs font-light">Marketing</p>
+              <p className="text-xs font-light">{user?.role}</p>
             </div>
-            <ChevronDown size={24} className="text-gray-600" />
+            <AdminUserMenu />
           </div>
         </div>
       </div>

@@ -9,17 +9,24 @@ import {
   Utensils,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
+import ConfirmDialog from "./ConfirmDialog";
 
 type SidebarItem = {
   icon: LucideIcon;
   label: string;
   badge?: string;
   logout?: boolean;
+  // Link ke luar aplikasi — dibuka di tab baru, bukan lewat router
+  external?: boolean;
   endpoint: string;
 };
+
+const HELP_DESK_URL =
+  "https://www.larksuite.com/invitation/page/add_contact/?token=301kce01-9ef9-4e56-9395-123fa9kjq1dv&unique_id=bckMDAWSKNscMTluYrx70w==";
 
 const sidebarSections: { label: string; items: SidebarItem[] }[] = [
   {
@@ -33,7 +40,6 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
       {
         icon: Map,
         label: "Locations",
-        badge: "8",
         endpoint: "/admin/locations",
       },
       { icon: Users, label: "Customers", endpoint: "/admin/customers" },
@@ -51,7 +57,6 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
       {
         icon: ShoppingCart,
         label: "Loyalty Products",
-        badge: "99+",
         endpoint: "/admin/products-loyalty",
       },
       // { icon: TicketPercent, label: "Promos", endpoint: "/admin/promos" },
@@ -65,7 +70,8 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
       {
         icon: CircleQuestionMark,
         label: "Help Desk",
-        endpoint: "/admin/helpdesk",
+        external: true,
+        endpoint: HELP_DESK_URL,
       },
       { icon: LogOut, label: "Log out", logout: true, endpoint: "#" },
     ],
@@ -74,6 +80,7 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const logout = useMutation({
     mutationFn: () =>
@@ -108,7 +115,7 @@ const AdminSidebar = () => {
               if (item.logout) {
                 return (
                   <button
-                    onClick={() => logout.mutate()}
+                    onClick={() => setIsLogoutConfirmOpen(true)}
                     key={item.label}
                     type="button"
                     className="flex w-full items-center gap-3 rounded-2xl bg-gray-50 px-3 py-2.5 cursor-pointer"
@@ -120,6 +127,23 @@ const AdminSidebar = () => {
                       {item.label}
                     </span>
                   </button>
+                );
+              }
+
+              if (item.external) {
+                return (
+                  <a
+                    href={item.endpoint}
+                    key={item.label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center gap-3 rounded-2xl px-5 py-3 transition-colors hover:bg-gray-50"
+                  >
+                    <Icon size={16} />
+                    <span className="text-sm font-semibold text-chocolate">
+                      {item.label}
+                    </span>
+                  </a>
                 );
               }
 
@@ -165,6 +189,20 @@ const AdminSidebar = () => {
           </div>
         ))}
       </nav>
+
+      {isLogoutConfirmOpen && (
+        <ConfirmDialog
+          title="Keluar dari akun?"
+          message="Anda perlu login kembali untuk mengakses dashboard admin."
+          icon={LogOut}
+          variant="danger"
+          confirmLabel="Ya, log out"
+          isPending={logout.isPending}
+          error={logout.error ? "Gagal log out, coba lagi." : undefined}
+          onConfirm={() => logout.mutate()}
+          onCancel={() => setIsLogoutConfirmOpen(false)}
+        />
+      )}
     </aside>
   );
 };
