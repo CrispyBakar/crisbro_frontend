@@ -215,6 +215,7 @@ export const changeCustomerStatus = async (
       method: "PATCH",
       credentials: "include",
       headers: {
+        "Content-Type": "application/json",
         "x-csrf-protection": "1",
       },
       body: JSON.stringify({

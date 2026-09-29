@@ -60,14 +60,12 @@ export const useUpdateCustomer = () => {
   });
 };
 
-export const useChangeStatusCustomer = (
-  customer_id: string,
-  status: string,
-) => {
+export const useChangeStatusCustomer = (customer_id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => changeCustomerStatus(customer_id, status),
+    mutationFn: (status: "active" | "inactive") =>
+      changeCustomerStatus(customer_id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["customer", customer_id],

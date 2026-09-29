@@ -6,7 +6,6 @@ import {
   MapPin,
   MoreVertical,
   Pencil,
-  Phone,
   Power,
   RefreshCw,
   Search,
@@ -15,8 +14,9 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import {
+  useChangeStatusCustomer,
   useCustomer,
   useCustomerPointHistory,
   useUpdateCustomer,
@@ -25,6 +25,7 @@ import { useLocations } from "@/hooks/use-locations";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useSaleTransaction } from "@/hooks/use-sale-transactions";
 import type { Customer } from "@/services/customers";
+import whatsappIcon from "../../assets/whatsapp-icon.png";
 
 // Bulan singkat Indonesia + zona WIB, mis. "10 Sep 2026, 10:45 WIB"
 const formatDateWIB = (iso: string) => {
@@ -505,6 +506,11 @@ type CustomerForm = {
 
 const GENDERS = ["male", "female", "unknown"] as const;
 
+const STATUS_OPTIONS = [
+  { value: "active", label: "Activate" },
+  { value: "inactive", label: "Deactivate" },
+] as const;
+
 const buildCustomerForm = (customer: Customer): CustomerForm => ({
   name: customer.name ?? "",
   email: customer.user?.email ?? "",
@@ -764,9 +770,11 @@ const CustomerDetails = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>("Activity Log");
   const [showChangeStatus, setShowChangeStatus] = useState<boolean>(false);
-  const [currentStatus, setCurrentStatus] = useState<string | undefined>(
-    customer?.status,
-  );
+  const {
+    mutate: changeStatus,
+    isPending: isChangingStatus,
+    error: changeStatusError,
+  } = useChangeStatusCustomer(customerId);
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -830,25 +838,40 @@ const CustomerDetails = () => {
             {copied ? "ID Tersalin" : "Copy ID"}
           </button>
 
-          <div
-            onClick={() => setShowChangeStatus(!showChangeStatus)}
-            className="relative"
-          >
-            <button className="flex items-center gap-2 rounded-3xl border border-gray-100 bg-white py-2 px-5 text-sm font-semibold text-chocolate transtiton-colors hover:bg-cream activate:bg-gray-100 cursor-pointer">
+          <div className="relative">
+            <button
+              onClick={() => setShowChangeStatus(!showChangeStatus)}
+              disabled={isChangingStatus}
+              className="flex items-center gap-2 rounded-3xl border border-gray-100 bg-white py-2 px-5 text-sm font-semibold text-chocolate transition-colors hover:bg-cream active:bg-gray-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            >
               <Power size={16} />
-              Ubah Status
+              {isChangingStatus ? "Mengubah..." : "Ubah Status"}
             </button>
 
-            <div
-              className={`${!showChangeStatus ? "hidden" : ""} absolute mt-1 w-full p-0.5 bg-white border border-gray-100 shadow-sm rounded-2xl`}
-            >
-              <ul className="px-2 py-1.5 hover:bg-gray-200 rounded-2xl text-sm">
-                Activate
+            {showChangeStatus && (
+              <ul className="absolute z-10 mt-1 w-full p-0.5 bg-white border border-gray-100 shadow-sm rounded-2xl">
+                {STATUS_OPTIONS.map(({ value, label }) => (
+                  <li key={value}>
+                    <button
+                      onClick={() => {
+                        setShowChangeStatus(false);
+                        changeStatus(value);
+                      }}
+                      disabled={customer.status === value}
+                      className="w-full text-left px-2 py-1.5 hover:bg-gray-200 rounded-2xl text-sm cursor-pointer disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-transparent"
+                    >
+                      {label}
+                    </button>
+                  </li>
+                ))}
               </ul>
-              <ul className="px-2 py-1.5 hover:bg-gray-200 rounded-2xl text-sm">
-                Deactivate
-              </ul>
-            </div>
+            )}
+
+            {changeStatusError && (
+              <p className="absolute right-0 mt-1 whitespace-nowrap text-xs text-red-500">
+                {changeStatusError.message}
+              </p>
+            )}
           </div>
 
           <button
@@ -896,11 +919,20 @@ const CustomerDetails = () => {
               Contact Information
             </h4>
             <ul className="flex flex-col gap-3">
-              <InfoRow icon={Phone}>
+              <Link
+                to={`https://wa.me/${customer.phone_number_country_code}${customer.phone_number}`}
+                target="blank"
+                className="flex gap-3 items-center"
+              >
+                <img
+                  src={whatsappIcon}
+                  alt=""
+                  className="w-8 h-8 hover:bg-cream p-1 rounded-md cursor-pointer"
+                />
                 <span className="text-sm text-chocolate">
                   +{customer.phone_number_country_code} {customer.phone_number}
                 </span>
-              </InfoRow>
+              </Link>
               <InfoRow icon={MapPin}>
                 {customer.address ? (
                   <span className="text-sm text-chocolate">

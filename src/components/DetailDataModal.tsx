@@ -59,7 +59,7 @@ const DetailDataModal = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white rounded-3xl shadow-lg"
+        className="w-full max-w-lg bg-white rounded-3xl shadow-lg max-h-dvh overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
@@ -73,16 +73,20 @@ const DetailDataModal = ({
           </button>
         </div>
 
-        {imageUrl && imageUrl !== '' && (
-        <div className="flex w-full justify-center items-center mt-4 -mb-10">
-          <div className="w-36 h-36">
-          <img src={imageUrl} alt="" className="object-cover rounded-xl w-fit h-fit" />
+        {imageUrl && imageUrl !== "" && (
+          <div className="flex w-full justify-center items-center mt-4">
+            <div className="w-36 h-36">
+              <img
+                src={imageUrl}
+                alt=""
+                className="object-cover rounded-xl w-fit h-fit"
+              />
+            </div>
           </div>
-        </div>
         )}
 
         {/* Detail fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 max-h-[70vh] overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 max-h-[70vh]">
           {heads.map((head) => {
             const value = formatValue(row[head.key]);
             return (
