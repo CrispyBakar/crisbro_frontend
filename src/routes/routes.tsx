@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, RouterProvider, redirect } from "react-router";
 import AdminAuthLayout from "../components/layouts/AdminAuthLayout";
 import ErrorPage from "@/pages/error/ErrorPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
@@ -15,6 +15,10 @@ import AdminSettings from "@/pages/admin_settings/AdminSettings";
 import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
 
 const router = createBrowserRouter([
+  {
+    path: "/",
+    loader: () => redirect("/admin/login"),
+  },
   {
     path: "/admin",
     element: <AdminAuthLayout />,
