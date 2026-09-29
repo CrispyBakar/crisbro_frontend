@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # VITE_API_BASE_URL tidak ditulis di sini: isi di dashboard Netlify
+  # (Site configuration > Environment variables), mis.
+  # https://<backend>.netlify.app/api. Nilainya ditanam ke bundle saat build,
+  # jadi setelah mengubahnya perlu deploy ulang.
+
+# Aset hasil build Vite memakai hash di nama file, aman di-cache permanen.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# SPA fallback: route React Router (/admin/dashboard, dst.) tidak punya file
+# fisik; tanpa ini refresh atau buka link langsung akan 404. File statis yang
+# ada (assets, favicon) tetap dilayani lebih dulu karena tidak memakai force.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

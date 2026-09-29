@@ -1,5 +1,25 @@
 # React + TypeScript + Vite
 
+## Deployment (Netlify)
+
+[netlify.toml](netlify.toml) menjalankan `npm run build`, mem-publish `dist`,
+dan mengarahkan semua route ke `index.html` (SPA fallback untuk React Router).
+
+Wajib diisi di Netlify (Site configuration > Environment variables):
+
+| Variabel | Contoh |
+| --- | --- |
+| `VITE_API_BASE_URL` | `https://<backend>.netlify.app/api` |
+
+Nilainya ditanam ke bundle saat build, jadi setiap perubahan butuh deploy
+ulang. Build di Netlify sengaja gagal bila variabel ini kosong.
+
+Di sisi backend, isi `FRONTEND_URL` dengan URL frontend Netlify (tanpa path)
+supaya lolos CORS, dan biarkan `NODE_ENV=production` agar cookie sesi dikirim
+dengan `SameSite=None; Secure`.
+
+---
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
