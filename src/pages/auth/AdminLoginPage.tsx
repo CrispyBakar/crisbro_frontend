@@ -4,7 +4,7 @@ import { useLogin } from "@/hooks/use-login";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
 import logoCrisbar from "../../assets/logo_c_crisbar.png";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AdminLoginPage = () => {
   usePageTitle("Login");
@@ -12,11 +12,10 @@ const AdminLoginPage = () => {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
-  const login = useLogin({ setError });
+  const login = useLogin({});
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
