@@ -51,7 +51,7 @@ const AdminUserMenu = () => {
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-full z-40 mt-4 w-52 rounded-2xl border border-gray-100 bg-white p-1.5 shadow-lg"
+          className="absolute right-0 top-full z-40 mt-4 w-52 max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-100 bg-white p-1.5 shadow-lg"
         >
           <button
             type="button"

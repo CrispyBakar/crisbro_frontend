@@ -24,17 +24,33 @@ export type GetProductsProps = {
   take?: number;
   skip?: number;
   search?: string;
+  sort_by?:
+    | "runchise_id"
+    | "name"
+    | "product_category"
+    | "internal_price"
+    | "sell_price"
+    | "status";
+  order_by?: "asc" | "desc";
+  status?: "activated" | "deactivated";
 };
 
 export const getProducts = async ({
   take,
   skip,
   search,
+  sort_by,
+  order_by,
+  status,
 }: GetProductsProps): Promise<GetProducts> => {
   const params = new URLSearchParams({
     ...(take ? { take: String(take) } : {}),
     ...(skip ? { skip: String(skip) } : {}),
     ...(search ? { search: String(search) } : {}),
+    // Backend products memakai `order_by` (bukan `sort_order` seperti customers)
+    ...(sort_by ? { sort_by: String(sort_by) } : {}),
+    ...(sort_by && order_by ? { order_by: String(order_by) } : {}),
+    ...(status ? { status: String(status) } : {}),
   });
 
   const res = await fetch(

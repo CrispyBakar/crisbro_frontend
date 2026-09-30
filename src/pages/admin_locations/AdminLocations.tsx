@@ -70,6 +70,7 @@ const AdminLocations = () => {
         <p className="text-red-500">Gagal memuat lokasi: {error.message}</p>
       ) : (
         <GeneralTable
+          canSelectDate={false}
           deleteBulk={false}
           tableTitle="Locations"
           dataHeads={[

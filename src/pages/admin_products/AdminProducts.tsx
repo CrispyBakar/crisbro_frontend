@@ -1,6 +1,7 @@
-import GeneralTable from "@/components/GeneralTable";
+import GeneralTable, { type SortOrder } from "@/components/GeneralTable";
 import HeaderMain from "@/components/HeaderMain";
 import { useProducts, useSyncProducts } from "@/hooks/use-products";
+import type { GetProductsProps } from "@/services/products";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 import imageFallback from "../../assets/ProductImageFallback.png";
@@ -11,6 +12,9 @@ const AdminProducts = () => {
   const itemsPerPage = 25;
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("");
+  const [orderBy, setOrderBy] = useState<SortOrder | "">("");
+  const [status, setStatus] = useState<string>("");
 
   const {
     mutate: generateProducts,
@@ -27,6 +31,9 @@ const AdminProducts = () => {
     take: itemsPerPage,
     skip: (currentPage - 1) * itemsPerPage,
     search: search,
+    sort_by: (sortBy || undefined) as GetProductsProps["sort_by"],
+    order_by: orderBy || undefined,
+    status: (status || undefined) as GetProductsProps["status"],
   });
 
   const totalPages = products?.total_page;
@@ -61,6 +68,7 @@ const AdminProducts = () => {
         </p>
       ) : (
         <GeneralTable
+          canSelectDate={false}
           deleteBulk={false}
           tableTitle="Products"
           dataHeads={[
@@ -125,6 +133,17 @@ const AdminProducts = () => {
           total={total ?? 0}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
+          sortBy={sortBy}
+          orderBy={orderBy}
+          setSortBy={setSortBy}
+          setOrderBy={setOrderBy}
+          filterLabel="Status"
+          filterOptions={[
+            { label: "Activated", value: "activated" },
+            { label: "Deactivated", value: "deactivated" },
+          ]}
+          filterValue={status}
+          onFilterChange={setStatus}
           detailHiddenKeys={["sub_brands", "id"]}
           handleDelete={() => {}}
           canDelete={false}

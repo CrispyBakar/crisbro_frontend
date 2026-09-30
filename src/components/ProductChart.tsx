@@ -213,7 +213,7 @@ export function ProductChart({
   return (
     <div className="flex h-full w-full flex-col rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight text-neutral-900 sm:text-xl">
             {title}

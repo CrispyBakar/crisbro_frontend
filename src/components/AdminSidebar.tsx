@@ -3,6 +3,7 @@ import {
   LayoutGrid,
   LogOut,
   Map,
+  X,
   Settings,
   ShoppingCart,
   Users,
@@ -78,7 +79,12 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
   },
 ];
 
-const AdminSidebar = () => {
+type AdminSidebarProps = {
+  // Menutup drawer di layar kecil (tombol X / setelah memilih menu)
+  onClose?: () => void;
+};
+
+const AdminSidebar = ({ onClose }: AdminSidebarProps) => {
   const navigate = useNavigate();
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
@@ -100,6 +106,18 @@ const AdminSidebar = () => {
 
   return (
     <aside className="flex h-full w-full flex-col overflow-hidden rounded-4xl border border-gray-100 bg-white p-4 shadow-sm">
+      {/* Tombol tutup drawer — hanya di layar kecil */}
+      <div className="mb-2 flex justify-end lg:hidden">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup menu"
+          className="rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 cursor-pointer"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
       {/* Sidebar */}
       <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
         {sidebarSections.map((section) => (
@@ -137,6 +155,7 @@ const AdminSidebar = () => {
                     key={item.label}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={onClose}
                     className="flex w-full items-center gap-3 rounded-2xl px-5 py-3 transition-colors hover:bg-gray-50"
                   >
                     <Icon size={16} />
@@ -152,6 +171,7 @@ const AdminSidebar = () => {
                 <NavLink
                   to={item.endpoint}
                   key={item.label}
+                  onClick={onClose}
                   className={({ isActive }) =>
                     `flex w-full items-center gap-3 rounded-2xl px-5 py-3 transition-colors ${
                       isActive ? "bg-berry-red" : "hover:bg-gray-50"

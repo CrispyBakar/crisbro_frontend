@@ -173,7 +173,9 @@ const DetailRow = ({
 }) => (
   <div className="grid grid-cols-[7.5rem_1fr] items-center gap-4 border-b border-gray-200 py-3">
     <span className="font-semibold text-chocolate">{label}</span>
-    <span className="font-bold text-black">{value ?? "-"}</span>
+    <span className="min-w-0 wrap-break-word font-bold text-black">
+      {value ?? "-"}
+    </span>
   </div>
 );
 
@@ -269,9 +271,9 @@ const OverviewTab = ({ customer }: { customer: Customer }) => {
   ];
 
   return (
-    <div className="mt-6 grid grid-cols-2 gap-6">
+    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 md:gap-6">
       {[rows.slice(0, 10), rows.slice(10)].map((column, columnIndex) => (
-        <div key={columnIndex} className="col-span-1 mb-2 text-xs">
+        <div key={columnIndex} className="col-span-1 text-xs md:mb-2">
           {column.map((row) => (
             <DetailRow key={row.label} {...row} />
           ))}
@@ -309,8 +311,8 @@ const PointsTab = ({ customerId }: { customerId: string }) => {
   }
 
   return (
-    <div className="w-full mt-6 max-h-112.5 overflow-scroll">
-      <table className="w-full">
+    <div className="w-full mt-6 max-h-112.5 overflow-auto">
+      <table className="w-full whitespace-nowrap">
         <thead className="bg-gray-50 text-xs text-left">
           <tr>
             {POINT_COLUMNS.map((column) => (
@@ -383,9 +385,9 @@ const TransactionsTab = ({ customerId }: { customerId: string }) => {
         return (
           <li
             key={transaction.transaction_id}
-            className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 p-5"
+            className="flex flex-col gap-3 rounded-2xl border border-gray-100 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:p-5"
           >
-            <div className="flex items-start gap-4">
+            <div className="flex min-w-0 items-start gap-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cream text-muted">
                 <CreditCardCheck size={18} />
               </span>
@@ -409,7 +411,7 @@ const TransactionsTab = ({ customerId }: { customerId: string }) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center justify-between gap-4 pl-14 sm:pl-0">
               <span className="text-sm font-bold text-chocolate">
                 {transaction.net_sales != null
                   ? formatRupiah(transaction.net_sales)
@@ -462,9 +464,9 @@ const ActivityLogTab = ({
         return (
           <li
             key={`${activity.title}-${activity.timestamp}`}
-            className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 p-5"
+            className="flex items-start justify-between gap-4 rounded-2xl border border-gray-100 p-4 sm:p-5"
           >
-            <div className="flex items-start gap-4">
+            <div className="flex min-w-0 items-start gap-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cream text-muted">
                 <Icon size={18} />
               </span>
@@ -598,8 +600,8 @@ const EditCustomerModal = ({
         className="w-full max-w-2xl rounded-3xl border border-gray-100 bg-white shadow-md"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-100 p-6">
-          <div>
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 p-4 sm:p-6">
+          <div className="min-w-0">
             <h3 className="text-lg font-bold text-chocolate">Edit Customer</h3>
             <span className="text-xs text-gray-500">
               Perbarui informasi customer {customer.name}.
@@ -616,7 +618,7 @@ const EditCustomerModal = ({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid max-h-[65vh] grid-cols-2 gap-4 overflow-y-auto p-6">
+          <div className="grid max-h-[60dvh] grid-cols-1 gap-4 overflow-y-auto p-4 sm:max-h-[65vh] sm:grid-cols-2 sm:p-6">
             <FormField label="Name">
               <input
                 type="text"
@@ -736,7 +738,7 @@ const EditCustomerModal = ({
             </FormField>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 p-6">
+          <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 p-4 sm:p-6">
             {error && (
               <p className="mr-auto text-sm text-red-500">{error.message}</p>
             )}
@@ -817,7 +819,7 @@ const CustomerDetails = () => {
       {/* Header halaman */}
       <div className="flex w-full flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold text-chocolate">
+          <h2 className="text-2xl font-semibold text-chocolate sm:text-3xl">
             Customer Detail
           </h2>
           <span className="text-xs text-gray-500">
@@ -825,7 +827,7 @@ const CustomerDetails = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={handleCopyId}
             className="flex items-center gap-2 rounded-3xl border border-gray-100 bg-white py-2 px-5 text-sm font-semibold text-chocolate transition-colors hover:bg-cream active:bg-gray-100 cursor-pointer"
@@ -868,7 +870,7 @@ const CustomerDetails = () => {
             )}
 
             {changeStatusError && (
-              <p className="absolute right-0 mt-1 whitespace-nowrap text-xs text-red-500">
+              <p className="absolute left-0 mt-1 w-max max-w-[80vw] text-xs text-red-500 sm:left-auto sm:right-0">
                 {changeStatusError.message}
               </p>
             )}
@@ -885,9 +887,9 @@ const CustomerDetails = () => {
       </div>
 
       {/* Kartu utama: profil (kiri) + tab aktivitas (kanan) */}
-      <div className="grid grid-cols-[21rem_1fr] rounded-3xl border border-gray-100 bg-white shadow-md">
+      <div className="grid grid-cols-1 rounded-3xl border border-gray-100 bg-white shadow-md lg:grid-cols-[21rem_1fr]">
         {/* Panel profil customer */}
-        <aside className="flex flex-col gap-6 border-r border-gray-100 p-8">
+        <aside className="flex min-w-0 flex-col gap-6 border-b border-gray-100 p-5 sm:p-8 lg:border-r lg:border-b-0">
           <div className="flex flex-col items-start w-full gap-4">
             <div className="relative">
               <div className="flex size-20 items-center justify-center rounded-full bg-sunshine-yellow text-2xl font-bold text-chocolate">
@@ -896,7 +898,7 @@ const CustomerDetails = () => {
             </div>
 
             <div className="flex flex-col w-full justify-start items-start gap-1.5">
-              <h3 className="text-xl font-bold text-chocolate">
+              <h3 className="wrap-break-word text-xl font-bold text-chocolate">
                 {customer.name}
               </h3>
               <span className="text-sm text-gray-500">
@@ -995,7 +997,7 @@ const CustomerDetails = () => {
         </aside>
 
         {/* Panel tab & activity log */}
-        <section className="flex min-w-0 flex-col p-8">
+        <section className="flex min-w-0 flex-col p-5 sm:p-8">
           <nav className="flex flex-wrap items-center gap-2">
             {TABS.map((tab) => (
               <button
@@ -1018,7 +1020,7 @@ const CustomerDetails = () => {
               <span className="text-xs text-gray-500">{subtitle}</span>
             </div>
             {activeTab === "Activity Log" && (
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search
                   size={16}
                   className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-gray-400"
@@ -1028,7 +1030,7 @@ const CustomerDetails = () => {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search activity..."
-                  className="w-64 rounded-full bg-white py-2 pr-4 pl-10 text-sm text-chocolate placeholder:text-gray-400 outline-none focus:ring-2 border border-gray-200 focus:ring-border/40"
+                  className="w-full rounded-full sm:w-64 bg-white py-2 pr-4 pl-10 text-sm text-chocolate placeholder:text-gray-400 outline-none focus:ring-2 border border-gray-200 focus:ring-border/40"
                 />
               </div>
             )}

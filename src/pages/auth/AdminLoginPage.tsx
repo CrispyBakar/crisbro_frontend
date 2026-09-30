@@ -32,11 +32,11 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="w-full h-dvh flex justify-center items-center">
-      <div className="w-md rounded-2xl p-6 shadow-lg border-gray-100 border bg-white">
-        <div className="flex flex-col justify-center items-center">
+    <div className="w-full min-h-dvh flex justify-center items-center p-4">
+      <div className="w-full max-w-md rounded-2xl p-5 shadow-lg border-gray-100 border bg-white sm:p-6">
+        <div className="flex flex-col justify-center items-center text-center">
           <img src={logoCrisbar} alt="Logo C Crisbar" width={50} />
-          <h4 className="text-black font-extrabold text-4xl mt-3">
+          <h4 className="text-black font-extrabold text-3xl mt-3 sm:text-4xl">
             Welcome <span className="text-berry-red">Crisbro!</span>
           </h4>
           <p className="font-light text-sm text-gray-600">

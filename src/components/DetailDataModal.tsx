@@ -59,7 +59,7 @@ const DetailDataModal = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white rounded-3xl shadow-lg max-h-dvh overflow-y-auto"
+        className="w-full max-w-lg bg-white rounded-3xl shadow-lg max-h-[90dvh]"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
@@ -73,20 +73,20 @@ const DetailDataModal = ({
           </button>
         </div>
 
-        {imageUrl && imageUrl !== "" && (
-          <div className="flex w-full justify-center items-center mt-4">
-            <div className="w-36 h-36">
-              <img
-                src={imageUrl}
-                alt=""
-                className="object-cover rounded-xl w-fit h-fit"
-              />
-            </div>
-          </div>
-        )}
-
         {/* Detail fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 max-h-[70vh]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-6 py-5 max-h-[70vh] overflow-y-scroll">
+          {imageUrl && imageUrl !== "" && (
+            <div className="flex w-full justify-center items-center mt-4">
+              <div className="w-36 h-36">
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="object-cover rounded-xl w-fit h-fit"
+                />
+              </div>
+            </div>
+          )}
+
           {heads.map((head) => {
             const value = formatValue(row[head.key]);
             return (
@@ -108,7 +108,7 @@ const DetailDataModal = ({
           })}
         </div>
 
-        {/* Footer */}
+        {/* Footer
         <div className="flex justify-end px-6 py-4 border-t border-gray-100">
           <button
             onClick={onClose}
@@ -116,7 +116,7 @@ const DetailDataModal = ({
           >
             Close
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

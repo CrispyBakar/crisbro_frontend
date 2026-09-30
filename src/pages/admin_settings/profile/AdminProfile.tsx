@@ -172,7 +172,7 @@ const EditProfileForm = ({
         </FormField>
       </div>
 
-      <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-5">
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-5">
         {error && (
           <p className="mr-auto text-sm text-red-500">{error.message}</p>
         )}
@@ -222,7 +222,7 @@ const AdminProfile = () => {
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Kartu ringkasan: foto profil, nama, role */}
-          <section className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+          <section className="flex flex-col items-center rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm sm:p-8">
             <div className="relative">
               <div className="flex h-28 w-28 items-center justify-center rounded-full bg-linear-to-r from-sunshine-yellow via-orange to-berry-red text-3xl font-bold text-white">
                 {getInitials(user.username)}
@@ -256,7 +256,7 @@ const AdminProfile = () => {
           </section>
 
           {/* Detail akun + form edit */}
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
+          <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6 lg:col-span-2">
             <div className="mb-2 flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-bold text-chocolate">

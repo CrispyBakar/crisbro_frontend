@@ -69,9 +69,9 @@ const AdminProductsLoyalty = () => {
         <></>
       )}
 
-      <div className="w-full flex justify-start items-center gap-3">
-        <div className="flex gap-2 justify-start items-center relative rounded-xl border border-gray-200 p-2">
-          <Search size={14} />
+      <div className="w-full flex flex-col gap-3 sm:flex-row sm:justify-start sm:items-center">
+        <div className="flex gap-2 justify-start items-center relative rounded-xl border border-gray-200 p-2 sm:w-64">
+          <Search size={14} className="shrink-0" />
           <input
             type="text"
             className="w-full outline-none h-full text-sm"
@@ -87,7 +87,7 @@ const AdminProductsLoyalty = () => {
           <select
             value={location}
             onChange={(e) => handleChangeLocation(e.target.value)}
-            className="w-full p-2 border border-gray-100 shadow-sm text-xs rounded-xl max-w-xs"
+            className="w-full p-2 border border-gray-100 shadow-sm text-xs rounded-xl sm:max-w-xs"
           >
             <option value="all">All Locations</option>
             {Array.isArray(locations?.locations) &&
@@ -142,14 +142,14 @@ const AdminProductsLoyalty = () => {
           </div>
 
           {/* Pagination */}
-          <div className="w-full flex justify-between items-center">
+          <div className="w-full flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
             <span className="text-xs text-gray-500">
               {`Showing ${(page - 1) * itemsPerPage + 1} to ${Math.min(
                 page * itemsPerPage,
                 total ?? 0,
               )} of ${total ?? 0} products`}
             </span>
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => setCurrentPage(Math.max(page - 1, 1))}
                 disabled={page === 1}

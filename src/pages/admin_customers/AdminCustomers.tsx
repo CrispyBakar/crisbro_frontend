@@ -1,6 +1,7 @@
-import GeneralTable from "@/components/GeneralTable";
+import GeneralTable, { type SortOrder } from "@/components/GeneralTable";
 import HeaderMain from "@/components/HeaderMain";
 import { useCustomers } from "@/hooks/use-customers";
+import type { ParamsCustomers } from "@/services/customers";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -10,6 +11,10 @@ const AdminCustomers = () => {
 
   const [search, setSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("");
+  const [orderBy, setOrderBy] = useState<SortOrder | "">("");
 
   const navigate = useNavigate();
 
@@ -18,7 +23,15 @@ const AdminCustomers = () => {
     data: customers,
     isPending,
     error,
-  } = useCustomers({ limit: itemsPerPage, search: search, page: currentPage });
+  } = useCustomers({
+    limit: itemsPerPage,
+    search: search,
+    page: currentPage,
+    start_date: startDate,
+    end_date: endDate,
+    sort_by: (sortBy || undefined) as ParamsCustomers["sort_by"],
+    sort_order: orderBy || undefined,
+  });
   const totalPages = customers?.meta.total_pages;
   const total = customers?.meta.total;
 
@@ -39,10 +52,15 @@ const AdminCustomers = () => {
         <p className="text-red-500">Gagal memuat customers: {error.message}</p>
       ) : (
         <GeneralTable
+          sortBy={sortBy}
+          orderBy={orderBy}
+          setSortBy={setSortBy}
+          setOrderBy={setOrderBy}
+          canSelectDate={true}
           deleteBulk={false}
           tableTitle="Customers"
           dataHeads={[
-            { key: "runchise_id", label: "Runchise Id" },
+            { key: "runchise_id", label: "Runchise Id", sortable: false },
             { key: "name", label: "Name" },
             { key: "phone_number", label: "Phone Number" },
             {
@@ -100,6 +118,23 @@ const AdminCustomers = () => {
                 );
               },
             },
+            {
+              key: "created_at",
+              label: "Created At",
+              render: (row: any) => {
+                const date = new Date(row.created_at ?? "");
+
+                return (
+                  <span>
+                    {date.toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                );
+              },
+            },
           ]}
           data={
             customers?.data?.map((customer) => ({
@@ -120,6 +155,10 @@ const AdminCustomers = () => {
           canShow={false}
           canDetail={true}
           handleDetail={handleDetailCustomer}
+          setStartDate={setStartDate}
+          setEndDate={setEndDate}
+          startDate={startDate}
+          endDate={endDate}
         />
       )}
     </main>

@@ -7,10 +7,18 @@ import {
 import { getProducts, syncProducts } from "@/services/products";
 import type { GetProductsProps } from "@/services/products";
 
-export const useProducts = ({ skip, take, search }: GetProductsProps) => {
+export const useProducts = ({
+  skip,
+  take,
+  search,
+  sort_by,
+  order_by,
+  status,
+}: GetProductsProps) => {
   return useQuery({
-    queryKey: ["products", { skip, take, search }],
-    queryFn: () => getProducts({ skip, take, search }),
+    queryKey: ["products", { skip, take, search, sort_by, order_by, status }],
+    queryFn: () =>
+      getProducts({ skip, take, search, sort_by, order_by, status }),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
   });

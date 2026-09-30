@@ -19,10 +19,24 @@ export const useCustomers = ({
   search,
   sort_by,
   sort_order,
+  start_date,
+  end_date,
 }: ParamsCustomers) => {
   return useQuery({
-    queryKey: ["customers", { page, limit, search, sort_by, sort_order }],
-    queryFn: () => getCustomers({ page, limit, search, sort_by, sort_order }),
+    queryKey: [
+      "customers",
+      { page, limit, search, sort_by, sort_order, start_date, end_date },
+    ],
+    queryFn: () =>
+      getCustomers({
+        page,
+        limit,
+        search,
+        sort_by,
+        sort_order,
+        start_date,
+        end_date,
+      }),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
   });

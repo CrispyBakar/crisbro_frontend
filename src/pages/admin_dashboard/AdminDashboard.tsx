@@ -120,7 +120,7 @@ const AdminDashboard = () => {
   });
 
   return (
-    <main className="w-full space-y-6 pr-3">
+    <main className="w-full space-y-6 lg:pr-3">
       <HeaderMain
         title={"Loyalty Overview"}
         subtitle={"Analisis customer dan transaksi"}
@@ -202,6 +202,7 @@ const AdminDashboard = () => {
           </p>
         ) : (
           <GeneralTable
+            canSelectDate={false}
             deleteBulk={false}
             tableTitle="Recent Transactions"
             dataHeads={[

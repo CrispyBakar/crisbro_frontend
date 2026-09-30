@@ -33,12 +33,12 @@ const DashboardCard = ({
   const { pct, Icon: TrendIcon, className } = getTrend(value, lastValue);
 
   return (
-    <div className="col-span-3 bg-white w-full p-4 rounded-2xl border border-gray-100 shadow-sm">
+    <div className="col-span-12 sm:col-span-6 xl:col-span-3 bg-white w-full p-4 rounded-2xl border border-gray-100 shadow-sm">
       <div className="flex gap-1 flex-row items-start justify-between">
-        <div className="flex flex-col gap-2 space-y-4">
+        <div className="flex min-w-0 flex-col gap-2 space-y-2 sm:space-y-4">
           <span className="text-gray-700 font-medium ">{title}</span>
-          <div className="flex gap-2 w-full">
-            <span className="text-4xl font-bold">{numberFmt.format(value)}</span>
+          <div className="flex flex-wrap gap-2 w-full">
+            <span className="text-3xl font-bold sm:text-4xl">{numberFmt.format(value)}</span>
             {pct !== null && (
               <div
                 className={`flex h-fit items-center py-1 font-semibold text-xs rounded-2xl px-1.5 ${className}`}
@@ -54,7 +54,7 @@ const DashboardCard = ({
             </span>
           </p>
         </div>
-        <div className="p-3 rounded-full bg-gray-50">
+        <div className="shrink-0 p-3 rounded-full bg-gray-50">
           <Icon className="text-chocolate" />
         </div>
       </div>

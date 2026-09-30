@@ -2,8 +2,16 @@ export interface ParamsCustomers {
   page?: number;
   limit?: number;
   search?: string;
-  sort_by?: "name" | "status" | "created_at" | "phone_number";
+  sort_by?:
+    | "name"
+    | "status"
+    | "created_at"
+    | "phone_number"
+    | "total_point"
+    | "available_point";
   sort_order?: "asc" | "desc";
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface Customer {
@@ -128,6 +136,8 @@ export const getCustomers = async ({
   search,
   sort_by,
   sort_order,
+  start_date,
+  end_date,
 }: ParamsCustomers): Promise<GetCustomersResponse> => {
   const params = new URLSearchParams({
     ...(page ? { page: String(page) } : {}),
@@ -135,6 +145,8 @@ export const getCustomers = async ({
     ...(search ? { search: String(search) } : {}),
     ...(sort_by ? { sort_by: String(sort_by) } : {}),
     ...(sort_order ? { sort_order: String(sort_order) } : {}),
+    ...(start_date ? { start_date: String(start_date) } : {}),
+    ...(end_date ? { end_date: String(end_date) } : {}),
   });
 
   const res = await fetch(
