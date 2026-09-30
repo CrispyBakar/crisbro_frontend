@@ -15,7 +15,7 @@ const AdminLocations = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
 
-  const { data, isPending, isError, error } = useLocations({
+  const { data, isPending, isFetching, isError, error } = useLocations({
     take: itemsPerPage,
     skip: (currentPage - 1) * itemsPerPage,
     query: search,
@@ -70,6 +70,7 @@ const AdminLocations = () => {
         <p className="text-red-500">Gagal memuat lokasi: {error.message}</p>
       ) : (
         <GeneralTable
+          dataPending={isFetching}
           canSelectDate={false}
           deleteBulk={false}
           tableTitle="Locations"

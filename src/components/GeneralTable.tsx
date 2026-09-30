@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import DetailDataModal from "./DetailDataModal";
 import { DateRange, type Range } from "react-date-range";
+import LoadingCircle from "./LoadingCircle";
 
 const formatDate = (date?: Date) =>
   date
@@ -56,6 +57,7 @@ export type SortOrder = "asc" | "desc";
 export type FilterOption = { label: string; value: string };
 
 type GeneralTableProps<T extends TableRow> = {
+  dataPending?: boolean;
   tableTitle: string;
   dataHeads: TableHead[];
   data: T[];
@@ -101,6 +103,7 @@ type GeneralTableProps<T extends TableRow> = {
 };
 
 const GeneralTable = <T extends TableRow>({
+  dataPending = false,
   tableTitle,
   dataHeads,
   data,
@@ -476,97 +479,101 @@ const GeneralTable = <T extends TableRow>({
         </div>
       </div>
 
-      {/* Tabel di-scroll horizontal saat layar lebih sempit dari isinya */}
-      <div className="mt-4 w-full overflow-x-auto">
-        <table className="w-full whitespace-nowrap border-separate border-spacing-0">
-          <thead className="bg-gray-50 text-left text-base">
-            <tr>
-              {dataHeads.map((head, index) => (
-                <th
-                  key={head.key}
-                  className={`px-4 py-2 text-gray-500 font-normal ${index === 0 ? "rounded-l-md" : ""}`}
-                >
-                  <div className="flex justify-start items-center gap-2">
-                    {index === 0 && deleteBulk && <input type="checkbox" />}
-                    <span>{head.label}</span>
-                  </div>
-                </th>
-              ))}
-              <th className="px-4 py-2 text-gray-500 font-normal rounded-r-md">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody className="text-left text-sm">
-            {sortedData.map((row) => (
-              <tr key={row.id}>
+      {dataPending ? (
+        <LoadingCircle className="mt-4 py-16" />
+      ) : (
+        // Tabel di-scroll horizontal saat layar lebih sempit dari isinya
+        <div className="mt-4 w-full overflow-x-auto">
+          <table className="w-full whitespace-nowrap border-separate border-spacing-0">
+            <thead className="bg-gray-50 text-left text-base">
+              <tr>
                 {dataHeads.map((head, index) => (
-                  <td
+                  <th
                     key={head.key}
-                    className="px-4 py-3 border-b border-gray-100 text-gray-500"
+                    className={`px-4 py-2 text-gray-500 font-normal ${index === 0 ? "rounded-l-md" : ""}`}
                   >
-                    {index === 0 ? (
-                      <div className="flex justify-start items-center gap-2">
-                        {deleteBulk && (
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(row.id)}
-                            onChange={() => toggleSelect(row.id)}
-                          />
-                        )}
+                    <div className="flex justify-start items-center gap-2">
+                      {index === 0 && deleteBulk && <input type="checkbox" />}
+                      <span>{head.label}</span>
+                    </div>
+                  </th>
+                ))}
+                <th className="px-4 py-2 text-gray-500 font-normal rounded-r-md">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-left text-sm">
+              {sortedData.map((row) => (
+                <tr key={row.id}>
+                  {dataHeads.map((head, index) => (
+                    <td
+                      key={head.key}
+                      className="px-4 py-3 border-b border-gray-100 text-gray-500"
+                    >
+                      {index === 0 ? (
+                        <div className="flex justify-start items-center gap-2">
+                          {deleteBulk && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(row.id)}
+                              onChange={() => toggleSelect(row.id)}
+                            />
+                          )}
 
-                        <span className="font-semibold text-black">
-                          {String(row[head.key] ?? "")}
-                        </span>
-                      </div>
-                    ) : head.render ? (
-                      head.render(row)
-                    ) : (
-                      String(row[head.key] ?? "")
+                          <span className="font-semibold text-black">
+                            {String(row[head.key] ?? "")}
+                          </span>
+                        </div>
+                      ) : head.render ? (
+                        head.render(row)
+                      ) : (
+                        String(row[head.key] ?? "")
+                      )}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 border-b border-gray-100">
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDelete?.(row.id)}
+                        className="p-2 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500 cursor-pointer transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    {canShow && (
+                      <button
+                        onClick={() => setDetailRow(row)}
+                        className="p-2 rounded-full text-gray-400 hover:bg-red-50 hover:text-orange-500 cursor-pointer transition-colors"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    )}
+                    {canDetail && (
+                      <button
+                        onClick={() => handleDetail?.(row.id)}
+                        className="py-1 px-2.5 rounded-3xl bg-gray-100 border border-gray-100 text-sm text-gray-500 font-semibold hover:bg-orange-300 hover:text-white cursor-pointer active:bg-orange-400"
+                      >
+                        Detail
+                      </button>
                     )}
                   </td>
-                ))}
-                <td className="px-4 py-3 border-b border-gray-100">
-                  {canDelete && (
-                    <button
-                      onClick={() => handleDelete?.(row.id)}
-                      className="p-2 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500 cursor-pointer transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                  {canShow && (
-                    <button
-                      onClick={() => setDetailRow(row)}
-                      className="p-2 rounded-full text-gray-400 hover:bg-red-50 hover:text-orange-500 cursor-pointer transition-colors"
-                    >
-                      <Eye size={16} />
-                    </button>
-                  )}
-                  {canDetail && (
-                    <button
-                      onClick={() => handleDetail?.(row.id)}
-                      className="py-1 px-2.5 rounded-3xl bg-gray-100 border border-gray-100 text-sm text-gray-500 font-semibold hover:bg-orange-300 hover:text-white cursor-pointer active:bg-orange-400"
-                    >
-                      Detail
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {sortedData.length === 0 && (
-              <tr>
-                <td
-                  colSpan={dataHeads.length + 1}
-                  className="px-4 py-8 text-center text-gray-400"
-                >
-                  No data found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </tr>
+              ))}
+              {sortedData.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={dataHeads.length + 1}
+                    className="px-4 py-8 text-center text-gray-400"
+                  >
+                    No data found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">

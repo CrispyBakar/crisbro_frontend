@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import LoadingCircle from "@/components/LoadingCircle";
 
 type ProtectedRouteProps = {
   roles?: string[];
@@ -10,11 +11,7 @@ const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   const location = useLocation();
 
   if (isPending) {
-    return (
-      <div className="flex h-dvh items-center justify-center">
-        <span className="animate-spin size-8 rounded-full border-2 border-gay-300 border-t-berry-red" />
-      </div>
-    );
+    return <LoadingCircle />;
   }
 
   //   Unauthenticated

@@ -22,6 +22,7 @@ const AdminCustomers = () => {
   const {
     data: customers,
     isPending,
+    isFetching,
     error,
   } = useCustomers({
     limit: itemsPerPage,
@@ -52,6 +53,7 @@ const AdminCustomers = () => {
         <p className="text-red-500">Gagal memuat customers: {error.message}</p>
       ) : (
         <GeneralTable
+          dataPending={isFetching}
           sortBy={sortBy}
           orderBy={orderBy}
           setSortBy={setSortBy}

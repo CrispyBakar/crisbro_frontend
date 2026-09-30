@@ -26,6 +26,7 @@ const AdminProducts = () => {
   const {
     data: products,
     isPending: pendingProducts,
+    isFetching: fetchingProducts,
     error: errorProducts,
   } = useProducts({
     take: itemsPerPage,
@@ -68,6 +69,7 @@ const AdminProducts = () => {
         </p>
       ) : (
         <GeneralTable
+          dataPending={fetchingProducts}
           canSelectDate={false}
           deleteBulk={false}
           tableTitle="Products"

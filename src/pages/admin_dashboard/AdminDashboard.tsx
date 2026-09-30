@@ -112,6 +112,7 @@ const AdminDashboard = () => {
   const {
     data: recentTransactions,
     isPending: recentTransactionsPending,
+    isFetching: recentTransactionsFetching,
     error: recentTransactionsError,
   } = useRecentTransactions({
     take: itemsPerPage,
@@ -202,6 +203,7 @@ const AdminDashboard = () => {
           </p>
         ) : (
           <GeneralTable
+            dataPending={recentTransactionsFetching}
             canSelectDate={false}
             deleteBulk={false}
             tableTitle="Recent Transactions"
