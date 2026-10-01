@@ -60,7 +60,7 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
         label: "Loyalty Products",
         endpoint: "/admin/products-loyalty",
       },
-      // { icon: TicketPercent, label: "Promos", endpoint: "/admin/promos" },
+      // { icon: TicketPercent, label: "Promotions", endpoint: "/admin/promos" },
       // { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
     ],
   },

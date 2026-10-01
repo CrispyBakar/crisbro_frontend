@@ -123,6 +123,7 @@ const GeneralTable = <T extends TableRow>({
   canDetail,
   canShow,
   handleDetail,
+  detailButton = "Detail",
   canSelectDate,
   setStartDate,
   setEndDate,
@@ -554,7 +555,7 @@ const GeneralTable = <T extends TableRow>({
                         onClick={() => handleDetail?.(row.id)}
                         className="py-1 px-2.5 rounded-3xl bg-gray-100 border border-gray-100 text-sm text-gray-500 font-semibold hover:bg-orange-300 hover:text-white cursor-pointer active:bg-orange-400"
                       >
-                        Detail
+                        {detailButton}
                       </button>
                     )}
                   </td>

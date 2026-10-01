@@ -13,6 +13,7 @@ import AdminProducts from "@/pages/admin_products/AdminProducts";
 import AdminProductsLoyalty from "@/pages/admin_products_loyalty/AdminProductsLoyalty";
 import AdminSettings from "@/pages/admin_settings/AdminSettings";
 import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
+import AdminPromo from "@/pages/admin_promo/AdminPromo";
 
 const router = createBrowserRouter([
   {
@@ -71,6 +72,11 @@ const router = createBrowserRouter([
               { index: true, Component: AdminSettings },
               { path: "profile", Component: AdminProfile },
             ],
+          },
+          {
+            path: "promos",
+            element: <AdminRootLayout />,
+            children: [{ index: true, Component: AdminPromo }],
           },
         ],
       },
