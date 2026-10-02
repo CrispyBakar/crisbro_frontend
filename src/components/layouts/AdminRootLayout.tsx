@@ -28,7 +28,7 @@ const AdminRootLayout = ({ children }: AdminRootLayoutProps) => {
       {/* Navbar */}
       <AdminNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 gap-5 sm:mt-4 lg:grid-cols-[17rem_1fr]">
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-5 sm:mt-4 lg:grid-cols-[17rem_1fr]">
         {/* Backdrop drawer (mobile/tablet) */}
         {isSidebarOpen && (
           <div

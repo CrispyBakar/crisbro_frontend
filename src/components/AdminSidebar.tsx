@@ -8,6 +8,8 @@ import {
   ShoppingCart,
   Users,
   Utensils,
+  TicketPercent,
+  HandCoins,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
@@ -60,8 +62,13 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
         label: "Loyalty Products",
         endpoint: "/admin/products-loyalty",
       },
-      // { icon: TicketPercent, label: "Promotions", endpoint: "/admin/promos" },
-      // { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
+    ],
+  },
+  {
+    label: "Loyalty",
+    items: [
+      { icon: TicketPercent, label: "Promotions", endpoint: "/admin/promos" },
+      { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
     ],
   },
   {

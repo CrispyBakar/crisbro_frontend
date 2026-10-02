@@ -1,26 +1,7 @@
 import { useState } from "react";
 import { Check, Copy, Search, X } from "lucide-react";
-import type { PromoCode } from "@/services/promo";
-
-// TODO: ganti dengan data dari GET /promos/:promo_id (field promo_codes)
-const createDummyPromoCodes = (promoId: string): PromoCode[] =>
-  ["H1OBPQRC1", "K7ZMWT3QA", "P2XNLD8VE", "R9CUYH4BS", "T5GJKE6WN"].map(
-    (code, index) => ({
-      promo_code_id: `${promoId}-${index}`,
-      promo_id: promoId,
-      runchise_id: 900000 + index,
-      code,
-      usage_type: "single",
-      status: index < 2 ? "used" : "active",
-      maximum_usage: 1,
-      number_of_usage: index < 2 ? 1 : 0,
-      last_usage: index < 2 ? "2026-09-28T10:15:00.000Z" : null,
-      deactivate_at: null,
-      deactivate_reason: null,
-      created_at: "2026-09-25T08:00:00.000Z",
-      updated_at: "2026-09-28T10:15:00.000Z",
-    }),
-  );
+import { usePromo } from "@/hooks/use-promos";
+import LoadingCircle from "@/components/LoadingCircle";
 
 const formatDateTime = (value: string | null) =>
   value
@@ -55,7 +36,9 @@ const PromoCodesModal = ({
   const [search, setSearch] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const promoCodes = createDummyPromoCodes(promoId);
+  // promo_codes diambil dari GET /promos/:promo_id
+  const { data: promoDetail, isPending, error } = usePromo(promoId);
+  const promoCodes = promoDetail?.promo_codes ?? [];
   const filteredCodes = promoCodes.filter((promoCode) =>
     (promoCode.code ?? "")
       .toLowerCase()
@@ -86,7 +69,8 @@ const PromoCodesModal = ({
           <div className="min-w-0">
             <h3 className="text-lg font-bold text-chocolate">Promo Codes</h3>
             <span className="block truncate text-xs text-gray-500">
-              {promoName} · {promoCodes.length} kode
+              {promoName}
+              {!isPending && !error && ` · ${promoCodes.length} kode`}
             </span>
           </div>
           <button
@@ -170,15 +154,34 @@ const PromoCodesModal = ({
                     </td>
                   </tr>
                 ))}
-                {filteredCodes.length === 0 && (
+                {isPending ? (
+                  <tr>
+                    <td colSpan={5}>
+                      <LoadingCircle className="py-8" />
+                    </td>
+                  </tr>
+                ) : error ? (
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-8 text-center text-gray-400"
+                      className="px-4 py-8 text-center text-red-500"
                     >
-                      Tidak ada promo code
+                      Gagal memuat promo code: {error.message}
                     </td>
                   </tr>
+                ) : (
+                  filteredCodes.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-8 text-center text-gray-400"
+                      >
+                        {promoCodes.length === 0
+                          ? "Promo ini belum memiliki promo code"
+                          : "Promo code tidak ditemukan"}
+                      </td>
+                    </tr>
+                  )
                 )}
               </tbody>
             </table>

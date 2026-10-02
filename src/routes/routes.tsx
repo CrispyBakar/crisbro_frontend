@@ -14,6 +14,7 @@ import AdminProductsLoyalty from "@/pages/admin_products_loyalty/AdminProductsLo
 import AdminSettings from "@/pages/admin_settings/AdminSettings";
 import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
 import AdminPromo from "@/pages/admin_promo/AdminPromo";
+import AdminReferral from "@/pages/admin_referral/AdminReferral";
 
 const router = createBrowserRouter([
   {
@@ -77,6 +78,11 @@ const router = createBrowserRouter([
             path: "promos",
             element: <AdminRootLayout />,
             children: [{ index: true, Component: AdminPromo }],
+          },
+          {
+            path: "referrals",
+            element: <AdminRootLayout />,
+            children: [{ index: true, Component: AdminReferral }],
           },
         ],
       },

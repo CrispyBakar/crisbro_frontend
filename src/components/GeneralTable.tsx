@@ -100,6 +100,8 @@ type GeneralTableProps<T extends TableRow> = {
   filterValue?: string;
   onFilterChange?: (value: string) => void;
   handleDetail?: (id: string) => void;
+  // Tombol aksi tambahan per baris di kolom Action, mis. tombol validasi
+  renderActions?: (row: T) => React.ReactNode;
 };
 
 const GeneralTable = <T extends TableRow>({
@@ -137,6 +139,7 @@ const GeneralTable = <T extends TableRow>({
   filterOptions,
   filterValue = "",
   onFilterChange,
+  renderActions,
 }: GeneralTableProps<T>) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [internalSearch, setInternalSearch] = useState("");
@@ -534,6 +537,7 @@ const GeneralTable = <T extends TableRow>({
                     </td>
                   ))}
                   <td className="px-4 py-3 border-b border-gray-100">
+                    {renderActions?.(row)}
                     {canDelete && (
                       <button
                         onClick={() => handleDelete?.(row.id)}
