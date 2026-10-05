@@ -60,6 +60,108 @@ export const getCurrentUser = async (): Promise<CurrentUser | null> => {
   return user;
 };
 
+export interface CustomerLoginPayload {
+  phone: string;
+  password: string;
+}
+
+export type CustomerUser = Omit<CurrentUser, "customer"> & {
+  customer?: {
+    customer_id: string;
+    name: string;
+    total_point: number;
+    available_point: number;
+  } | null;
+};
+
+export interface CustomerLoginResponse {
+  expiresIn: string;
+  user: CustomerUser;
+}
+
+export const loginCustomer = async (
+  payload: CustomerLoginPayload,
+): Promise<CustomerLoginResponse> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/login`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Nomor HP atau password salah");
+  }
+
+  return res.json();
+};
+
+export interface CustomerRegisterPayload {
+  name: string;
+  phone: string;
+  username: string;
+  email: string;
+  password: string;
+  // runchise_id outlet yang dipilih
+  location_id: number;
+  referral_code?: string;
+}
+
+export interface CustomerRegisterResponse {
+  success: boolean;
+  message: string;
+  data: {
+    user: CustomerUser;
+    // Teks aktivasi yang harus dikirim user lewat WhatsApp tanpa diubah
+    text: string;
+  };
+}
+
+export const registerCustomer = async (
+  payload: CustomerRegisterPayload,
+): Promise<CustomerRegisterResponse> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/register`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-protection": "1",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    // Gagal validasi: { success: false, errors: { field: [pesan] } } tanpa message
+    const fieldError = error?.errors
+      ? Object.values(error.errors).flat()[0]
+      : null;
+    throw new Error(
+      error?.message ?? fieldError ?? "Gagal mendaftar, coba lagi nanti",
+    );
+  }
+
+  return res.json();
+};
+
+// /me khusus admin & marketing — sesi customer diambil dari /profile
+export const getCustomerProfile = async (): Promise<CustomerUser | null> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/profile`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  // 401: belum login, 403: nomor HP belum diverifikasi
+  if (res.status === 401 || res.status === 403) return null;
+  if (!res.ok) throw new Error("Gagal memuat sesi");
+
+  const user: CustomerUser = await res.json();
+  return user;
+};
+
 export interface ChangePasswordPayload {
   current_password: string;
   new_password: string;

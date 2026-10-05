@@ -16,6 +16,9 @@
   --color-border: #f8d7be;
   --color-input: #fcecd9;
   --color-success: #168a45;
+
+  /* Lebar maksimum kolom mobile halaman customer (max-w-mobile) */
+  --container-mobile: 30rem;
 }
 
 /*

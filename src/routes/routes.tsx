@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, redirect } from "react-router";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router";
 import AdminAuthLayout from "../components/layouts/AdminAuthLayout";
 import ErrorPage from "@/pages/error/ErrorPage";
 import AdminLoginPage from "@/pages/auth/AdminLoginPage";
@@ -15,12 +15,17 @@ import AdminSettings from "@/pages/admin_settings/AdminSettings";
 import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
 import AdminPromo from "@/pages/admin_promo/AdminPromo";
 import AdminReferral from "@/pages/admin_referral/AdminReferral";
+import CustomerAuthLayout from "@/components/layouts/CustomerAuthLayout";
+import CustomerLoginPage from "@/pages/auth/CustomerLoginPage";
+import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage";
+import CustomerRootLayout from "@/components/layouts/CustomerRootLayout";
+import CustomerHomePage from "@/pages/customer_home/CustomerHomePage";
 
 const router = createBrowserRouter([
-  {
-    path: "/",
-    loader: () => redirect("/admin/login"),
-  },
+  // {
+  //   path: "/",
+  //   loader: () => redirect("/admin/login"),
+  // },
   {
     path: "/admin",
     element: <AdminAuthLayout />,
@@ -85,6 +90,51 @@ const router = createBrowserRouter([
             children: [{ index: true, Component: AdminReferral }],
           },
         ],
+      },
+    ],
+  },
+  {
+    path: "/",
+    element: (
+      <CustomerRootLayout>
+        <Outlet />
+      </CustomerRootLayout>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        Component: CustomerHomePage,
+      },
+    ],
+  },
+  {
+    path: "/login",
+    element: (
+      <CustomerAuthLayout>
+        <Outlet />
+      </CustomerAuthLayout>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        Component: CustomerLoginPage,
+      },
+    ],
+  },
+  {
+    path: "/register",
+    element: (
+      <CustomerAuthLayout>
+        <Outlet />
+      </CustomerAuthLayout>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        Component: CustomerRegisterPage,
       },
     ],
   },
