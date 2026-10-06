@@ -9,11 +9,11 @@
   --color-berry-red: #e60c19;
   --color-sunshine-yellow: #ffd815;
   --color-orange: #ff9100;
-  --color-cream: #fcfbf8;
+  --color-cream: #f7f6f5;
   --color-peach: #ffd8bb;
   --color-chocolate: #361715;
   --color-muted: #82564f;
-  --color-border: #f8d7be;
+  --color-border: #d6d5d4;
   --color-input: #fcecd9;
   --color-success: #168a45;
 
@@ -25,3 +25,40 @@
  * Sweet Gradient (#FFD815 -> #FF9100 -> #E60C19):
  * bg-linear-to-r from-sunshine-yellow via-orange to-berry-red
  */
+
+/*
+ * Kartu kupon bergerigi di sisi kiri dan kanan (kartu voucher).
+ * coupon-edges memotong lekukan setengah lingkaran di kedua sisi; mask ikut
+ * memotong border dan shadow, jadi garis tepinya digambar oleh pembungkus
+ * ber-class coupon lewat drop-shadow yang mengikuti bentuk hasil potongan.
+ */
+@utility coupon {
+  filter: drop-shadow(
+      0 0 0.75px color-mix(in srgb, var(--color-chocolate) 50%, transparent)
+    )
+    drop-shadow(
+      0 1px 2px color-mix(in srgb, var(--color-chocolate) 10%, transparent)
+    );
+}
+
+@utility coupon-edges {
+  --coupon-notch: 6px;
+  mask-image:
+    radial-gradient(
+      circle at 0 50%,
+      transparent var(--coupon-notch),
+      black calc(var(--coupon-notch) + 0.5px)
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      transparent var(--coupon-notch),
+      black calc(var(--coupon-notch) + 0.5px)
+    );
+  /* 51%: kedua lapisan sedikit bertumpuk supaya tidak ada celah di tengah */
+  mask-size: 51% 20px;
+  mask-position:
+    0 0,
+    100% 0;
+  /* round: jumlah lekukan dibulatkan supaya tidak terpotong di ujung bawah */
+  mask-repeat: no-repeat round;
+}

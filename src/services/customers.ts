@@ -190,6 +190,48 @@ export const getCustomerPointHistory = async ({
   return data.data.data;
 };
 
+export interface GetPointHistoryResponse {
+  data: CustomerPointHistory[];
+  meta: GetCustomersResponse["meta"];
+}
+
+// Khusus role customer: riwayat poin milik user yang sedang login, terbaru dulu
+export const getMyPointHistory = async ({
+  page,
+  limit,
+}: {
+  page: number;
+  limit: number;
+}): Promise<GetPointHistoryResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sort_by: "formatted_created_at",
+    sort_order: "desc",
+  });
+
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/customers/me/point-history?${params}`,
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(
+      typeof error?.message === "string"
+        ? error.message
+        : "Gagal memuat riwayat poin",
+    );
+  }
+
+  const data = await res.json();
+
+  return data.data;
+};
+
 export const updateCustomer = async ({
   customer_id,
   ...payload
@@ -210,6 +252,50 @@ export const updateCustomer = async ({
   if (!res.ok) {
     const error = await res.json().catch(() => null);
     throw new Error(error?.message ?? "Gagal memperbarui customer");
+  }
+
+  const data = await res.json();
+
+  return data.data;
+};
+
+// Field yang diterima endpoint PATCH /customers/me (schema strict): sama dengan
+// update oleh admin, tanpa status dan owner_location_id
+export type ParamsUpdateMyCustomer = Omit<
+  ParamsUpdateCustomer,
+  "customer_id" | "status" | "owner_location_id"
+>;
+
+const UPDATE_MY_CUSTOMER_ERRORS: Record<string, string> = {
+  "Email is already registered": "Email ini sudah dipakai akun lain",
+  // Nama, alamat, dan jenis kelamin ikut disimpan ke Runchise; email dan
+  // tanggal lahir hanya disimpan lokal
+  "Customer belum terhubung ke Runchise, tidak bisa update":
+    "Data member kamu belum tersinkron. Untuk sementara hanya email dan tanggal lahir yang bisa diubah.",
+};
+
+// Khusus role customer: memperbarui data diri milik user yang sedang login
+export const updateMyCustomer = async (
+  payload: ParamsUpdateMyCustomer,
+): Promise<Customer> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/customers/me`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-protection": "1",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    // Gagal validasi (422) mengirim message berbentuk { field: [pesan] }
+    const message = typeof error?.message === "string" ? error.message : null;
+    throw new Error(
+      (message && (UPDATE_MY_CUSTOMER_ERRORS[message] ?? message)) ??
+        "Gagal memperbarui profil, coba lagi nanti",
+    );
   }
 
   const data = await res.json();

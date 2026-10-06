@@ -60,6 +60,27 @@ export const getLoyaltyProducts = async ({
   return result.data;
 };
 
+// Backend membatasi 100 produk per permintaan
+const LOYALTY_PRODUCTS_PAGE_SIZE = 100;
+
+// Seluruh produk loyalty sekaligus, untuk daftar yang difilter di sisi client
+export const getAllLoyaltyProducts = async (): Promise<LoyaltyProduct[]> => {
+  const products: LoyaltyProduct[] = [];
+  let total = Infinity;
+
+  while (products.length < total) {
+    const page = await getLoyaltyProducts({
+      take: LOYALTY_PRODUCTS_PAGE_SIZE,
+      skip: products.length,
+    });
+    total = page.total;
+    if (page.loyalty_products.length === 0) break;
+    products.push(...page.loyalty_products);
+  }
+
+  return products;
+};
+
 export const syncLoyaltyProducts = async (): Promise<LoyaltyProduct[]> => {
   const res = await fetch(
     `${import.meta.env.VITE_API_BASE_URL}/products/sync-loyalty-products`,

@@ -32,6 +32,7 @@ export interface ParamsLocation {
   query?: string;
   city?: string;
   status?: string;
+  branch_type?: string;
 }
 
 export interface LocationsResponse {
@@ -59,6 +60,7 @@ export const getLocations = async ({
   query,
   city,
   status,
+  branch_type,
 }: ParamsLocation): Promise<LocationsResponse> => {
   const params = new URLSearchParams({
     ...(take ? { take: String(take) } : {}),
@@ -66,6 +68,7 @@ export const getLocations = async ({
     ...(query ? { query: String(query) } : {}),
     ...(city ? { city: String(city) } : {}),
     ...(status ? { status: String(status) } : {}),
+    ...(branch_type ? { branch_type } : {}),
   });
 
   const res = await fetch(
@@ -86,6 +89,28 @@ export const getLocations = async ({
   const locations = data.data;
 
   return locations;
+};
+
+// Backend membatasi 100 lokasi per permintaan
+const LOCATIONS_PAGE_SIZE = 100;
+
+// Seluruh outlet untuk halaman customer; central kitchen tidak ikut
+export const getAllOutlets = async (): Promise<Location[]> => {
+  const outlets: Location[] = [];
+  let total = Infinity;
+
+  while (outlets.length < total) {
+    const page = await getLocations({
+      take: LOCATIONS_PAGE_SIZE,
+      skip: outlets.length,
+      branch_type: "outlet",
+    });
+    total = page.total;
+    if (page.locations.length === 0) break;
+    outlets.push(...page.locations);
+  }
+
+  return outlets;
 };
 
 export const deleteLocation = async ({

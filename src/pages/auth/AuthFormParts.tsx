@@ -3,12 +3,15 @@ import type { ComponentProps, ReactNode } from "react";
 import { Link } from "react-router";
 import {
   ArrowLeft,
+  Circle,
   CircleAlert,
+  CircleCheck,
   Eye,
   EyeOff,
   LoaderCircle,
 } from "lucide-react";
 import crisbarLogo from "@/assets/logo-crisbar-spotlight.png";
+import { passwordRules } from "@/lib/password";
 import { fieldBoxClass, fieldInputClass } from "./fieldStyles";
 
 const focusRingClass =
@@ -179,13 +182,47 @@ export const PasswordField = (props: PresetFieldProps) => {
   );
 };
 
-export const FormAlert = ({ message }: { message: string }) => {
+// Daftar syarat password; tiap syarat berubah hijau begitu terpenuhi
+export const PasswordRuleList = ({ password }: { password: string }) => {
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1">
+      {passwordRules.map((rule) => {
+        const isMet = rule.test(password);
+        const Icon = isMet ? CircleCheck : Circle;
+        return (
+          <li
+            key={rule.label}
+            className={`flex items-center gap-1.5 ${isMet ? "text-success" : ""}`}
+          >
+            <Icon size={14} className="shrink-0" />
+            {rule.label}
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
+
+export const FormAlert = ({
+  message,
+  tone = "error",
+}: {
+  message: string;
+  tone?: "error" | "success";
+}) => {
+  const isSuccess = tone === "success";
+  const Icon = isSuccess ? CircleCheck : CircleAlert;
+
   return (
     <p
-      role="alert"
-      className="flex items-start gap-2 rounded-xl border border-berry-red/20 bg-berry-red/5 px-3.5 py-3 text-sm text-berry-red"
+      role={isSuccess ? "status" : "alert"}
+      className={`flex items-start gap-2 rounded-xl border px-3.5 py-3 text-sm ${
+        isSuccess
+          ? "border-success/20 bg-success/5 text-success"
+          : "border-berry-red/20 bg-berry-red/5 text-berry-red"
+      }`}
     >
-      <CircleAlert size={18} className="mt-px shrink-0" />
+      <Icon size={18} className="mt-px shrink-0" />
       {message}
     </p>
   );
@@ -193,15 +230,17 @@ export const FormAlert = ({ message }: { message: string }) => {
 
 export const SubmitButton = ({
   pending,
+  disabled,
   children,
 }: {
   pending: boolean;
+  disabled?: boolean;
   children: ReactNode;
 }) => {
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className={`flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-berry-red text-base font-bold text-white transition-colors hover:bg-berry-red/90 disabled:cursor-not-allowed disabled:opacity-60 ${focusRingClass}`}
     >
       {pending && <LoaderCircle size={18} className="animate-spin" />}

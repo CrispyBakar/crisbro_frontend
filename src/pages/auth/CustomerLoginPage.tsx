@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCustomerLogin } from "@/hooks/use-login";
 import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useActivationText } from "@/hooks/use-phone-activation";
 import { normalizePhone } from "@/lib/phone";
 import {
   AuthFooterLink,
@@ -15,6 +16,7 @@ import {
   PhoneField,
   SubmitButton,
 } from "./AuthFormParts";
+import PhoneActivationDialog from "./PhoneActivationDialog";
 
 type FormField = "phone" | "password";
 type FormError = { field: FormField; message: string };
@@ -25,10 +27,12 @@ const CustomerLoginPage = () => {
   const [phone, setPhone] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [formError, setFormError] = useState<FormError | null>(null);
+  const [isActivationOpen, setIsActivationOpen] = useState<boolean>(false);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const login = useCustomerLogin();
+  const activation = useActivationText();
   const { data: user } = useCustomerProfile();
 
   // Sudah login — tidak perlu melihat halaman ini lagi
@@ -69,6 +73,14 @@ const CustomerLoginPage = () => {
       { phone: normalizedPhone, password },
       {
         onSuccess: (data) => {
+          // Nomor belum diverifikasi: tahan di halaman ini sampai aktivasi
+          // lewat WhatsApp selesai
+          if (!data.user.phone_verified) {
+            setIsActivationOpen(true);
+            activation.mutate();
+            return;
+          }
+
           queryClient.setQueryData(["auth", "profile"], data.user);
           navigate("/", { replace: true });
         },
@@ -127,6 +139,18 @@ const CustomerLoginPage = () => {
           />
         </div>
       </form>
+
+      {isActivationOpen && (
+        <PhoneActivationDialog
+          text={activation.data}
+          isPreparing={activation.isPending}
+          prepareError={
+            activation.isError ? activation.error.message : undefined
+          }
+          onRetry={() => activation.mutate()}
+          onClose={() => setIsActivationOpen(false)}
+        />
+      )}
     </div>
   );
 };

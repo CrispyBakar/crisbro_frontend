@@ -96,3 +96,42 @@ export const validateReferral = async (user_id: string) => {
   const data = await response.json();
   return data.data;
 };
+
+// Kode referral milik customer, dikembalikan saat kode dibuat
+export interface ReferralCodeData {
+  user_id: string;
+  referral_code: string;
+  referral_expires_at: string;
+}
+
+const GENERATE_REFERRAL_ERRORS: Record<string, string> = {
+  "Referral program has been created for this user":
+    "Kode referral kamu sudah pernah dibuat.",
+};
+
+// Khusus role customer; satu customer hanya punya satu kode. Tanpa body,
+// backend memakai nilai default program (poin dan masa berlaku).
+export const generateReferralCode = async (): Promise<ReferralCodeData> => {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/referral/generate`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "x-csrf-protection": "1",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    const message = typeof error?.message === "string" ? error.message : null;
+    throw new Error(
+      (message && (GENERATE_REFERRAL_ERRORS[message] ?? message)) ??
+        "Gagal membuat kode referral, coba lagi nanti",
+    );
+  }
+
+  const data = await response.json();
+  return data.data;
+};

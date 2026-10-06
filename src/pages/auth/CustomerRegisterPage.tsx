@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 import { Navigate } from "react-router";
-import { Check, Circle, CircleCheck } from "lucide-react";
-import whatsappIcon from "@/assets/whatsapp-icon.png";
+import { Check } from "lucide-react";
 import { useCustomerRegister } from "@/hooks/use-register";
 import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { isPasswordValid } from "@/lib/password";
 import { normalizePhone } from "@/lib/phone";
 import {
   AuthFooterLink,
@@ -14,23 +14,14 @@ import {
   Field,
   FormAlert,
   PasswordField,
+  PasswordRuleList,
   PhoneField,
   SubmitButton,
   TextField,
 } from "./AuthFormParts";
+import ActivationMessage from "./ActivationMessage";
 import OutletSelect from "./OutletSelect";
 import type { SelectedOutlet } from "./OutletSelect";
-
-// Nomor WhatsApp bot aktivasi Crisbro (format 62xxx); bila kosong, tombol kirim diganti tombol salin pesan
-const ACTIVATION_WA_NUMBER: string | undefined = import.meta.env
-  .VITE_ACTIVATION_WA_NUMBER;
-
-// Aturan password backend: minimal 8 karakter, ada huruf besar dan angka
-const passwordRules = [
-  { label: "Minimal 8 karakter", test: (value: string) => value.length >= 8 },
-  { label: "Huruf besar", test: (value: string) => /[A-Z]/.test(value) },
-  { label: "Angka", test: (value: string) => /[0-9]/.test(value) },
-];
 
 type FormField = "name" | "phone" | "email" | "password" | "outlet";
 type FormError = { field: FormField; message: string };
@@ -45,7 +36,6 @@ const CustomerRegisterPage = () => {
   const [referralCode, setReferralCode] = useState<string>("");
   const [outlet, setOutlet] = useState<SelectedOutlet | null>(null);
   const [formError, setFormError] = useState<FormError | null>(null);
-  const [isCopied, setIsCopied] = useState<boolean>(false);
 
   const register = useCustomerRegister();
   const { data: user } = useCustomerProfile();
@@ -89,7 +79,7 @@ const CustomerRegisterPage = () => {
       failField("email", "Format email tidak valid");
       return;
     }
-    if (!passwordRules.every((rule) => rule.test(password))) {
+    if (!isPasswordValid(password)) {
       failField("password", "Password belum memenuhi syarat di bawah");
       return;
     }
@@ -115,12 +105,6 @@ const CustomerRegisterPage = () => {
     !formError && register.isError ? register.error.message : "";
   const activationText = register.data?.data.text;
 
-  const handleCopy = async () => {
-    if (!activationText) return;
-    await navigator.clipboard.writeText(activationText);
-    setIsCopied(true);
-  };
-
   if (activationText) {
     // Akun dibuat, tapi nomor baru aktif setelah pesan ini dikirim lewat WhatsApp
     return (
@@ -138,32 +122,11 @@ const CustomerRegisterPage = () => {
           dari nomor yang kamu daftarkan, tanpa mengubah isinya.
         </p>
 
-        <p className="mt-6 rounded-xl border border-chocolate/15 bg-white px-4 py-3.5 text-sm font-medium leading-relaxed whitespace-pre-line text-chocolate">
-          {activationText}
-        </p>
-
-        <div className="mt-6">
-          {ACTIVATION_WA_NUMBER ? (
-            <a
-              href={`https://wa.me/${ACTIVATION_WA_NUMBER}?text=${encodeURIComponent(activationText)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-success text-base font-bold text-white transition-colors hover:bg-success/90"
-            >
-              <img src={whatsappIcon} alt="" className="h-5 w-5" />
-              Kirim aktivasi ke WhatsApp
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-chocolate/20 bg-white text-base font-bold text-chocolate transition-colors hover:bg-chocolate/5"
-            >
-              {isCopied && <Check size={18} className="text-success" />}
-              {isCopied ? "Pesan tersalin" : "Salin pesan"}
-            </button>
-          )}
-        </div>
+        <ActivationMessage
+          text={activationText}
+          sendLabel="Kirim aktivasi ke WhatsApp"
+          className="mt-6 gap-6"
+        />
 
         <div className="mt-6">
           <AuthFooterLink
@@ -240,23 +203,7 @@ const CustomerRegisterPage = () => {
           }}
           autoComplete="new-password"
           error={errorFor("password")}
-          hint={
-            <ul className="flex flex-wrap gap-x-4 gap-y-1">
-              {passwordRules.map((rule) => {
-                const isMet = rule.test(password);
-                const Icon = isMet ? CircleCheck : Circle;
-                return (
-                  <li
-                    key={rule.label}
-                    className={`flex items-center gap-1.5 ${isMet ? "text-success" : ""}`}
-                  >
-                    <Icon size={14} className="shrink-0" />
-                    {rule.label}
-                  </li>
-                );
-              })}
-            </ul>
-          }
+          hint={<PasswordRuleList password={password} />}
         />
 
         <Field id="outlet" label="Outlet terdekat" error={errorFor("outlet")}>

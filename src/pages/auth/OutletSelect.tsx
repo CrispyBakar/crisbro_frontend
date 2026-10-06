@@ -26,6 +26,8 @@ const OutletOptions = ({
   const { data, isLoading, isFetching, error } = useLocations({
     take: 20,
     query: search,
+    // Central kitchen dan tipe lokasi lain bukan outlet yang bisa dipilih customer
+    branch_type: "outlet",
   });
 
   // Register butuh runchise_id → outlet tanpa runchise_id tidak bisa dipilih

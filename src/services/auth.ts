@@ -71,6 +71,17 @@ export type CustomerUser = Omit<CurrentUser, "customer"> & {
     name: string;
     total_point: number;
     available_point: number;
+    // runchise_id outlet tempat member terdaftar
+    runchise_location_id?: number | null;
+    // Data diri — /login dan /profile mengirim seluruh kolom Customer
+    address?: string | null;
+    province?: string | null;
+    city?: string | null;
+    postal_code?: string | null;
+    // ISO date, mis. "1995-03-12T00:00:00.000Z"
+    dob?: string | null;
+    // male | female | unknown
+    gender?: string | null;
   } | null;
 };
 
@@ -87,6 +98,9 @@ export const loginCustomer = async (
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      // Wajib bila masih ada cookie sesi lama, misalnya login ulang setelah
+      // popup aktivasi ditutup
+      "x-csrf-protection": "1",
     },
     body: JSON.stringify(payload),
   });
@@ -97,6 +111,38 @@ export const loginCustomer = async (
   }
 
   return res.json();
+};
+
+export const logout = async (): Promise<void> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "x-csrf-protection": "1",
+    },
+  });
+
+  if (!res.ok) throw new Error("Gagal keluar");
+};
+
+// Butuh sesi login. Tiap panggilan membuat no. referensi baru, jadi teks
+// aktivasi yang lama tidak berlaku lagi.
+export const requestActivationText = async (): Promise<string> => {
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/send-otp`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "x-csrf-protection": "1",
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Gagal menyiapkan pesan aktivasi");
+  }
+
+  const body: { data: { text: string } } = await res.json();
+  return body.data.text;
 };
 
 export interface CustomerRegisterPayload {
@@ -159,6 +205,8 @@ export const getCustomerProfile = async (): Promise<CustomerUser | null> => {
   if (!res.ok) throw new Error("Gagal memuat sesi");
 
   const user: CustomerUser = await res.json();
+  // Akun yang dinonaktifkan saat masih punya sesi diperlakukan seperti belum login
+  if (user.status === "inactive") return null;
   return user;
 };
 

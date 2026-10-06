@@ -20,6 +20,16 @@ import CustomerLoginPage from "@/pages/auth/CustomerLoginPage";
 import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage";
 import CustomerRootLayout from "@/components/layouts/CustomerRootLayout";
 import CustomerHomePage from "@/pages/customer_home/CustomerHomePage";
+import CustomerRedeemPage from "@/pages/customer_redeem/CustomerRedeemPage";
+import CustomerLocationsPage from "@/pages/customer_locations/CustomerLocationsPage";
+import CustomerRoute from "@/components/guards/CustomerRoute";
+import CustomerVouchersPage from "@/pages/customer_vouchers/CustomerVouchersPage";
+import CustomerVoucherDetailPage from "@/pages/customer_vouchers/CustomerVoucherDetailPage";
+import CustomerSettingsPage from "@/pages/customer_settings/CustomerSettingsPage";
+import CustomerProfilePage from "@/pages/customer_settings/CustomerProfilePage";
+import CustomerChangePasswordPage from "@/pages/customer_settings/CustomerChangePasswordPage";
+import CustomerReferralPage from "@/pages/customer_settings/CustomerReferralPage";
+import CustomerPointHistoryPage from "@/pages/customer_settings/CustomerPointHistoryPage";
 
 const router = createBrowserRouter([
   // {
@@ -106,6 +116,39 @@ const router = createBrowserRouter([
         index: true,
         Component: CustomerHomePage,
       },
+      {
+        path: "redeem",
+        Component: CustomerRedeemPage,
+      },
+      {
+        path: "locations",
+        Component: CustomerLocationsPage,
+      },
+      {
+        element: <CustomerRoute />,
+        children: [
+          {
+            path: "vouchers",
+            children: [
+              { index: true, Component: CustomerVouchersPage },
+              { path: ":voucher_id", Component: CustomerVoucherDetailPage },
+            ],
+          },
+          {
+            path: "settings",
+            children: [
+              { index: true, Component: CustomerSettingsPage },
+              { path: "profile", Component: CustomerProfilePage },
+              { path: "password", Component: CustomerChangePasswordPage },
+              { path: "referral", Component: CustomerReferralPage },
+              {
+                path: "point-history",
+                Component: CustomerPointHistoryPage,
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
   {
@@ -138,7 +181,9 @@ const router = createBrowserRouter([
       },
     ],
   },
-  { path: "/403", element: <h1>403 — Akses ditolak</h1> },
+  { path: "/403", element: <ErrorPage status={403} /> },
+  // Alamat yang tidak cocok dengan rute mana pun, termasuk di bawah /admin
+  { path: "*", element: <ErrorPage status={404} /> },
 ]);
 
 export default function AppRouter() {

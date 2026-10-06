@@ -1,279 +1,192 @@
-import heroBanner from "@/assets/banners/hero_banner.png";
 import crisbarLogo from "@/assets/logo-crisbar-spotlight.png";
+import crisbarMark from "@/assets/logo_c_crisbar.png";
 import crisbarCoin from "@/assets/crisbar_coin.png";
-import productImageFallback from "@/assets/ProductImageFallback.png";
-import {
-  ChevronRight,
-  Coins,
-  ExternalLink,
-  Gift,
-  MapPin,
-  TicketPercent,
-} from "lucide-react";
+import { Gift } from "lucide-react";
 import { Link } from "react-router";
 import { useCustomerProfile } from "@/hooks/use-customer-profile";
+import { useRewardMenus } from "@/hooks/use-loyalty-products";
+import { formatPhone } from "@/lib/phone";
+import type { CustomerUser } from "@/services/auth";
+import type { LoyaltyProduct } from "@/services/loyalty-products";
+import BannerSlider from "./BannerSlider";
+import HomeOutlets from "./HomeOutlets";
+import HomeRewards from "./HomeRewards";
 
-const quickActions = [
-  { icon: Gift, label: "Tukar Poin", endpoint: "/redeem" },
-  { icon: MapPin, label: "Cabang Outlet", endpoint: "/locations" },
-  { icon: TicketPercent, label: "Voucher Saya", endpoint: "/vouchers" },
-];
+const memberStatLabelClass =
+  "text-xs font-bold tracking-wider text-chocolate/70";
 
-// Data sementara sampai tersambung ke API
-const rewardMenus = [
-  {
-    id: 1,
-    name: "Ayam Nashville + Butter Rice",
-    description: "Ayam Nashville, butter rice, cheese sauce & spicy kale.",
-    points: 10,
-    image: productImageFallback,
-  },
-  {
-    id: 2,
-    name: "Ayam Nashville + Butter Rice",
-    description: "Ayam Nashville, butter rice, cheese sauce & spicy kale.",
-    points: 10,
-    image: productImageFallback,
-  },
-];
-
-const outlets = [
-  {
-    id: 1,
-    city: "Bandung",
-    name: "Antapani",
-    address:
-      "Jl. Subang No.59, Antapani Tengah, Kec. Antapani, Kota Bandung, Jawa Barat 40291",
-  },
-];
-
-type SectionHeaderProps = {
-  title: string;
-  subtitle: string;
-  endpoint: string;
+type MemberCardProps = {
+  user: CustomerUser | null | undefined;
+  // Semua menu reward urut dari poin terkecil; undefined selama belum termuat
+  menus: LoyaltyProduct[] | undefined;
+  isMenusError: boolean;
 };
 
-const SectionHeader = ({ title, subtitle, endpoint }: SectionHeaderProps) => {
+const MemberCard = ({ user, menus, isMenusError }: MemberCardProps) => {
+  const points = user?.customer?.available_point ?? 0;
+  const totalPoints = user?.customer?.total_point ?? 0;
+
+  // Reward termurah yang poinnya belum cukup; null bila semua reward sudah bisa ditukar
+  const nextReward = menus?.find((menu) => menu.point_needed > points) ?? null;
+  const progress = nextReward
+    ? points / nextReward.point_needed
+    : menus?.length
+      ? 1
+      : 0;
+
+  const nextRewardText = () => {
+    if (nextReward) {
+      const missingPoints = nextReward.point_needed - points;
+      return `Tinggal ${missingPoints.toLocaleString("id-ID")} poin lagi untuk ${nextReward.product_name}`;
+    }
+    if (menus?.length) return "Poin kamu cukup untuk menukar semua reward";
+    if (menus) return "Belum ada reward yang bisa ditukar";
+    if (isMenusError) return "Reward berikutnya belum bisa dimuat";
+    return "Memuat reward berikutnya...";
+  };
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="text-sm font-bold text-chocolate">{title}</h2>
-        <p className="text-xs text-chocolate">{subtitle}</p>
+    <section className="relative overflow-hidden rounded-2xl bg-sunshine-yellow p-4 text-chocolate">
+      {/* Watermark logo C; brightness-0 + invert mengubah logo kuning jadi putih */}
+      <img
+        src={crisbarMark}
+        alt=""
+        className="pointer-events-none absolute top-1/2 -right-10 h-[130%] max-w-none -translate-y-1/2 opacity-30 brightness-0 invert"
+      />
+
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img
+              src={crisbarCoin}
+              alt=""
+              className="h-8 w-8 shrink-0 rounded-full ring-2 ring-white/50"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold leading-tight">Crisbar</p>
+              <p className="text-xs font-semibold leading-tight text-chocolate/70">
+                Member Card
+              </p>
+            </div>
+          </div>
+          <p className="shrink-0 rounded-full bg-chocolate px-2.5 py-1 text-xs font-bold tracking-wider text-sunshine-yellow">
+            CRISBRO MEMBER
+          </p>
+        </div>
+
+        {user ? (
+          <>
+            <p className="mt-2.5 text-xs font-bold">Poin Tersedia</p>
+            <p className="text-4xl font-extrabold leading-none">
+              {points.toLocaleString("id-ID")}
+              <span className="ml-1.5 text-base">Poin</span>
+            </p>
+
+            <div className="mt-2.5 flex items-center justify-between gap-3 text-xs font-bold">
+              <p className="flex items-center gap-1.5">
+                <Gift size={14} />
+                Reward berikutnya
+              </p>
+              {nextReward && (
+                <p>
+                  {points.toLocaleString("id-ID")}/
+                  {nextReward.point_needed.toLocaleString("id-ID")}
+                </p>
+              )}
+            </div>
+            <div
+              role="progressbar"
+              aria-label="Progres menuju reward berikutnya"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress * 100)}
+              className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/60"
+            >
+              <div
+                className="h-full rounded-full bg-chocolate"
+                style={{ width: `${progress * 100}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs font-semibold">{nextRewardText()}</p>
+
+            <dl className="mt-2.5 flex justify-between gap-3 border-t border-chocolate/15 pt-2">
+              <div>
+                <dt className={memberStatLabelClass}>TOTAL POIN</dt>
+                <dd className="text-sm font-extrabold">
+                  {totalPoints.toLocaleString("id-ID")} Poin
+                </dd>
+              </div>
+              <div className="text-right">
+                <dt className={memberStatLabelClass}>NOMOR TELEPON</dt>
+                <dd className="text-sm font-extrabold">
+                  {user.phone ? formatPhone(user.phone) : "-"}
+                </dd>
+              </div>
+            </dl>
+          </>
+        ) : (
+          <>
+            {/* Guest: poin disembunyikan sampai login */}
+            <h2 className="mt-2.5 text-lg font-extrabold leading-tight">
+              Kumpulkan poin, tukar reward
+            </h2>
+            <p className="mt-1 text-sm text-chocolate/80">
+              Masuk untuk melihat poin kamu dan menukarnya dengan menu Crisbar.
+            </p>
+
+            <div className="mt-3 flex gap-3">
+              <Link
+                to="/login"
+                className="flex h-10 flex-1 items-center justify-center rounded-full bg-chocolate text-sm font-bold text-sunshine-yellow"
+              >
+                Masuk
+              </Link>
+              <Link
+                to="/register"
+                className="flex h-10 flex-1 items-center justify-center rounded-full border border-chocolate/40 text-sm font-bold text-chocolate"
+              >
+                Daftar
+              </Link>
+            </div>
+          </>
+        )}
       </div>
-      <Link
-        to={endpoint}
-        className="shrink-0 text-xs font-semibold text-berry-red"
-      >
-        Lihat lainnya
-      </Link>
-    </div>
+    </section>
   );
 };
 
 const CustomerHomePage = () => {
   const { data: user } = useCustomerProfile();
-  const isLoggedIn = Boolean(user);
-  const points = user?.customer?.available_point ?? 0;
+  const rewardMenus = useRewardMenus();
+  const firstName = user?.customer?.name.trim().split(/\s+/)[0];
 
   return (
-    <div className="w-full">
-      {/* aspect mengikuti rasio gambar banner (1290x900) supaya tidak terpotong */}
-      <div className="relative w-full aspect-43/30">
-        <img
-          src={heroBanner}
-          alt="Customer Home"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute flex items-center gap-3 top-0 left-0 w-full px-4 pt-5">
-          {/* Crisbar Logo */}
-          <div className="bg-white rounded-full w-11 h-11 shrink-0 flex justify-center items-center">
-            <img src={crisbarLogo} alt="Crisbar Logo" className="w-8 h-8" />
-          </div>
-
-          {/* Location */}
-          <div className="min-w-0 bg-black/45 rounded-full px-3 py-2 text-sm font-semibold text-white flex items-center gap-1">
-            <MapPin size={16} className="shrink-0 text-sunshine-yellow" />
-            <span className="truncate">Crisbar Office</span>
-          </div>
-
-          {/* Notification Bell */}
-          {/* <div className="bg-white rounded-full w-11 h-11 flex justify-center items-center">
-            <Bell className="text-berry-red" />
-          </div> */}
+    <div className="flex w-full flex-col gap-6 px-4 pt-5">
+      <header className="flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-md bg-white">
+          <img src={crisbarLogo} alt="Crisbar" className="h-8 w-8" />
         </div>
-
-        <div className="absolute bottom-0 inset-x-4 translate-y-1/2 px-4 max-[411px]:px-3 py-3 bg-white h-fixed rounded-3xl shadow-md flex flex-row items-center justify-start gap-2">
-          <div className="shrink-0 max-[299px]:hidden">
-            <img src={crisbarCoin} alt="Crisbar Coin" className="w-10 h-10" />
-          </div>
-          {isLoggedIn ? (
-            <>
-              <div className="min-w-0">
-                {/* flex-wrap: badge turun ke bawah angka poin di layar sempit */}
-                <div className="flex flex-wrap justify-start items-center gap-x-2 max-[389px]:pb-1">
-                  <h4 className="font-extrabold text-2xl text-chocolate whitespace-nowrap">
-                    {points.toLocaleString("id-ID")}{" "}
-                    <span className="text-base font-bold">Poin</span>
-                  </h4>
-                  <div className="text-[10px] leading-none font-bold text-sunshine-yellow bg-chocolate rounded-full px-1.5 py-1 align-text-bottom whitespace-nowrap">
-                    CRISBRO MEMBER
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="max-w-36 border-b-4 border-chocolate rounded-full" />
-
-                {/* Text */}
-                <p className="text-[12px] text-chocolate font-bold max-w-64">
-                  Hadiah menarik menanti kamu!
-                </p>
-              </div>
-              <div className="ml-auto shrink-0">
-                <button className="bg-sunshine-yellow text-chocolate font-bold text-sm px-4 max-[411px]:px-3 py-2 rounded-full flex items-center gap-0.5">
-                  Tukar
-                  <ChevronRight
-                    className="text-chocolate font-bold"
-                    size={16}
-                  />
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Guest: poin disembunyikan sampai login */}
-              <div className="min-w-0">
-                <h4 className="font-extrabold text-base leading-tight text-chocolate">
-                  Login dulu, yuk!
-                </h4>
-                <p className="text-[12px] text-chocolate font-bold">
-                  Masuk untuk melihat poin kamu
-                </p>
-              </div>
-              <div className="ml-auto shrink-0">
-                <Link
-                  to="/login"
-                  className="bg-sunshine-yellow text-chocolate font-bold text-sm px-4 max-[411px]:px-3 py-2 rounded-full flex items-center gap-0.5"
-                >
-                  Login
-                  <ChevronRight className="text-chocolate font-bold" size={16} />
-                </Link>
-              </div>
-            </>
-          )}
+        <div className="min-w-0">
+          <p className="text-xs text-muted">
+            {user ? "Selamat datang kembali" : "Selamat datang di"}
+          </p>
+          <h1 className="truncate text-lg font-extrabold leading-tight text-chocolate">
+            {user ? `Halo, ${firstName || "Crisbro"}` : "Crisbro Member"}
+          </h1>
         </div>
-      </div>
-      <div className="px-4 mt-20 flex flex-col gap-8">
-        {/* Quick Actions */}
-        <div className="grid grid-cols-3 gap-2 min-[390px]:gap-3">
-          {quickActions.map(({ icon: Icon, label, endpoint }) => (
-            <Link
-              to={endpoint}
-              key={label}
-              className="bg-white border border-border rounded-3xl px-1 py-5 flex flex-col items-center gap-3"
-            >
-              <span className="bg-input rounded-xl w-11 h-11 flex justify-center items-center">
-                <Icon size={22} className="text-berry-red" />
-              </span>
-              <span className="text-xs font-semibold leading-tight text-center text-muted">
-                {label}
-              </span>
-            </Link>
-          ))}
-        </div>
+      </header>
 
-        {/* Reward Menu */}
-        <section>
-          <SectionHeader
-            title="Menu spesial reward buat crisbro"
-            subtitle="Tukarkan poin kamu sekarang"
-            endpoint="/redeem"
-          />
-          <div className="mt-4 flex flex-col gap-3">
-            {rewardMenus.map((menu) => (
-              <div
-                key={menu.id}
-                className="bg-white rounded-2xl shadow-md p-2 flex gap-3"
-              >
-                <img
-                  src={menu.image}
-                  alt={menu.name}
-                  className="w-[27%] max-w-26 aspect-square shrink-0 self-start rounded-xl object-cover"
-                />
-                <div className="min-w-0 flex-1 flex flex-col py-1 pr-1">
-                  <h3 className="text-base font-extrabold leading-tight text-muted">
-                    {menu.name}
-                  </h3>
-                  <p className="mt-0.5 text-[10px] text-muted/70 line-clamp-2">
-                    {menu.description}
-                  </p>
-                  <div className="mt-auto pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <Coins size={18} className="text-orange" />
-                      <span className="text-lg font-extrabold text-orange">
-                        {menu.points}
-                      </span>
-                      <span className="text-xs font-bold text-muted/70">
-                        Poin
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled
-                      className="w-24 shrink-0 rounded-full bg-gray-300 px-3 py-1.5 text-[10px] font-bold leading-tight tracking-wide text-white"
-                    >
-                      Login untuk tukar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+      <MemberCard
+        user={user}
+        menus={rewardMenus.data}
+        isMenusError={rewardMenus.isError}
+      />
 
-        {/* Outlets */}
-        <section>
-          <SectionHeader
-            title="Makan dine in lebih nikmat"
-            subtitle="Kunjungi outlet terdekat"
-            endpoint="/locations"
-          />
-          <div className="mt-4 flex flex-col gap-3">
-            {outlets.map((outlet) => (
-              <div
-                key={outlet.id}
-                className="bg-white border border-border rounded-3xl p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="bg-sunshine-yellow rounded-xl w-9 h-9 shrink-0 flex justify-center items-center">
-                    <MapPin size={18} className="text-berry-red" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase text-berry-red">
-                      {outlet.city}
-                    </p>
-                    <h3 className="text-base font-extrabold leading-tight text-chocolate">
-                      {outlet.name}
-                    </h3>
-                    <p className="mt-1.5 text-xs text-muted">
-                      {outlet.address}
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.address)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 flex items-center justify-center gap-1.5 rounded-full border border-berry-red/20 bg-berry-red/10 py-2 text-xs font-bold text-berry-red"
-                >
-                  <MapPin size={14} />
-                  Lihat di Maps
-                  <ExternalLink size={12} />
-                </a>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+      <BannerSlider />
+
+      <HomeRewards />
+
+      <HomeOutlets registeredOutletId={user?.customer?.runchise_location_id} />
     </div>
   );
 };
