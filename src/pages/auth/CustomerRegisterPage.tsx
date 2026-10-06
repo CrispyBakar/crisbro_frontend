@@ -124,7 +124,7 @@ const CustomerRegisterPage = () => {
 
         <ActivationMessage
           text={activationText}
-          sendLabel="Kirim aktivasi ke WhatsApp"
+          sendLabel="Verifikasi via WhatsApp"
           className="mt-6 gap-6"
         />
 
