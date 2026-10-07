@@ -268,8 +268,8 @@ export type ParamsUpdateMyCustomer = Omit<
 
 const UPDATE_MY_CUSTOMER_ERRORS: Record<string, string> = {
   "Email is already registered": "Email ini sudah dipakai akun lain",
-  // Nama, alamat, dan jenis kelamin ikut disimpan ke Runchise; email dan
-  // tanggal lahir hanya disimpan lokal
+  // Customer yang belum terhubung ke Runchise tidak bisa mengubah nama, alamat,
+  // dan jenis kelamin; email dan tanggal lahir tetap bisa, disimpan lokal saja
   "Customer belum terhubung ke Runchise, tidak bisa update":
     "Data member kamu belum tersinkron. Untuk sementara hanya email dan tanggal lahir yang bisa diubah.",
 };
