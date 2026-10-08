@@ -18,6 +18,8 @@ import AdminReferral from "@/pages/admin_referral/AdminReferral";
 import CustomerAuthLayout from "@/components/layouts/CustomerAuthLayout";
 import CustomerLoginPage from "@/pages/auth/CustomerLoginPage";
 import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage";
+import CustomerForgotPasswordPage from "@/pages/auth/CustomerForgotPasswordPage";
+import CustomerResetPasswordPage from "@/pages/auth/CustomerResetPasswordPage";
 import CustomerRootLayout from "@/components/layouts/CustomerRootLayout";
 import CustomerHomePage from "@/pages/customer_home/CustomerHomePage";
 import CustomerRedeemPage from "@/pages/customer_redeem/CustomerRedeemPage";
@@ -178,6 +180,38 @@ const router = createBrowserRouter([
       {
         index: true,
         Component: CustomerRegisterPage,
+      },
+    ],
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <CustomerAuthLayout>
+        <Outlet />
+      </CustomerAuthLayout>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        Component: CustomerForgotPasswordPage,
+      },
+    ],
+  },
+  // Alamat ini dipakai backend untuk tautan reset password (balasan bot
+  // WhatsApp untuk customer, email untuk role lain)
+  {
+    path: "/reset-password",
+    element: (
+      <CustomerAuthLayout>
+        <Outlet />
+      </CustomerAuthLayout>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        index: true,
+        Component: CustomerResetPasswordPage,
       },
     ],
   },

@@ -43,6 +43,8 @@ const toFormValues = (
     ...emptyPromoFormValues(),
     name: promo.name ?? "",
     goal: (promo.goal as PromoFormValues["goal"]) ?? "",
+    promoType: promo.promo_type ?? "",
+    termsConditions: promo.terms_conditions ?? "",
     startDate: toInputDate(promo.start_date),
     endDate: toInputDate(promo.end_date),
     discountValue: promo_reward?.discount_amount ?? "",

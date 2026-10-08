@@ -239,3 +239,78 @@ export const changePassword = async (
 
   return res.json();
 };
+
+// Gagal validasi: { success: false, errors: { field: [pesan] } } tanpa message
+const readErrorMessage = async (
+  res: Response,
+  fallback: string,
+): Promise<string> => {
+  const error = await res.json().catch(() => null);
+  const fieldError = error?.errors
+    ? Object.values(error.errors).flat()[0]
+    : null;
+  return error?.message ?? fieldError ?? fallback;
+};
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+// Publik. Jawaban backend sama untuk email terdaftar maupun tidak, jadi
+// berhasil di sini bukan berarti emailnya ada.
+export const requestPasswordReset = async (
+  payload: ForgotPasswordPayload,
+): Promise<{ message: string }> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/forgot-password`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        // Wajib bila browser masih menyimpan cookie sesi
+        "x-csrf-protection": "1",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, "Gagal mengirim tautan reset password"),
+    );
+  }
+
+  return res.json();
+};
+
+export interface ResetPasswordPayload {
+  // Token dari tautan reset password (balasan bot WhatsApp atau email)
+  token: string;
+  new_password: string;
+}
+
+// Publik. Backend mencabut semua sesi setelah password direset — user wajib
+// login ulang
+export const resetPassword = async (
+  payload: ResetPasswordPayload,
+): Promise<{ message: string }> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/reset-password`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-protection": "1",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, "Gagal mereset password"));
+  }
+
+  return res.json();
+};

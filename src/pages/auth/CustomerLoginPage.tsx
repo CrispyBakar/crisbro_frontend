@@ -10,6 +10,7 @@ import { normalizePhone } from "@/lib/phone";
 import {
   AuthFooterLink,
   AuthHeader,
+  AuthLink,
   AuthTitle,
   FormAlert,
   PasswordField,
@@ -127,6 +128,10 @@ const CustomerLoginPage = () => {
           autoComplete="current-password"
           error={errorFor("password")}
         />
+
+        <p className="-mt-2 text-right text-sm">
+          <AuthLink to="/forgot-password">Lupa password?</AuthLink>
+        </p>
 
         {serverError && <FormAlert message={serverError} />}
 

@@ -1,6 +1,8 @@
 // Angka diterima backend sebagai string maupun number
 type NumericValue = string | number;
 
+export type PromoType = "general_promo" | "loyalty_promo";
+
 // Mengikuti createPromoSchema di backend (validation/runchise/runchise-validation.js)
 export interface CreatePromoRequest {
   channel: "pos";
@@ -20,6 +22,10 @@ export interface CreatePromoRequest {
   location_group_ids: number[];
   exclude_location_group_ids: number[];
   owner_location_id: number;
+  // promo_type & terms_conditions hanya disimpan di database lokal, tidak
+  // dikirim ke Runchise
+  promo_type: PromoType;
+  terms_conditions: string;
   promo_schedules: Record<string, unknown>[] | null;
   promo_rule_attributes: {
     order_type_ids: number[];
@@ -158,6 +164,9 @@ export interface Promo {
   channel: string | null;
   // location_id lokal (UUID), bukan runchise_id
   location_ids: string[];
+  promo_type: PromoType;
+  // Kosong ("") bila belum diisi
+  terms_conditions: string;
   created_at: string;
   updated_at: string;
 }

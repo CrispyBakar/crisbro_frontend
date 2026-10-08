@@ -6,12 +6,16 @@ import LocationSelect from "./LocationSelect";
 import LocationMultiSelect from "./LocationMultiSelect";
 import OrderTypeSelect from "./OrderTypeSelect";
 import { createProductRow } from "./promo-form-utils";
+import { PROMO_TYPE_LABELS } from "./promo-detail-utils";
 import type {
   ProductRow,
   PromoCodeUsageType,
   PromoFormValues,
 } from "./promo-form-utils";
 import type { OrderTypeOption } from "./OrderTypeSelect";
+import type { PromoType } from "@/services/promo";
+
+const PROMO_TYPES: PromoType[] = ["general_promo", "loyalty_promo"];
 
 // Order type Runchise (belum ada endpoint-nya di backend)
 // TODO: tambahkan "(R) External Order" & "Takeaway" setelah ID Runchise-nya diketahui
@@ -179,7 +183,32 @@ const PromoFormModal = ({
                 <span className="text-sm font-bold">POS</span>
               </div>
             </div>
-            <div className="hidden sm:col-span-1 sm:block"></div>
+            {/* promo_type di backend; diberi label "Promo Category" supaya tidak
+                tertukar dengan "Promotion Type" (jenis diskon). Hanya disimpan di
+                database lokal, tidak dikirim ke Runchise. */}
+            <div className="col-span-1">
+              <label className="font-semibold text-sm">Promo Category</label>
+              <div className="flex flex-col gap-2">
+                {PROMO_TYPES.map((promoType) => (
+                  <label
+                    key={promoType}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="promoType"
+                      checked={values.promoType === promoType}
+                      onChange={() => setField("promoType", promoType)}
+                      className="w-4 h-4 accent-orange"
+                      required
+                    />
+                    <span className="text-sm">
+                      {PROMO_TYPE_LABELS[promoType]}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="col-span-1 sm:col-span-2">
               <label className="font-semibold text-sm">Promotion Name</label>
               <input
@@ -424,6 +453,22 @@ const PromoFormModal = ({
             {/* Terms and Conditions */}
             <div className="col-span-1 flex flex-col gap-4 sm:col-span-2">
               <h4 className="font-semibold text-sm">Terms and Conditions</h4>
+              <div>
+                <textarea
+                  value={values.termsConditions}
+                  onChange={(event) =>
+                    setField("termsConditions", event.target.value)
+                  }
+                  rows={4}
+                  placeholder="Tulis syarat dan ketentuan promo"
+                  aria-label="Terms and Conditions"
+                  className={`${inputClassName} resize-y`}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Opsional. Hanya disimpan di sistem ini, tidak dikirim ke
+                  Runchise.
+                </p>
+              </div>
               <div className="rounded-lg bg-gray-100 px-4 py-2 text-xs font-medium uppercase text-gray-500">
                 Purchase Requirement
               </div>

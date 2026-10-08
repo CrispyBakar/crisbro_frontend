@@ -1,5 +1,6 @@
 import type {
   CreatePromoRequest,
+  PromoType,
   UpdatePromoRequest,
 } from "@/services/promo";
 import type { SelectedProduct } from "./ProductSelect";
@@ -23,6 +24,9 @@ export const createProductRow = (
 export type PromoFormValues = {
   name: string;
   goal: CreatePromoRequest["goal"] | "";
+  // Kosong selama belum dipilih; wajib dipilih di form
+  promoType: PromoType | "";
+  termsConditions: string;
   startDate: string; // YYYY-MM-DD (input date)
   endDate: string; // YYYY-MM-DD, kosong = tanpa batas
   discountValue: string;
@@ -42,6 +46,8 @@ export type PromoFormValues = {
 export const emptyPromoFormValues = (): PromoFormValues => ({
   name: "",
   goal: "",
+  promoType: "",
+  termsConditions: "",
   startDate: "",
   endDate: "",
   discountValue: "",
@@ -94,6 +100,8 @@ export const buildPromoPayload = (
     exclude_location_group_ids: [],
     // Divalidasi di form; 0 hanya terjadi pada nilai awal edit yang tidak terbaca
     owner_location_id: values.ownerLocation?.id ?? 0,
+    promo_type: values.promoType as PromoType,
+    terms_conditions: values.termsConditions.trim(),
     promo_schedules: null,
     promo_rule_attributes: {
       order_type_ids: values.isOrderTypeEnabled ? values.orderTypeIds : [],

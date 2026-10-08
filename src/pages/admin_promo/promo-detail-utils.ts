@@ -1,3 +1,5 @@
+import type { PromoType } from "@/services/promo";
+
 // Kolom JSON string di PromoRule (order_types, maximum_qty_applied_to_products)
 export const parseJsonArray = (value: string | null | undefined) => {
   if (!value) return [];
@@ -51,4 +53,9 @@ export const formatPromoPeriodDate = (value: string | null) => {
 export const PROMO_GOAL_LABELS: Record<string, string> = {
   increase_average_sale: "Increase average sales",
   increase_number_sale: "Increase number of sales",
+};
+
+export const PROMO_TYPE_LABELS: Record<PromoType, string> = {
+  general_promo: "General Promo",
+  loyalty_promo: "Loyalty Promo",
 };

@@ -10,8 +10,8 @@ type ActivationMessageProps = {
   className?: string;
 };
 
-// Kotak pesan aktivasi + tombol kirim ke WhatsApp. Bila nomor bot belum
-// dikonfigurasi, tombol kirim diganti tombol salin pesan.
+// Kotak pesan untuk bot WhatsApp (aktivasi atau reset password) + tombol kirim.
+// Bila nomor bot belum dikonfigurasi, tombol kirim diganti tombol salin pesan.
 const ActivationMessage = ({
   text,
   sendLabel,

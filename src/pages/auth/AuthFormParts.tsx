@@ -10,6 +10,7 @@ import {
   EyeOff,
   LoaderCircle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import crisbarLogo from "@/assets/logo-crisbar-spotlight.png";
 import { passwordRules } from "@/lib/password";
 import { fieldBoxClass, fieldInputClass } from "./fieldStyles";
@@ -249,6 +250,23 @@ export const SubmitButton = ({
   );
 };
 
+export const AuthLink = ({
+  to,
+  children,
+}: {
+  to: string;
+  children: ReactNode;
+}) => {
+  return (
+    <Link
+      to={to}
+      className={`rounded-sm font-semibold text-berry-red hover:underline ${focusRingClass}`}
+    >
+      {children}
+    </Link>
+  );
+};
+
 export const AuthFooterLink = ({
   text,
   linkLabel,
@@ -260,13 +278,56 @@ export const AuthFooterLink = ({
 }) => {
   return (
     <p className="text-center text-sm text-muted">
-      {text}{" "}
-      <Link
-        to={to}
-        className={`rounded-sm font-semibold text-berry-red hover:underline ${focusRingClass}`}
-      >
-        {linkLabel}
-      </Link>
+      {text} <AuthLink to={to}>{linkLabel}</AuthLink>
     </p>
+  );
+};
+
+// Layar hasil pengganti form: ikon, judul, dan penjelasan langkah berikutnya
+export const AuthStatus = ({
+  icon: Icon,
+  tone = "success",
+  title,
+  description,
+}: {
+  icon: LucideIcon;
+  tone?: "success" | "error";
+  title: string;
+  description: ReactNode;
+}) => {
+  return (
+    <div className="mt-10">
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-full ${
+          tone === "success"
+            ? "bg-success/10 text-success"
+            : "bg-berry-red/10 text-berry-red"
+        }`}
+      >
+        <Icon size={24} strokeWidth={2.5} />
+      </span>
+      <h1 className="mt-5 text-[1.75rem] font-extrabold leading-tight tracking-tight text-chocolate">
+        {title}
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>
+    </div>
+  );
+};
+
+// Tautan yang tampil seperti tombol utama
+export const ButtonLink = ({
+  to,
+  children,
+}: {
+  to: string;
+  children: ReactNode;
+}) => {
+  return (
+    <Link
+      to={to}
+      className={`flex h-12 w-full items-center justify-center rounded-full bg-berry-red text-base font-bold text-white transition-colors hover:bg-berry-red/90 ${focusRingClass}`}
+    >
+      {children}
+    </Link>
   );
 };

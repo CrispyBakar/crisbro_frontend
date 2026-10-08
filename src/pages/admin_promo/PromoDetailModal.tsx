@@ -10,6 +10,7 @@ import LoadingCircle from "@/components/LoadingCircle";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   PROMO_GOAL_LABELS,
+  PROMO_TYPE_LABELS,
   formatPromoPeriodDate,
   parseMaxQtyProducts,
   parseOrderTypes,
@@ -228,6 +229,12 @@ const PromoDetailModal = ({
                   <DetailItem label="Promotion Goal">
                     {PROMO_GOAL_LABELS[promo?.goal ?? ""] ?? promo?.goal ?? "-"}
                   </DetailItem>
+                  <DetailItem label="Promo Category">
+                    {promo?.promo_type
+                      ? (PROMO_TYPE_LABELS[promo.promo_type] ??
+                        promo.promo_type)
+                      : "-"}
+                  </DetailItem>
 
                   <hr className="border-gray-100" />
 
@@ -281,6 +288,16 @@ const PromoDetailModal = ({
                   className="flex scroll-mt-4 flex-col gap-5"
                 >
                   <h4 className="text-base font-bold">Term and Conditions</h4>
+                  <DetailItem label="Terms and Conditions">
+                    {/* pre-line: baris baru yang diketik admin tetap tampil */}
+                    {promo?.terms_conditions ? (
+                      <p className="whitespace-pre-line">
+                        {promo.terms_conditions}
+                      </p>
+                    ) : (
+                      "-"
+                    )}
+                  </DetailItem>
                   <DetailItem label="Applicable for Order Type">
                     {orderTypes.length
                       ? orderTypes.map((orderType) => orderType.name).join(", ")
