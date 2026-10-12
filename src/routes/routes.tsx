@@ -15,6 +15,7 @@ import AdminSettings from "@/pages/admin_settings/AdminSettings";
 import AdminProfile from "@/pages/admin_settings/profile/AdminProfile";
 import AdminPromo from "@/pages/admin_promo/AdminPromo";
 import AdminReferral from "@/pages/admin_referral/AdminReferral";
+import AdminRedeemTransactions from "@/pages/admin_redeem_transactions/AdminRedeemTransactions";
 import CustomerAuthLayout from "@/components/layouts/CustomerAuthLayout";
 import CustomerLoginPage from "@/pages/auth/CustomerLoginPage";
 import CustomerRegisterPage from "@/pages/auth/CustomerRegisterPage";
@@ -23,6 +24,7 @@ import CustomerResetPasswordPage from "@/pages/auth/CustomerResetPasswordPage";
 import CustomerRootLayout from "@/components/layouts/CustomerRootLayout";
 import CustomerHomePage from "@/pages/customer_home/CustomerHomePage";
 import CustomerRedeemPage from "@/pages/customer_redeem/CustomerRedeemPage";
+import CustomerRedeemDetailPage from "@/pages/customer_redeem/CustomerRedeemDetailPage";
 import CustomerLocationsPage from "@/pages/customer_locations/CustomerLocationsPage";
 import CustomerRoute from "@/components/guards/CustomerRoute";
 import CustomerVouchersPage from "@/pages/customer_vouchers/CustomerVouchersPage";
@@ -101,6 +103,11 @@ const router = createBrowserRouter([
             element: <AdminRootLayout />,
             children: [{ index: true, Component: AdminReferral }],
           },
+          {
+            path: "redeem-transactions",
+            element: <AdminRootLayout />,
+            children: [{ index: true, Component: AdminRedeemTransactions }],
+          },
         ],
       },
     ],
@@ -129,6 +136,11 @@ const router = createBrowserRouter([
       {
         element: <CustomerRoute />,
         children: [
+          // Daftar menu redeem publik, tapi detail penukarannya wajib login
+          {
+            path: "redeem/:loyalty_product_id",
+            Component: CustomerRedeemDetailPage,
+          },
           {
             path: "vouchers",
             children: [

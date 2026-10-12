@@ -82,6 +82,8 @@ export type CustomerUser = Omit<CurrentUser, "customer"> & {
     dob?: string | null;
     // male | female | unknown
     gender?: string | null;
+    // Sudah menjawab "tahu Crisbar dari mana"; hanya dikirim /login dan /profile
+    has_acquisition?: boolean;
   } | null;
 };
 

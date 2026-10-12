@@ -1,3 +1,5 @@
+import type { Promo } from "@/services/promo";
+
 export interface LoyaltyProduct {
   loyalty_product_id: string;
   runchise_loyalty_product_id: number;
@@ -12,6 +14,22 @@ export interface LoyaltyProduct {
   is_select_all_location: boolean;
   location_ids: string[];
   product_location_ids: string[];
+  // false bila menu belum dihubungkan ke promo
+  has_promo: boolean;
+  // false bila belum ada promo, atau semua kode vouchernya nonaktif / sudah
+  // diklaim; menu tidak bisa ditukar selama nilainya false
+  is_voucher_available: boolean;
+  // Promo sumber voucher menu ini; null bila menu belum dihubungkan ke promo.
+  // location_ids: outlet tempat vouchernya berlaku.
+  promo: Pick<
+    Promo,
+    | "promo_id"
+    | "status"
+    | "start_date"
+    | "end_date"
+    | "terms_conditions"
+    | "location_ids"
+  > | null;
   created_at: string;
   updated_at: string;
 }

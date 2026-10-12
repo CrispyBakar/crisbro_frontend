@@ -121,6 +121,27 @@ const AdminCustomers = () => {
               },
             },
             {
+              key: "user_id",
+              label: "Phone Verified",
+              render: (row: any) => {
+                const status = row.user_id
+                  ? row.user.phone_verified
+                    ? String("verified")
+                    : String("unverified")
+                  : String("not registered");
+
+                return (
+                  <span
+                    className={`inline-block py-1 px-3 rounded-full bg-orange/10 ${
+                      status === "verified" ? "text-success" : "text-red-500"
+                    } font-semibold`}
+                  >
+                    {status}
+                  </span>
+                );
+              },
+            },
+            {
               key: "created_at",
               label: "Created At",
               render: (row: any) => {

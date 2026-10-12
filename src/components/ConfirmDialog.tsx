@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
 
 type ConfirmDialogProps = {
@@ -41,7 +42,9 @@ const ConfirmDialog = ({
     };
   }, [onCancel, isPending]);
 
-  return (
+  // Dirender ke body: induk yang memakai transform (mis. drawer sidebar admin)
+  // menjadi acuan posisi "fixed", sehingga dialog terkurung di dalam induk itu
+  return createPortal(
     <div
       role="alertdialog"
       aria-modal="true"
@@ -92,7 +95,8 @@ const ConfirmDialog = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

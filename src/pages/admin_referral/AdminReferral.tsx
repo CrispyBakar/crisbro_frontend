@@ -47,7 +47,6 @@ const referralHeads: TableHead[] = [
     render: (row) => renderPoint(row.referrer_point_reward),
   },
   { key: "referred_username", label: "Referred" },
-  { key: "referred_phone", label: "Referred Phone" },
   {
     key: "referred_point_given",
     label: "Referred Point",

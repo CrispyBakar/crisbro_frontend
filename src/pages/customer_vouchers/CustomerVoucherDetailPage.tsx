@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import {
   BadgeCheck,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
   Check,
   Coins,
@@ -16,18 +17,18 @@ import crisbarMark from "@/assets/logo_c_crisbar.png";
 import CustomerPageHeader from "@/components/CustomerPageHeader";
 import LoadingCircle from "@/components/LoadingCircle";
 import StateMessage from "@/components/StateMessage";
+import VoucherOutlets from "@/components/VoucherOutlets";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useMyVouchers } from "@/hooks/use-vouchers";
-import { formatShortDate } from "@/lib/date";
-import type { Voucher } from "@/services/vouchers";
+import { useMyVoucher } from "@/hooks/use-redeem-transactions";
+import { formatShortCalendarDate, formatShortDate } from "@/lib/date";
+import {
+  VOUCHER_STATE_LABELS,
+  getVoucherMenu,
+  getVoucherName,
+  getVoucherState,
+} from "@/lib/vouchers";
+import type { RedeemedVoucherDetail } from "@/services/redeem-transactions";
 import VoucherMenuImage from "./VoucherMenuImage";
-
-// Teks sementara — ganti dengan syarat dan ketentuan resmi dari Crisbar
-const VOUCHER_TERMS = [
-  "Voucher hanya berlaku untuk menu yang tertera.",
-  "Satu kode voucher hanya bisa dipakai satu kali.",
-  "Voucher tidak bisa diuangkan atau ditukar kembali menjadi poin.",
-];
 
 const sectionTitleClass = "text-xs font-extrabold tracking-wider text-muted";
 
@@ -55,15 +56,19 @@ const DetailRow = ({
   );
 };
 
-const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
+const VoucherDetail = ({ voucher }: { voucher: RedeemedVoucherDetail }) => {
   const [isCopied, setIsCopied] = useState<boolean>(false);
 
-  const menu = voucher.loyalty_product;
-  const isUsed = voucher.status === "used";
+  const menu = getVoucherMenu(voucher);
+  const state = getVoucherState(voucher);
+  const isActive = state === "active";
+  const code = voucher.promo_code.code ?? "";
+  const usedAt = state === "used" ? voucher.promo_code.last_usage : null;
+  const terms = voucher.promo.terms_conditions.trim();
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(voucher.code);
+      await navigator.clipboard.writeText(code);
       setIsCopied(true);
     } catch {
       // Clipboard diblokir browser: kode tetap bisa diblok dan disalin manual
@@ -72,10 +77,10 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
 
   return (
     <>
-      {/* Panel kuning senada kartu member di beranda; voucher terpakai tampil pudar */}
+      {/* Panel kuning senada kartu member di beranda; voucher yang sudah tidak aktif tampil pudar */}
       <section
         className={`relative overflow-hidden rounded-2xl px-5 py-6 text-center ${
-          isUsed ? "bg-input" : "bg-sunshine-yellow"
+          isActive ? "bg-sunshine-yellow" : "bg-input"
         }`}
       >
         {/* Watermark logo C; brightness-0 + invert mengubah logo kuning jadi putih */}
@@ -87,33 +92,29 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
 
         <div className="relative flex flex-col items-center">
           <VoucherMenuImage
-            src={menu.product_image_url}
+            src={menu?.image_url ?? null}
             className={`h-32 w-32 rounded-2xl object-cover shadow-md ring-4 ring-white ${
-              isUsed ? "grayscale" : ""
+              isActive ? "" : "grayscale"
             }`}
           />
           <p className="mt-4 text-xs font-extrabold tracking-wider text-chocolate/70">
             MENU DITUKAR
           </p>
           <h2 className="mt-1 text-xl font-extrabold leading-tight text-chocolate">
-            {menu.product_name}
+            {getVoucherName(voucher)}
           </h2>
-          {menu.product_description && (
+          {menu?.description && (
             <p className="mt-1.5 text-sm leading-relaxed text-chocolate/80">
-              {menu.product_description}
+              {menu.description}
             </p>
           )}
-          <p className="mt-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-extrabold text-chocolate">
-            <Coins
-              size={16}
-              className={isUsed ? "text-muted" : "text-berry-red"}
-            />
-            <span className={isUsed ? "text-muted" : "text-berry-red"}>
-              {voucher.point_used.toLocaleString("id-ID")} Poin
-            </span>
-            <span className="font-bold text-muted">
-              · {voucher.quantity.toLocaleString("id-ID")} porsi
-            </span>
+          <p
+            className={`mt-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-extrabold ${
+              isActive ? "text-berry-red" : "text-muted"
+            }`}
+          >
+            <Coins size={16} />
+            {voucher.points_spent.toLocaleString("id-ID")} Poin
           </p>
         </div>
       </section>
@@ -125,22 +126,14 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
           <p
             // select-all: sekali tap memblok seluruh kode untuk disalin manual
             className={`mt-1.5 font-mono text-2xl font-bold tracking-widest break-all select-all ${
-              isUsed ? "text-muted line-through" : "text-chocolate"
+              isActive ? "text-chocolate" : "text-muted line-through"
             }`}
           >
-            {voucher.code}
+            {code}
           </p>
 
           <div className="mt-4 border-t-2 border-dashed border-peach pt-4">
-            {isUsed ? (
-              <p className="text-sm text-muted">
-                Voucher ini sudah dipakai
-                {voucher.used_at
-                  ? ` pada ${formatShortDate(voucher.used_at)}`
-                  : ""}
-                .
-              </p>
-            ) : (
+            {isActive ? (
               <>
                 <p className="mx-auto flex w-fit items-center gap-1.5 rounded-full bg-input px-3 py-1.5 text-xs font-bold text-chocolate">
                   <Store size={14} className="shrink-0 text-berry-red" />
@@ -155,6 +148,15 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
                   {isCopied ? "Kode tersalin" : "Salin kode"}
                 </button>
               </>
+            ) : state === "used" ? (
+              <p className="text-sm text-muted">
+                Voucher ini sudah dipakai
+                {usedAt ? ` pada ${formatShortDate(usedAt)}` : ""}.
+              </p>
+            ) : (
+              <p className="text-sm text-muted">
+                Voucher ini sudah tidak berlaku.
+              </p>
             )}
           </div>
         </div>
@@ -164,29 +166,41 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
         <DetailRow icon={BadgeCheck} label="Status">
           <span
             className={`rounded-full px-2.5 py-1 text-xs ${
-              isUsed ? "bg-input text-muted" : "bg-success/10 text-success"
+              isActive ? "bg-success/10 text-success" : "bg-input text-muted"
             }`}
           >
-            {isUsed ? "Terpakai" : "Aktif"}
+            {VOUCHER_STATE_LABELS[state]}
           </span>
         </DetailRow>
         <DetailRow icon={CalendarDays} label="Tanggal ditukar">
-          {formatShortDate(voucher.created_at)}
+          {formatShortDate(voucher.redeemed_at)}
         </DetailRow>
-        {voucher.used_at && (
+        {usedAt && (
           <DetailRow icon={CalendarCheck} label="Tanggal dipakai">
-            {formatShortDate(voucher.used_at)}
+            {formatShortDate(usedAt)}
+          </DetailRow>
+        )}
+        {voucher.promo.end_date && (
+          <DetailRow icon={CalendarClock} label="Berlaku sampai">
+            {formatShortCalendarDate(voucher.promo.end_date)}
           </DetailRow>
         )}
       </dl>
 
+      <VoucherOutlets locationIds={voucher.promo.location_ids} />
+
       <section className="mt-6">
         <h2 className={sectionTitleClass}>SYARAT DAN KETENTUAN</h2>
-        <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-muted marker:font-bold marker:text-berry-red">
-          {VOUCHER_TERMS.map((term) => (
-            <li key={term}>{term}</li>
-          ))}
-        </ol>
+        {terms ? (
+          // pre-line: baris baru yang diketik admin tetap tampil
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted">
+            {terms}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Belum ada syarat dan ketentuan untuk voucher ini.
+          </p>
+        )}
       </section>
     </>
   );
@@ -195,32 +209,31 @@ const VoucherDetail = ({ voucher }: { voucher: Voucher }) => {
 const CustomerVoucherDetailPage = () => {
   usePageTitle("Detail Voucher");
 
+  // Parameter rute berisi redeem_transaction_id
   const { voucher_id: voucherId } = useParams();
   const navigate = useNavigate();
-  const vouchersQuery = useMyVouchers();
-
-  // Belum ada endpoint detail, jadi voucher dicari dari daftar milik customer
-  const voucher = vouchersQuery.data?.find(
-    (item) => item.voucher_id === voucherId,
-  );
+  const voucherQuery = useMyVoucher(voucherId);
+  const voucher = voucherQuery.data;
 
   // Kembali ke tab tempat voucher ini berada
   const listUrl =
-    voucher?.status === "used" ? "/vouchers?status=terpakai" : "/vouchers";
+    voucher && getVoucherState(voucher) !== "active"
+      ? "/vouchers?status=terpakai"
+      : "/vouchers";
 
   const renderContent = () => {
-    if (vouchersQuery.isPending) {
+    if (voucherQuery.isPending) {
       return <LoadingCircle className="py-20" />;
     }
 
-    if (vouchersQuery.isError) {
+    if (voucherQuery.isError) {
       return (
         <StateMessage
           icon={Ticket}
           title="Voucher gagal dimuat"
-          description={vouchersQuery.error.message}
+          description={voucherQuery.error.message}
           actionLabel="Coba lagi"
-          onAction={() => vouchersQuery.refetch()}
+          onAction={() => voucherQuery.refetch()}
         />
       );
     }

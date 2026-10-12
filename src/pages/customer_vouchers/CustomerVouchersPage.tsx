@@ -4,50 +4,63 @@ import CustomerPageHeader from "@/components/CustomerPageHeader";
 import FilterPill from "@/components/FilterPill";
 import StateMessage from "@/components/StateMessage";
 import { usePageTitle } from "@/hooks/use-page-title";
-import { useMyVouchers } from "@/hooks/use-vouchers";
+import { useMyVouchers } from "@/hooks/use-redeem-transactions";
 import { formatShortDate } from "@/lib/date";
-import type { Voucher } from "@/services/vouchers";
+import {
+  getVoucherMenu,
+  getVoucherName,
+  getVoucherState,
+} from "@/lib/vouchers";
+import type { RedeemedVoucher } from "@/services/redeem-transactions";
 import VoucherMenuImage from "./VoucherMenuImage";
 
+// "used" memuat semua voucher yang sudah tidak aktif: terpakai maupun yang
+// kodenya dinonaktifkan
 type Filter = "active" | "used";
 
 // Di layar sempit foto diperkecil supaya kode voucher tetap muat satu baris
 const menuImageClass =
   "h-12 w-12 shrink-0 rounded-xl min-[390px]:h-14 min-[390px]:w-14";
 
-const VoucherCard = ({ voucher }: { voucher: Voucher }) => {
-  const menu = voucher.loyalty_product;
-  const isUsed = voucher.status === "used";
+const getVoucherCaption = (voucher: RedeemedVoucher) => {
+  const state = getVoucherState(voucher);
+  if (state === "inactive") return "Sudah tidak berlaku";
+  if (state === "used" && voucher.promo_code.last_usage) {
+    return `Dipakai ${formatShortDate(voucher.promo_code.last_usage)}`;
+  }
+  return `Ditukar ${formatShortDate(voucher.redeemed_at)}`;
+};
+
+const VoucherCard = ({ voucher }: { voucher: RedeemedVoucher }) => {
+  const isActive = getVoucherState(voucher) === "active";
 
   return (
     // Bentuk kupon: sisi kiri-kanan bergerigi (lihat coupon di global.css)
     <article className="coupon">
       <Link
-        to={`/vouchers/${voucher.voucher_id}`}
+        to={`/vouchers/${voucher.redeem_transaction_id}`}
         className="coupon-edges flex items-stretch rounded-sm bg-white"
       >
         <div
-          className={`flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 pl-4 ${isUsed ? "opacity-60" : ""}`}
+          className={`flex min-w-0 flex-1 items-center gap-3 py-3 pr-3 pl-4 ${isActive ? "" : "opacity-60"}`}
         >
           <VoucherMenuImage
-            src={menu.product_image_url}
+            src={getVoucherMenu(voucher)?.image_url ?? null}
             className={`${menuImageClass} object-cover`}
           />
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-extrabold leading-tight text-chocolate">
-              {menu.product_name}
+              {getVoucherName(voucher)}
             </h3>
             <p
               className={`mt-1 truncate font-mono text-sm font-bold leading-tight tracking-wide ${
-                isUsed ? "text-muted line-through" : "text-chocolate"
+                isActive ? "text-chocolate" : "text-muted line-through"
               }`}
             >
-              {voucher.code}
+              {voucher.promo_code.code}
             </p>
             <p className="mt-1 truncate text-xs text-muted">
-              {isUsed && voucher.used_at
-                ? `Dipakai ${formatShortDate(voucher.used_at)}`
-                : `Ditukar ${formatShortDate(voucher.created_at)}`}
+              {getVoucherCaption(voucher)}
             </p>
           </div>
         </div>
@@ -133,10 +146,10 @@ const CustomerVouchersPage = () => {
     }
 
     const activeVouchers = vouchers.filter(
-      (voucher) => voucher.status === "active",
+      (voucher) => getVoucherState(voucher) === "active",
     );
     const usedVouchers = vouchers.filter(
-      (voucher) => voucher.status === "used",
+      (voucher) => getVoucherState(voucher) !== "active",
     );
     const visibleVouchers = filter === "used" ? usedVouchers : activeVouchers;
 
@@ -177,7 +190,7 @@ const CustomerVouchersPage = () => {
           ) : (
             <ul className="flex flex-col gap-3">
               {visibleVouchers.map((voucher) => (
-                <li key={voucher.voucher_id}>
+                <li key={voucher.redeem_transaction_id}>
                   <VoucherCard voucher={voucher} />
                 </li>
               ))}

@@ -398,6 +398,43 @@ export const activatePromo = ({ promo_id }: ParamPromoStatus) =>
 export const deactivatePromo = ({ promo_id }: ParamPromoStatus) =>
   changePromoStatus(promo_id, "deactivate", "Gagal menonaktifkan promo");
 
+export type ParamGeneratePromoCodes = {
+  promo_id: string;
+  // Jumlah kode baru; backend menerima 1 sampai 1000
+  total_code: number;
+};
+
+// Menambah promo code baru ke promo yang memakai promo code. Kode dibuat di
+// Runchise lalu promo disinkronkan ulang ke DB lokal. PROMO_SYNC_FAILED
+// berarti kodenya sudah dibuat di Runchise → pulihkan lewat sync, jangan
+// generate ulang.
+export const generatePromoCodes = async ({
+  promo_id,
+  total_code,
+}: ParamGeneratePromoCodes): Promise<PromoDetail> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/promos/${promo_id}/promo-codes/generate`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-protection": "1",
+      },
+      body: JSON.stringify({ total_code }),
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw toPromoApiError(error, "Gagal generate promo code");
+  }
+
+  const result = await res.json();
+
+  return result.data;
+};
+
 export type ParamSyncPromo = {
   runchise_id: number;
 };

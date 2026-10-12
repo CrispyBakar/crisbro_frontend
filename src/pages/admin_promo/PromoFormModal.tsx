@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { useLocations } from "@/hooks/use-locations";
 import ProductSelect from "./ProductSelect";
 import LocationSelect from "./LocationSelect";
 import LocationMultiSelect from "./LocationMultiSelect";
 import OrderTypeSelect from "./OrderTypeSelect";
-import { createProductRow } from "./promo-form-utils";
 import { PROMO_TYPE_LABELS } from "./promo-detail-utils";
 import type {
   ProductRow,
@@ -54,6 +53,8 @@ type PromoFormModalProps = {
   extraOrderTypes?: OrderTypeOption[];
   // Edit: bagian promo code disembunyikan (kode dibuat lewat generate)
   showPromoCode?: boolean;
+  // Edit: bagian generate promo code, tampil di tempat bagian promo code
+  promoCodeSection?: React.ReactNode;
   // Wajib memilih minimal satu produk
   requireProducts?: boolean;
   isPending: boolean;
@@ -71,6 +72,7 @@ const PromoFormModal = ({
   initialValues,
   extraOrderTypes = [],
   showPromoCode = true,
+  promoCodeSection,
   requireProducts = true,
   isPending,
   error: submitError,
@@ -92,16 +94,20 @@ const PromoFormModal = ({
     productRows.flatMap((row) => (row.product ? [row.product.id] : [])),
   );
 
-  const addProductRow = () =>
-    setField("productRows", [...productRows, createProductRow()]);
+  // Satu promo hanya untuk satu produk. Lebih dari satu baris hanya muncul saat
+  // mengedit promo lama, dan harus dikurangi menjadi satu sebelum disimpan.
+  const hasExtraProducts = productRows.length > 1;
+  const productGridClassName = hasExtraProducts
+    ? "grid-cols-[1fr_32px] sm:grid-cols-[1fr_200px_32px]"
+    : "grid-cols-1 sm:grid-cols-[1fr_200px]";
 
-  const removeProductRow = (key: number) =>
+  const removeProductRow = (key: number) => {
     setField(
       "productRows",
-      productRows.length === 1
-        ? productRows
-        : productRows.filter((row) => row.key !== key),
+      productRows.filter((row) => row.key !== key),
     );
+    setFormError(null);
+  };
 
   const updateProductRow = (key: number, patch: Partial<ProductRow>) =>
     setField(
@@ -130,10 +136,16 @@ const PromoFormModal = ({
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (hasExtraProducts) {
+      setFormError(
+        "Promo hanya boleh berisi satu produk. Hapus produk lainnya.",
+      );
+      return;
+    }
     const hasEmptyRow = productRows.some((row) => !row.product);
     const hasProduct = productRows.some((row) => row.product);
     if (requireProducts ? hasEmptyRow : hasEmptyRow && hasProduct) {
-      setFormError("Pilih produk di setiap baris Specific Products.");
+      setFormError("Pilih produk pada Specific Products.");
       return;
     }
     if (!values.ownerLocation) {
@@ -329,7 +341,9 @@ const PromoFormModal = ({
                 </label>
 
                 <div className="flex flex-col gap-3 sm:pl-6">
-                  <div className="hidden grid-cols-[1fr_200px_32px] gap-3 sm:grid">
+                  <div
+                    className={`hidden gap-3 sm:grid ${productGridClassName}`}
+                  >
                     <span className="text-xs font-semibold uppercase text-gray-500">
                       Product
                     </span>
@@ -341,7 +355,7 @@ const PromoFormModal = ({
                   {productRows.map((row) => (
                     <div
                       key={row.key}
-                      className="grid grid-cols-[1fr_32px] gap-3 sm:grid-cols-[1fr_200px_32px] sm:items-center"
+                      className={`grid gap-3 sm:items-center ${productGridClassName}`}
                     >
                       <ProductSelect
                         value={row.product}
@@ -365,26 +379,22 @@ const PromoFormModal = ({
                         required={row.product !== null}
                         className={`col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto ${inputClassName}`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeProductRow(row.key)}
-                        disabled={productRows.length === 1}
-                        className="col-start-2 row-start-1 cursor-pointer justify-self-center rounded-full p-1.5 text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 sm:col-start-auto sm:row-start-auto"
-                        aria-label="Hapus produk"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {hasExtraProducts && (
+                        <button
+                          type="button"
+                          onClick={() => removeProductRow(row.key)}
+                          className="col-start-2 row-start-1 cursor-pointer justify-self-center rounded-full p-1.5 text-red-500 transition-colors hover:bg-red-50 sm:col-start-auto sm:row-start-auto"
+                          aria-label="Hapus produk"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   ))}
 
-                  <button
-                    type="button"
-                    onClick={addProductRow}
-                    className="flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-orange"
-                  >
-                    <Plus size={18} />
-                    Add More Items
-                  </button>
+                  <p className="text-xs text-gray-500">
+                    Satu promo hanya berlaku untuk satu produk.
+                  </p>
 
                   <label className="flex w-fit cursor-pointer items-center gap-3">
                     <input
@@ -596,6 +606,8 @@ const PromoFormModal = ({
                   )}
                 </div>
               )}
+
+              {promoCodeSection}
             </div>
           </div>
 

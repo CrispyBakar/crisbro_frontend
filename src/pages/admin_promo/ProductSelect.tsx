@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
-import { useProducts } from "@/hooks/use-products";
+import { useLoyaltyProducts } from "@/hooks/use-loyalty-products";
 
+// id = runchise_product_id
 export type SelectedProduct = { id: number; name: string };
 
 type ProductSelectProps = {
   value: SelectedProduct | null;
   onChange: (product: SelectedProduct) => void;
-  // runchise_id produk yang sudah dipilih di baris lain
+  // runchise_product_id produk yang sudah dipilih di baris lain
   excludedIds: Set<number>;
   placeholder?: string;
 };
 
-// Daftar produk hasil search server; di-mount hanya saat dropdown terbuka
+// Daftar produk loyalty hasil search server; di-mount hanya saat dropdown terbuka
 // agar tiap baris tidak memanggil API sebelum dibutuhkan.
 const ProductOptions = ({
   search,
@@ -25,18 +26,13 @@ const ProductOptions = ({
   excludedIds: Set<number>;
   onSelect: (product: SelectedProduct) => void;
 }) => {
-  const { data, isLoading, isFetching, error } = useProducts({
+  // Backend mengurutkan produk loyalty berdasarkan nama
+  const { data, isLoading, isFetching, error } = useLoyaltyProducts({
     take: 20,
-    search,
-    status: "activated",
-    sort_by: "name",
-    order_by: "asc",
+    query: search,
   });
 
-  // Payload diteruskan apa adanya ke Runchise → hanya produk yang punya runchise_id
-  const products = (data?.products ?? []).filter(
-    (product) => product.runchise_id != null,
-  );
+  const products = data?.loyalty_products ?? [];
 
   if (isLoading) {
     return <p className="px-1 py-2 text-sm text-gray-400">Memuat produk...</p>;
@@ -57,24 +53,28 @@ const ProductOptions = ({
   return (
     <div className={isFetching ? "opacity-60" : ""}>
       {products.map((product) => {
-        const isSelected = value?.id === product.runchise_id;
-        const isUsed = !isSelected && excludedIds.has(product.runchise_id);
+        // Payload promo memakai ID produk Runchise, bukan ID loyalty product
+        const productId = product.runchise_product_id;
+        const isSelected = value?.id === productId;
+        const isUsed = !isSelected && excludedIds.has(productId);
         return (
           <button
-            key={product.runchise_id}
+            key={product.loyalty_product_id}
             type="button"
             disabled={isUsed}
             onClick={() =>
-              onSelect({ id: product.runchise_id, name: product.name })
+              onSelect({ id: productId, name: product.product_name })
             }
             className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-2.5 text-left text-sm transition-colors hover:bg-cream disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent ${
               isSelected ? "font-medium text-orange" : ""
             }`}
           >
             <span className="flex min-w-0 flex-col">
-              <span className="truncate">{product.name}</span>
-              {product.sku && (
-                <span className="text-xs text-gray-400">#{product.sku}</span>
+              <span className="truncate">{product.product_name}</span>
+              {product.product_sku && (
+                <span className="text-xs text-gray-400">
+                  #{product.product_sku}
+                </span>
               )}
             </span>
             {isSelected && <Check size={16} className="shrink-0" />}

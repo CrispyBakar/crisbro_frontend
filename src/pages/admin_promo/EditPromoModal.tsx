@@ -4,6 +4,7 @@ import { useLocations } from "@/hooks/use-locations";
 import type { PromoDetail } from "@/services/promo";
 import type { Location } from "@/services/locations";
 import LoadingCircle from "@/components/LoadingCircle";
+import PromoCodeGenerator from "./PromoCodeGenerator";
 import PromoFormModal from "./PromoFormModal";
 import {
   buildPromoPayload,
@@ -168,6 +169,14 @@ const EditPromoModal = ({ promoId, onClose, onSuccess }: EditPromoModalProps) =>
       initialValues={initialValues}
       extraOrderTypes={initialOrderTypes}
       showPromoCode={false}
+      promoCodeSection={
+        <PromoCodeGenerator
+          promoId={promoId}
+          promoName={detail.promo.name ?? "-"}
+          codeCount={detail.promo_codes.length}
+          isEnabled={detail.promo_rule?.use_promotion_code ?? false}
+        />
+      }
       // Promo tanpa data produk yang terbaca tidak dipaksa memilih ulang produk
       requireProducts={initialValues.productRows.some((row) => row.product)}
       isPending={isPending}

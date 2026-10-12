@@ -22,6 +22,19 @@ const redeemButtonClass =
 
 // Melihat menu boleh tanpa login, tapi menukar poin wajib login
 const RewardAction = ({ menu, points }: RewardCardProps) => {
+  // Belum ada promo, atau semua kode vouchernya sudah diklaim
+  if (!menu.is_voucher_available) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="flex h-10 shrink-0 cursor-not-allowed items-center rounded-full bg-input px-4 text-sm font-bold text-muted"
+      >
+        Voucher Habis
+      </button>
+    );
+  }
+
   if (points === null) {
     return (
       <Link to="/login" className={redeemButtonClass}>
@@ -40,10 +53,14 @@ const RewardAction = ({ menu, points }: RewardCardProps) => {
   }
 
   return (
-    // Belum ada aksi: backend belum punya endpoint penukaran poin
-    <button type="button" className={redeemButtonClass}>
+    // Penukaran dikonfirmasi di halaman detail, setelah customer membaca
+    // syarat dan ketentuannya
+    <Link
+      to={`/redeem/${menu.loyalty_product_id}`}
+      className={redeemButtonClass}
+    >
       Tukar Poin
-    </button>
+    </Link>
   );
 };
 
@@ -211,8 +228,15 @@ const CustomerRedeemPage = () => {
       );
     }
 
-    const redeemableMenus = menus.filter((menu) => menu.point_needed <= points);
-    const lockedMenus = menus.filter((menu) => menu.point_needed > points);
+    // Menu yang vouchernya habis tidak bisa ditukar berapa pun poinnya
+    const availableMenus = menus.filter((menu) => menu.is_voucher_available);
+    const soldOutMenus = menus.filter((menu) => !menu.is_voucher_available);
+    const redeemableMenus = availableMenus.filter(
+      (menu) => menu.point_needed <= points,
+    );
+    const lockedMenus = availableMenus.filter(
+      (menu) => menu.point_needed > points,
+    );
 
     return (
       <>
@@ -250,15 +274,35 @@ const CustomerRedeemPage = () => {
             />
           )}
 
-          {filter === "redeemable" && redeemableMenus.length === 0 && (
-            <StateMessage
-              icon={Gift}
-              title="Poin kamu belum cukup"
-              description={`Kamu punya ${points.toLocaleString("id-ID")} poin. Kumpulkan lagi untuk menukar menu pertamamu.`}
-              actionLabel="Lihat semua menu"
-              onAction={() => changeFilter("all")}
+          {filter === "all" && soldOutMenus.length > 0 && (
+            <RewardSection
+              title="VOUCHER HABIS"
+              dotClass="bg-muted/40"
+              menus={soldOutMenus}
+              points={points}
             />
           )}
+
+          {filter === "redeemable" &&
+            redeemableMenus.length === 0 &&
+            // Tanpa menu yang vouchernya masih ada, penyebabnya bukan poin
+            (availableMenus.length === 0 ? (
+              <StateMessage
+                icon={Gift}
+                title="Voucher sedang habis"
+                description="Semua voucher menu redeem sedang habis. Coba cek lagi nanti."
+                actionLabel="Lihat semua menu"
+                onAction={() => changeFilter("all")}
+              />
+            ) : (
+              <StateMessage
+                icon={Gift}
+                title="Poin kamu belum cukup"
+                description={`Kamu punya ${points.toLocaleString("id-ID")} poin. Kumpulkan lagi untuk menukar menu pertamamu.`}
+                actionLabel="Lihat semua menu"
+                onAction={() => changeFilter("all")}
+              />
+            ))}
         </div>
       </>
     );

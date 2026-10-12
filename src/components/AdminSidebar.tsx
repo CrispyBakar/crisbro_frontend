@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Users,
   Utensils,
+  Ticket,
   TicketPercent,
   HandCoins,
 } from "lucide-react";
@@ -69,6 +70,11 @@ const sidebarSections: { label: string; items: SidebarItem[] }[] = [
     items: [
       { icon: TicketPercent, label: "Promotions", endpoint: "/admin/promos" },
       { icon: HandCoins, label: "Referrals", endpoint: "/admin/referrals" },
+      {
+        icon: Ticket,
+        label: "Redeemed Vouchers",
+        endpoint: "/admin/redeem-transactions",
+      },
     ],
   },
   {

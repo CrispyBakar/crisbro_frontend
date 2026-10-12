@@ -8,6 +8,7 @@ import {
   activatePromo,
   createPromo,
   deactivatePromo,
+  generatePromoCodes,
   getPromo,
   getPromos,
   syncPromo,
@@ -16,6 +17,7 @@ import {
 import type {
   CreatePromoRequest,
   GetPromosProps,
+  ParamGeneratePromoCodes,
   ParamPromoStatus,
   ParamSyncPromo,
   ParamUpdatePromo,
@@ -98,6 +100,24 @@ export const useDeactivatePromo = () => {
       deactivatePromo({ promo_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promos"] });
+    },
+    onError: (error) => {
+      console.error(error.message);
+    },
+  });
+};
+
+export const useGeneratePromoCodes = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ promo_id, total_code }: ParamGeneratePromoCodes) =>
+      generatePromoCodes({ promo_id, total_code }),
+    onSuccess: () => {
+      // Termasuk ["promos", "detail", id] agar jumlah & daftar kode ikut ter-refresh
+      queryClient.invalidateQueries({ queryKey: ["promos"] });
+      // Kode baru menambah stok voucher menu redeem
+      queryClient.invalidateQueries({ queryKey: ["loyalty-products"] });
     },
     onError: (error) => {
       console.error(error.message);

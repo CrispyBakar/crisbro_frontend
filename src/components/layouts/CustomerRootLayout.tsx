@@ -1,4 +1,5 @@
 import React from "react";
+import AcquisitionPrompt from "@/components/AcquisitionPrompt";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 
 const CustomerRootLayout = ({ children }: { children: React.ReactNode }) => {
@@ -8,6 +9,7 @@ const CustomerRootLayout = ({ children }: { children: React.ReactNode }) => {
         {children}
         <CustomerBottomNav />
       </main>
+      <AcquisitionPrompt />
     </div>
   );
 };
