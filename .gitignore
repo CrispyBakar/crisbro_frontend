@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 # Environtment
-.env.development
+.env*
