@@ -17,6 +17,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
+import { disablePush } from "@/lib/push";
 import ConfirmDialog from "./ConfirmDialog";
 
 type SidebarItem = {
@@ -102,14 +103,18 @@ const AdminSidebar = ({ onClose }: AdminSidebarProps) => {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const logout = useMutation({
-    mutationFn: () =>
-      fetch(`${import.meta.env.VITE_API_BASE_URL}/logout`, {
+    mutationFn: async () => {
+      // Matikan push sebelum sesi dicabut (unsubscribe butuh login), supaya
+      // perangkat ini tidak terus menerima notifikasi referral setelah logout
+      await disablePush().catch(() => undefined);
+      return fetch(`${import.meta.env.VITE_API_BASE_URL}/logout`, {
         method: "POST",
         credentials: "include",
         headers: {
           "x-csrf-protection": "1",
         },
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.setQueryData(["auth", "me"], null);
       queryClient.removeQueries();

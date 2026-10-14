@@ -20,7 +20,6 @@ const PROMO_TYPES: PromoType[] = ["general_promo", "loyalty_promo"];
 // TODO: tambahkan "(R) External Order" & "Takeaway" setelah ID Runchise-nya diketahui
 const ORDER_TYPES: OrderTypeOption[] = [{ id: 2699, name: "Dine In" }];
 
-
 const PROMO_CODE_USAGE_TYPES: {
   value: PromoCodeUsageType;
   label: string;
@@ -157,10 +156,7 @@ const PromoFormModal = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={isPending ? undefined : onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
         className="w-full max-w-2xl rounded-3xl border border-gray-100 bg-white shadow-md"
         onClick={(event) => event.stopPropagation()}

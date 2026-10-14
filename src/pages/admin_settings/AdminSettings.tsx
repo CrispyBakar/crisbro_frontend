@@ -1,4 +1,5 @@
 import HeaderMain from "@/components/HeaderMain";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { User2 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -25,6 +26,14 @@ const AdminSettings = () => {
               </div>
             </div>
           </Link>
+
+          {/* Notifikasi */}
+          <div>
+            <h3 className="text-xl font-bold mb-3">Notifikasi</h3>
+            <div className="max-w-md">
+              <PushNotificationToggle offDescription="Dapatkan pemberitahuan referral baru yang perlu divalidasi" />
+            </div>
+          </div>
         </div>
       </div>
     </main>

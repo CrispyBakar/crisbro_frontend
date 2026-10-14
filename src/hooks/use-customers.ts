@@ -8,11 +8,13 @@ import {
 import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import type { ParamsCustomers } from "@/services/customers";
 import {
+  adjustCustomerPoint,
   changeCustomerStatus,
   getCustomerById,
   getCustomerPointHistory,
   getCustomers,
   getMyPointHistory,
+  syncCustomer,
   updateCustomer,
   updateMyCustomer,
 } from "@/services/customers";
@@ -116,7 +118,37 @@ export const useUpdateMyCustomer = () => {
   });
 };
 
-export const useChangeStatusCustomer = (customer_id: string) => {
+export const useAdjustCustomerPoint = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: adjustCustomerPoint,
+    onSuccess: (_, { customer_id }) => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customer_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-point-history", customer_id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+export const useSyncCustomer = (customer_id: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => syncCustomer(customer_id),
+    // Promise dikembalikan supaya tombol tetap loading sampai detail customer
+    // termuat ulang
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["customer", customer_id] }),
+        queryClient.invalidateQueries({ queryKey: ["customers"] }),
+      ]),
+  });
+};
+
+export const useChangeStatusCustomer =(customer_id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({

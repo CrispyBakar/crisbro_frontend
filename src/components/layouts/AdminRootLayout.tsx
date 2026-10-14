@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import AdminNavbar from "../AdminNavbar";
 import AdminSidebar from "../AdminSidebar";
 import Breadcrumb from "../Breadcrumb";
+import { AdminPushPermissionPrompt } from "../PushPermissionPrompt";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePushSync } from "@/hooks/use-push-notification";
 
 type AdminRootLayoutProps = {
   children?: React.ReactNode;
@@ -12,6 +15,10 @@ type AdminRootLayoutProps = {
 const AdminRootLayout = ({ children }: AdminRootLayoutProps) => {
   // Di bawah breakpoint lg sidebar tampil sebagai drawer yang dibuka dari navbar
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Pastikan subscription di browser ini tercatat atas nama staf yang login
+  const { data: user } = useCurrentUser();
+  usePushSync(user?.role === "admin" || user?.role === "marketing");
 
   useEffect(() => {
     if (!isSidebarOpen) return;
@@ -54,6 +61,8 @@ const AdminRootLayout = ({ children }: AdminRootLayoutProps) => {
           </div>
         </div>
       </div>
+
+      <AdminPushPermissionPrompt />
     </main>
   );
 };

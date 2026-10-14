@@ -16,6 +16,7 @@ import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import { useCustomerLogout } from "@/hooks/use-login";
 import { usePageTitle } from "@/hooks/use-page-title";
 import { formatPhone } from "@/lib/phone";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 type SettingsItem = {
   icon: LucideIcon;
@@ -107,6 +108,8 @@ const CustomerSettingsPage = () => {
           })}
         </ul>
       </nav>
+
+      <PushNotificationToggle />
 
       <button
         type="button"

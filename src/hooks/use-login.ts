@@ -1,9 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { loginAdmin, loginCustomer, logout } from "@/services/auth";
-import type {
-  AdminLoginPayload,
-  CustomerLoginPayload,
-} from "@/services/auth";
+import type { AdminLoginPayload, CustomerLoginPayload } from "@/services/auth";
+import { disablePush } from "@/lib/push";
 
 interface UseLoginProps {
   setError?: (value: string) => void;
@@ -44,10 +42,14 @@ export const useCustomerLogout = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: logout,
+    mutationFn: async () => {
+      await disablePush().catch(() => undefined);
+      await logout();
+    },
     // Sesi dikosongkan, lalu CustomerRoute mengarahkan ke halaman login
     onSuccess: () => {
       queryClient.setQueryData(["auth", "profile"], null);
+      queryClient.invalidateQueries({ queryKey: ["push", "status"] });
     },
   });
 };

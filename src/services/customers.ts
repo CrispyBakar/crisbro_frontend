@@ -303,6 +303,87 @@ export const updateMyCustomer = async (
   return data.data;
 };
 
+export type AdjustPointType = "add" | "subtract";
+
+// Body endpoint POST /customers/:customer_id/adjust-point (schema strict)
+export type ParamsAdjustPoint = {
+  customer_id: string;
+  point: number;
+  type: AdjustPointType;
+  notes?: string;
+};
+
+export type AdjustPointResult = {
+  customer: Customer;
+  // false: poin sudah berubah di Runchise, tapi saldo lokal belum tersinkron
+  synced: boolean;
+  message: string;
+};
+
+export const adjustCustomerPoint = async ({
+  customer_id,
+  ...payload
+}: ParamsAdjustPoint): Promise<AdjustPointResult> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/customers/${customer_id}/adjust-point`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-protection": "1",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    // Gagal validasi (422) mengirim message berbentuk { field: [pesan] }
+    const message = typeof error?.message === "string" ? error.message : null;
+    throw new Error(message ?? "Gagal mengubah poin customer");
+  }
+
+  const data = await res.json();
+
+  return { ...data.data, message: data.message };
+};
+
+const SYNC_CUSTOMER_ERRORS: Record<string, string> = {
+  "Customer not found": "Customer tidak ditemukan",
+  "Customer belum terhubung ke Runchise, tidak bisa update":
+    "Customer belum terhubung ke Runchise, tidak bisa disinkronkan",
+};
+
+// Menarik data terbaru customer dari Runchise. Respons tanpa relasi user dan
+// owner_location, jadi detail customer perlu dimuat ulang setelahnya
+export const syncCustomer = async (customer_id: string): Promise<Customer> => {
+  const res = await fetch(
+    `${import.meta.env.VITE_API_BASE_URL}/customers/${customer_id}/sync`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "x-csrf-protection": "1",
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    // Gagal validasi (422) mengirim message berbentuk { field: [pesan] }
+    const message = typeof error?.message === "string" ? error.message : null;
+    throw new Error(
+      (message && (SYNC_CUSTOMER_ERRORS[message] ?? message)) ??
+        "Gagal menyinkronkan customer",
+    );
+  }
+
+  const data = await res.json();
+
+  return data.data;
+};
+
 export const changeCustomerStatus = async (
   customer_id: string,
   status: string,

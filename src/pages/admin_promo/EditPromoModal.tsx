@@ -58,9 +58,7 @@ const toFormValues = (
         )
       : [createProductRow()],
     applyToOptionSet: promo_reward?.apply_to_option_set ?? true,
-    ownerLocation: owner
-      ? { id: owner.runchise_id, name: owner.name }
-      : null,
+    ownerLocation: owner ? { id: owner.runchise_id, name: owner.name } : null,
     validLocation: {
       mode: "locations",
       selectAll: false,
@@ -81,7 +79,11 @@ type EditPromoModalProps = {
   onSuccess: () => void;
 };
 
-const EditPromoModal = ({ promoId, onClose, onSuccess }: EditPromoModalProps) => {
+const EditPromoModal = ({
+  promoId,
+  onClose,
+  onSuccess,
+}: EditPromoModalProps) => {
   const { data: detail, error: detailError } = usePromo(promoId);
   const { data: locationsData, error: locationsError } = useLocations({
     take: 100, // batas maksimal take di backend
@@ -97,10 +99,7 @@ const EditPromoModal = ({ promoId, onClose, onSuccess }: EditPromoModalProps) =>
   // Form baru di-mount setelah data siap agar nilai awalnya lengkap
   if (!detail || !locationsData) {
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-        onClick={onClose}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
         <div
           className="w-full max-w-md rounded-3xl border border-gray-100 bg-white p-6 shadow-md"
           onClick={(event) => event.stopPropagation()}

@@ -1,7 +1,9 @@
 import {
   Check,
+  CoinsIcon,
   Copy,
   CreditCardCheck,
+  EllipsisIcon,
   Gift,
   MapPin,
   MoreVertical,
@@ -16,9 +18,11 @@ import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
+  useAdjustCustomerPoint,
   useChangeStatusCustomer,
   useCustomer,
   useCustomerPointHistory,
+  useSyncCustomer,
   useUpdateCustomer,
 } from "@/hooks/use-customers";
 import { useLocations } from "@/hooks/use-locations";
@@ -26,6 +30,7 @@ import { usePageTitle } from "@/hooks/use-page-title";
 import { useSaleTransaction } from "@/hooks/use-sale-transactions";
 import type { Customer } from "@/services/customers";
 import whatsappIcon from "../../assets/whatsapp-icon.png";
+import AdjustPointModal from "@/components/AdjustPointModal";
 
 // Bulan singkat Indonesia + zona WIB, mis. "10 Sep 2026, 10:45 WIB"
 const formatDateWIB = (iso: string) => {
@@ -767,6 +772,11 @@ const EditCustomerModal = ({
 const CustomerDetails = () => {
   const { customer_id: customerId = "" } = useParams();
   const { data: customer, isPending, error } = useCustomer(customerId);
+  const {
+    mutate: syncCustomer,
+    isPending: isSyncing,
+    error: syncError,
+  } = useSyncCustomer(customerId);
 
   usePageTitle(customer?.name ?? "Detail Customer");
 
@@ -780,6 +790,23 @@ const CustomerDetails = () => {
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAdjustPoinOpen, setIsAdjustPoinOpen] = useState(false);
+  const {
+    mutate: adjustPoint,
+    isPending: isAdjustingPoint,
+    error: adjustPointError,
+    reset: resetAdjustPoint,
+  } = useAdjustCustomerPoint();
+  // Peringatan jika poin sudah berubah di Runchise tapi saldo lokal belum
+  // tersinkron, supaya admin tidak mengulang adjust
+  const [adjustPointNotice, setAdjustPointNotice] = useState<string | null>(
+    null,
+  );
+
+  const closeAdjustPoint = () => {
+    setIsAdjustPoinOpen(false);
+    resetAdjustPoint();
+  };
 
   const handleCopyId = async () => {
     if (!customer) return;
@@ -877,6 +904,17 @@ const CustomerDetails = () => {
           </div>
 
           <button
+            onClick={() => {
+              setAdjustPointNotice(null);
+              setIsAdjustPoinOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-3xl border border-gray-100 bg-white py-2 px-5 text-sm font-semibold text-chocolate transition-colors hover:bg-cream active:bg-gray-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <CoinsIcon size={16} />
+            <span>Atur Poin</span>
+          </button>
+
+          <button
             onClick={() => setIsEditOpen(true)}
             className="flex items-center gap-2 rounded-3xl bg-orange py-2 px-6 text-sm font-semibold text-white shadow-sm shadow-amber-600 active:bg-orange-500 cursor-pointer"
           >
@@ -885,6 +923,19 @@ const CustomerDetails = () => {
           </button>
         </div>
       </div>
+
+      {adjustPointNotice && (
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p>{adjustPointNotice}</p>
+          <button
+            onClick={() => setAdjustPointNotice(null)}
+            className="cursor-pointer rounded-full p-0.5 text-amber-700 transition-colors hover:bg-amber-100"
+            aria-label="Tutup pemberitahuan"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Kartu utama: profil (kiri) + tab aktivitas (kanan) */}
       <div className="grid grid-cols-1 rounded-3xl border border-gray-100 bg-white shadow-md lg:grid-cols-[21rem_1fr]">
@@ -998,21 +1049,46 @@ const CustomerDetails = () => {
 
         {/* Panel tab & activity log */}
         <section className="flex min-w-0 flex-col p-5 sm:p-8">
-          <nav className="flex flex-wrap items-center gap-2">
-            {TABS.map((tab) => (
+          <div className="flex justify-between items-center">
+            <nav className="flex flex-wrap items-center gap-2">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                    activeTab === tab
+                      ? "bg-cream text-chocolate border border-gray-200"
+                      : "text-gray-500 hover:bg-cream hover:text-chocolate"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+            <div className="relative">
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
-                  activeTab === tab
-                    ? "bg-cream text-chocolate border border-gray-200"
-                    : "text-gray-500 hover:bg-cream hover:text-chocolate"
-                }`}
+                onClick={() => syncCustomer()}
+                disabled={isSyncing}
+                className="flex w-fit justify-center py-1.5 px-4 rounded-3xl bg-orange text-white font-semibold shadow-sm shadow-amber-600 active:bg-orange-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {tab}
+                {!isSyncing ? (
+                  "Sync Customer"
+                ) : (
+                  <EllipsisIcon
+                    size={20}
+                    color="white"
+                    className="[&>circle]:animate-bounce [&>circle:nth-child(2)]:[animation-delay:150ms] [&>circle:nth-child(3)]:[animation-delay:300ms]"
+                  />
+                )}
               </button>
-            ))}
-          </nav>
+
+              {syncError && (
+                <p className="absolute right-0 mt-1 w-max max-w-[80vw] text-xs text-red-500">
+                  {syncError.message}
+                </p>
+              )}
+            </div>
+          </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 pt-6">
             <div>
@@ -1052,6 +1128,26 @@ const CustomerDetails = () => {
         <EditCustomerModal
           customer={customer}
           onClose={() => setIsEditOpen(false)}
+        />
+      )}
+
+      {isAdjustPoinOpen && (
+        <AdjustPointModal
+          currentPoints={customer.available_point}
+          isPending={isAdjustingPoint}
+          error={adjustPointError?.message}
+          onSubmit={(values) =>
+            adjustPoint(
+              { customer_id: customerId, ...values },
+              {
+                onSuccess: ({ synced, message }) => {
+                  if (!synced) setAdjustPointNotice(message);
+                  closeAdjustPoint();
+                },
+              },
+            )
+          }
+          onClose={closeAdjustPoint}
         />
       )}
     </main>
