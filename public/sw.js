@@ -12,14 +12,26 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Crisbro", {
-      body: data.body || "",
-      icon: "/icons/crisbar-icon.png",
-      badge: "/icons/crisbar-icon.png",
-      tag: data.tag,
-      renotify: Boolean(data.tag),
-      data: { url: data.url || "/" },
-    }),
+    (async () => {
+      // Chrome di macOS mengganti notifikasi ber-tag sama tanpa menampilkan
+      // banner meski `renotify` aktif. Tutup yang lama dulu supaya notifikasi
+      // baru tampil sebagai notifikasi baru.
+      if (data.tag) {
+        const existing = await self.registration.getNotifications({
+          tag: data.tag,
+        });
+        existing.forEach((notification) => notification.close());
+      }
+
+      await self.registration.showNotification(data.title || "Crisbro", {
+        body: data.body || "",
+        icon: "/icons/crisbar-icon.png",
+        badge: "/icons/crisbar-icon.png",
+        tag: data.tag,
+        renotify: Boolean(data.tag),
+        data: { url: data.url || "/" },
+      });
+    })(),
   );
 });
 
