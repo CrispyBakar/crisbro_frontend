@@ -526,7 +526,9 @@ const GeneralTable = <T extends TableRow>({
                           )}
 
                           <span className="font-semibold text-black">
-                            {String(row[head.key] ?? "")}
+                            {head.render
+                              ? head.render(row)
+                              : String(row[head.key] ?? "")}
                           </span>
                         </div>
                       ) : head.render ? (

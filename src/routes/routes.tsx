@@ -34,6 +34,7 @@ import CustomerProfilePage from "@/pages/customer_settings/CustomerProfilePage";
 import CustomerChangePasswordPage from "@/pages/customer_settings/CustomerChangePasswordPage";
 import CustomerReferralPage from "@/pages/customer_settings/CustomerReferralPage";
 import CustomerPointHistoryPage from "@/pages/customer_settings/CustomerPointHistoryPage";
+import BannerSettings from "@/pages/admin_settings/banner/BannerSettings";
 
 const router = createBrowserRouter([
   // {
@@ -91,6 +92,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, Component: AdminSettings },
               { path: "profile", Component: AdminProfile },
+              { path: "banner", Component: BannerSettings },
             ],
           },
           {
