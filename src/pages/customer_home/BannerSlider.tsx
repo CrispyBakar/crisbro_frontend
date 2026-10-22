@@ -67,19 +67,25 @@ const BannerSlider = () => {
     };
 
     // menit sejak 00:00 untuk waktu sekarang, dalam zona yang sama dengan data (UTC)
-    const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const nowMinutes =
+      (now.getUTCHours() * 60 + now.getUTCMinutes() + 7 * 60) % 1440;
 
     return (
       rawBanners?.flatMap((v: Banner) => {
         if (v.status !== "active") return [];
 
+        const parseWIB = (s: string) =>
+          new Date(s.replace(" ", "T").slice(0, 19) + "+07:00");
+
         if (v.type === "temporary") {
-          const start = v.start_date ? new Date(v.start_date) : null;
-          const end = v.end_date ? new Date(v.end_date) : null;
+          const start = v.start_date ? parseWIB(v.start_date) : null;
+          const end = v.end_date ? parseWIB(v.end_date) : null;
+          const now = new Date(); // a real instant, no conversion needed
 
           if (start && now < start) return [];
           if (end && now > end) return [];
         } else if (v.type === "default") {
+          // console.log(v);
           if (v.start_time && v.end_time) {
             const startMin = toMinutesUTC(v.start_time);
             const endMin = toMinutesUTC(v.end_time);
