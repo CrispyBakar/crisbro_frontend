@@ -176,7 +176,8 @@ const UploadBannerModal = ({ onClose }: UploadBannerModalProps) => {
                 value={values.type}
                 onChange={(event) =>
                   setValues((current) => {
-                    const type = event.target.value as CreateBannerValues["type"];
+                    const type = event.target
+                      .value as CreateBannerValues["type"];
                     return {
                       ...current,
                       type,
@@ -312,7 +313,7 @@ const UploadBannerModal = ({ onClose }: UploadBannerModalProps) => {
                   <button
                     type="button"
                     onClick={handleRemove}
-                    className="absolute right-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white hover:bg-black/80"
+                    className="absolute right-2 top-2 rounded bg-black px-3 py-2 text-xs text-white hover:bg-white hover:text-black hover:border"
                   >
                     Hapus
                   </button>
@@ -338,7 +339,6 @@ const UploadBannerModal = ({ onClose }: UploadBannerModalProps) => {
                 onChange={handleChange}
                 className="sr-only"
               />
-
             </div>
           </div>
           {(error || mutationError) && (

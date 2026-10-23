@@ -106,22 +106,90 @@ const BannerSettings = () => {
                 render: (row) => <BannerImage bannerId={row.id} />,
               },
               { key: "title", label: "Title" },
-              { key: "status", label: "Status" },
+              {
+                key: "status",
+                label: "Status",
+                render: (row) => {
+                  const status = String(row.status);
+                  return (
+                    <span
+                      className={`${status === "active" ? "text-success" : "text-berry-red"}`}
+                    >
+                      {status}
+                    </span>
+                  );
+                },
+              },
               { key: "type", label: "Type" },
               {
                 key: "start_date",
                 label: "Start Date",
                 render: (row) => {
-                  const date = row.start_date ?? "Not set";
-                  return <span>{String(date)}</span>;
+                  let dateStr = "Not set";
+                  if (
+                    typeof row.start_date === "string" ||
+                    typeof row.start_date === "number"
+                  ) {
+                    dateStr = new Date(row.start_date).toLocaleString();
+                  }
+                  return (
+                    <span
+                      className={`${!row.start_date ? "text-berry-red" : ""}`}
+                    >
+                      {dateStr}
+                    </span>
+                  );
                 },
               },
               {
                 key: "end_date",
                 label: "End Date",
                 render: (row) => {
-                  const date = row.end_date ?? "Not set";
-                  return <span>{String(date)}</span>;
+                  let dateStr = "Not set";
+                  if (
+                    typeof row.end_date === "string" ||
+                    typeof row.end_date === "number"
+                  ) {
+                    dateStr = new Date(row.end_date).toLocaleString();
+                  }
+                  return (
+                    <span
+                      className={`${!row.end_date ? "text-berry-red" : ""}`}
+                    >
+                      {dateStr}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "start_time",
+                label: "Start Time",
+                render: (row) => {
+                  const startTime = String(row.start_time ?? "Not Set");
+                  const time =
+                    startTime.split("T")[1]?.slice(0, 5) ?? startTime;
+                  return (
+                    <span
+                      className={`${!row.start_time ? "text-berry-red" : ""}`}
+                    >
+                      {time.replace(":", ".")}
+                    </span>
+                  );
+                },
+              },
+              {
+                key: "end_time",
+                label: "End Time",
+                render: (row) => {
+                  const endTime = String(row.end_time ?? "Not Set");
+                  const time = endTime.split("T")[1]?.slice(0, 5) ?? endTime;
+                  return (
+                    <span
+                      className={`${!row.end_time ? "text-berry-red" : ""}`}
+                    >
+                      {time.replace(":", ".")}
+                    </span>
+                  );
                 },
               },
             ]}
