@@ -17,7 +17,7 @@ const UploadBannerModal = ({ onClose }: UploadBannerModalProps) => {
   const [values, setValues] = useState<CreateBannerValues>({
     title: "",
     status: "inactive",
-    type: "temporary",
+    type: "campaign",
     start_date: "",
     end_date: "",
     start_time: "",
@@ -198,11 +198,11 @@ const UploadBannerModal = ({ onClose }: UploadBannerModalProps) => {
                 className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-chocolate"
               >
                 <option value="default">Default</option>
-                <option value="temporary">Temporary</option>
+                <option value="campaign">Campaign</option>
               </select>
             </div>
 
-            {values.type === "temporary" && (
+            {values.type === "campaign" && (
               <>
                 <div className="flex flex-col gap-2">
                   <label htmlFor="start_date" className="text-sm font-medium">

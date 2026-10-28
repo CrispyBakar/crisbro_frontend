@@ -37,10 +37,6 @@ import CustomerPointHistoryPage from "@/pages/customer_settings/CustomerPointHis
 import BannerSettings from "@/pages/admin_settings/banner/BannerSettings";
 
 const router = createBrowserRouter([
-  // {
-  //   path: "/",
-  //   loader: () => redirect("/admin/login"),
-  // },
   {
     path: "/admin",
     element: <AdminAuthLayout />,

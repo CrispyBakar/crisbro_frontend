@@ -77,7 +77,7 @@ const BannerSlider = () => {
         const parseWIB = (s: string) =>
           new Date(s.replace(" ", "T").slice(0, 19) + "+07:00");
 
-        if (v.type === "temporary") {
+        if (v.type === "campaign") {
           const start = v.start_date ? parseWIB(v.start_date) : null;
           const end = v.end_date ? parseWIB(v.end_date) : null;
           const now = new Date(); // a real instant, no conversion needed
