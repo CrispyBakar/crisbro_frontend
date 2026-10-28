@@ -124,51 +124,59 @@ const BannerSlider = () => {
   }, [activeIndex, isPaused, banners.length]);
 
   return (
-    <section aria-roledescription="carousel" aria-label="Promo Crisbar">
-      {/* Geser pakai scroll-snap bawaan browser supaya swipe terasa natural */}
-      <div
-        ref={trackRef}
-        onScroll={handleScroll}
-        onPointerEnter={() => setIsPaused(true)}
-        onPointerLeave={() => setIsPaused(false)}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden"
-      >
-        {banners.map((banner, index) => (
-          <div
-            key={banner.id}
-            role="group"
-            aria-roledescription="slide"
-            aria-label={`${index + 1} dari ${banners.length}`}
-            className="w-full shrink-0 snap-center"
-          >
-            <BannerImage bannerId={banner.id} alt={banner.alt} />
-          </div>
-        ))}
+    <>
+      <div className="min-w-0">
+        <h2 className="text-xl font-extrabold leading-tight text-chocolate">
+          Spesial crisbro member
+        </h2>
       </div>
 
-      {banners.length > 1 && (
-        <div className="mt-2 flex justify-center">
+      <section aria-roledescription="carousel" aria-label="Promo Crisbar">
+        {/* Geser pakai scroll-snap bawaan browser supaya swipe terasa natural */}
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          onPointerEnter={() => setIsPaused(true)}
+          onPointerLeave={() => setIsPaused(false)}
+          className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden"
+        >
           {banners.map((banner, index) => (
-            <button
+            <div
               key={banner.id}
-              type="button"
-              onClick={() => scrollToSlide(trackRef.current, index)}
-              aria-label={`Tampilkan banner ${index + 1}`}
-              aria-current={index === activeIndex ? true : undefined}
-              className="cursor-pointer p-1"
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1} dari ${banners.length}`}
+              className="w-full shrink-0 snap-center"
             >
-              <span
-                className={`block h-1.5 rounded-full transition-all ${
-                  index === activeIndex
-                    ? "w-5 bg-chocolate"
-                    : "w-1.5 bg-chocolate/20"
-                }`}
-              />
-            </button>
+              <BannerImage bannerId={banner.id} alt={banner.alt} />
+            </div>
           ))}
         </div>
-      )}
-    </section>
+
+        {banners.length > 1 && (
+          <div className="mt-2 flex justify-center">
+            {banners.map((banner, index) => (
+              <button
+                key={banner.id}
+                type="button"
+                onClick={() => scrollToSlide(trackRef.current, index)}
+                aria-label={`Tampilkan banner ${index + 1}`}
+                aria-current={index === activeIndex ? true : undefined}
+                className="cursor-pointer p-1"
+              >
+                <span
+                  className={`block h-1.5 rounded-full transition-all ${
+                    index === activeIndex
+                      ? "w-5 bg-chocolate"
+                      : "w-1.5 bg-chocolate/20"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 };
 

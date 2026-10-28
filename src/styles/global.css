@@ -21,6 +21,10 @@
   --container-mobile: 30rem;
 }
 
+@utility word-spacing-* {
+  word-spacing: --value(--spacing-*, [length]);
+}
+
 /*
  * Sweet Gradient (#FFD815 -> #FF9100 -> #E60C19):
  * bg-linear-to-r from-sunshine-yellow via-orange to-berry-red

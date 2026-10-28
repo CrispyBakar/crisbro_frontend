@@ -19,12 +19,14 @@ const OutletCard = ({
   return (
     <div className="rounded-2xl shadow-sm bg-white p-4">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-input">
-          <MapPin size={20} className="text-chocolate" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sunshine-yellow">
+          <MapPin size={20} className="text-black" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-semibold text-muted">{city}</p>
+            <p className="truncate text-xs font-semibold text-berry-red">
+              {city}
+            </p>
             {distance && (
               <p className="shrink-0 text-xs font-bold text-chocolate">
                 {distance}

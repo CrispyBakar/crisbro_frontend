@@ -10,7 +10,7 @@ const SectionHeader = ({ title, subtitle, endpoint }: SectionHeaderProps) => {
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="text-base font-extrabold leading-tight text-chocolate">
+        <h2 className="text-xl font-extrabold leading-tight text-chocolate">
           {title}
         </h2>
         <p className="mt-0.5 text-xs text-muted">{subtitle}</p>

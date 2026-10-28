@@ -1,10 +1,9 @@
 import crisbarMark from "@/assets/logo_c_crisbar.png";
-import crisbarCoin from "@/assets/crisbar_coin.png";
 import type { CustomerUser } from "@/services/auth";
 import type { LoyaltyProduct } from "@/services/loyalty-products";
-import { Gift } from "lucide-react";
 import { formatPhone } from "@/lib/phone";
 import { Link } from "react-router";
+import { ArrowUpRight, MoveUpRight } from "lucide-react";
 
 interface CustomerMemberCardProps {
   user: CustomerUser | null | undefined;
@@ -22,7 +21,7 @@ const CustomerMemberCard = ({
   isMenusError,
 }: CustomerMemberCardProps) => {
   const points = user?.customer?.available_point ?? 0;
-  const totalPoints = user?.customer?.total_point ?? 0;
+  // const totalPoints = user?.customer?.total_point ?? 0;
 
   // Reward termurah yang poinnya belum cukup; null bila semua reward sudah bisa ditukar
   const nextReward = menus?.find((menu) => menu.point_needed > points) ?? null;
@@ -35,7 +34,7 @@ const CustomerMemberCard = ({
   const nextRewardText = () => {
     if (nextReward) {
       const missingPoints = nextReward.point_needed - points;
-      return `Tinggal ${missingPoints.toLocaleString("id-ID")} poin lagi untuk ${nextReward.product_name}`;
+      return `${missingPoints.toLocaleString("id-ID")} poin lagi, dapat ${nextReward.product_name}!`;
     }
     if (menus?.length) return "Poin kamu cukup untuk menukar semua reward";
     if (menus) return "Belum ada reward yang bisa ditukar";
@@ -43,7 +42,7 @@ const CustomerMemberCard = ({
     return "Memuat reward berikutnya...";
   };
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-sunshine-yellow p-4 text-chocolate">
+    <section className="relative overflow-hidden rounded-3xl bg-sunshine-yellow px-4 py-6 text-chocolate">
       {/* Watermark logo C; brightness-0 + invert mengubah logo kuning jadi putih */}
       <img
         src={crisbarMark}
@@ -52,38 +51,27 @@ const CustomerMemberCard = ({
       />
 
       <div className="relative">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <img
-              src={crisbarCoin}
-              alt=""
-              className="h-8 w-8 shrink-0 rounded-full ring-2 ring-white/50"
-            />
-            <div className="min-w-0">
-              <p className="text-sm font-extrabold leading-tight">Crisbar</p>
-              <p className="text-xs font-semibold leading-tight text-chocolate/70">
-                Member Card
-              </p>
-            </div>
-          </div>
-          <p className="shrink-0 rounded-full bg-chocolate px-2.5 py-1 text-xs font-bold tracking-wider text-sunshine-yellow">
-            CRISBRO MEMBER
-          </p>
-        </div>
-
         {user ? (
           <>
-            <p className="mt-2.5 text-xs font-bold">Poin Tersedia</p>
-            <p className="text-4xl font-extrabold leading-none">
+            <div className="flex justify-between items-center gap-3">
+              <p className="text-xs font-bold">Poin Tersedia</p>
+              <div className="shrink-0 flex items-center rounded-full bg-chocolate px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-sunshine-yellow">
+                <img
+                  src={crisbarMark}
+                  alt="crisbar mark"
+                  className="h-4 -mr-0.5 -mt-0.5"
+                />
+                <span className="mt-1">risbro! Insider</span>
+              </div>
+            </div>
+
+            <p className="text-6xl font-extrabold leading-none">
               {points.toLocaleString("id-ID")}
               <span className="ml-1.5 text-base">Poin</span>
             </p>
 
             <div className="mt-2.5 flex items-center justify-between gap-3 text-xs font-bold">
-              <p className="flex items-center gap-1.5">
-                <Gift size={14} />
-                Reward berikutnya
-              </p>
+              <p className="mt-1.5 text-xs font-semibold">{nextRewardText()}</p>
               {nextReward && (
                 <p>
                   {points.toLocaleString("id-ID")}/
@@ -104,22 +92,21 @@ const CustomerMemberCard = ({
                 style={{ width: `${progress * 100}%` }}
               />
             </div>
-            <p className="mt-1.5 text-xs font-semibold">{nextRewardText()}</p>
-
-            <dl className="mt-2.5 flex justify-between gap-3 border-t border-chocolate/15 pt-2">
-              <div>
-                <dt className={memberStatLabelClass}>TOTAL POIN</dt>
-                <dd className="text-sm font-extrabold">
-                  {totalPoints.toLocaleString("id-ID")} Poin
-                </dd>
-              </div>
-              <div className="text-right">
-                <dt className={memberStatLabelClass}>NOMOR TELEPON</dt>
-                <dd className="text-sm font-extrabold">
-                  {user.phone ? formatPhone(user.phone) : "-"}
-                </dd>
-              </div>
-            </dl>
+            <div className="flex justify-between items-center-safe">
+              <p className="mt-2 text-xs font-semibold text-chocolate">
+                {user?.customer?.name.toUpperCase()} ·{" "}
+                {formatPhone(user?.phone as string)}
+              </p>
+              <Link
+                to={"/settings/point-history"}
+                className="mt-2 flex place-items-start gap-1"
+              >
+                <span className="text-xs text-chocolate font-bold">
+                  Riwayat
+                </span>
+                <ArrowUpRight size={10} />
+              </Link>
+            </div>
           </>
         ) : (
           <>

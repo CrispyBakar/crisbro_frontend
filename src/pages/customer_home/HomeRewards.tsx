@@ -3,9 +3,10 @@ import crisbarCoin from "@/assets/crisbar_coin.png";
 import productImageFallback from "@/assets/ProductImageFallback.png";
 import { useFeaturedRewardMenus } from "@/hooks/use-loyalty-products";
 import SectionHeader from "./SectionHeader";
+import { ArrowUpRight } from "lucide-react";
 
 const cardClass =
-  "w-40 shrink-0 snap-start overflow-hidden rounded-2xl shadow-sm bg-white mb-2";
+  "w-55 shrink-0 snap-start overflow-hidden rounded-2xl shadow-sm bg-white mb-2";
 
 const messageClass = "mt-4 text-sm text-muted";
 
@@ -61,19 +62,20 @@ const HomeRewards = () => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = productImageFallback;
               }}
-              className="aspect-square w-full object-cover"
+              className="aspect-square w-full max-h-40 object-cover bg-blue-200"
             />
             <div className="p-3">
-              <h3 className="line-clamp-2 text-sm font-bold leading-snug text-chocolate">
+              <h3 className="line-clamp-2 text-sm text-black font-normal leading-snug">
                 {menu.product_name}
               </h3>
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
-                <img src={crisbarCoin} alt="" className="h-4 w-4" />
-                <span className="text-sm font-extrabold text-chocolate">
-                  {menu.point_needed.toLocaleString("id-ID")}
+              <div className="mt-2 flex justify-between items-center gap-1.5 text-xs text-muted">
+                <span className="text-sm font-extrabold text-berry-red">
+                  {menu.point_needed.toLocaleString("id-ID")} Poin
                 </span>
-                Poin
-              </p>
+                <div className="rounded-lg p-1.5 bg-sunshine-yellow flex items-center">
+                  <ArrowUpRight size={16} className="text-black font-bold" />
+                </div>
+              </div>
             </div>
           </Link>
         ))}
@@ -84,7 +86,7 @@ const HomeRewards = () => {
   return (
     <section>
       <SectionHeader
-        title="Menu spesial reward buat Crisbro"
+        title="Menu spesial reward"
         subtitle="Tukarkan poin kamu sekarang"
         endpoint="/redeem"
       />
