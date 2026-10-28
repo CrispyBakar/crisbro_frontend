@@ -3,7 +3,7 @@ import type { CustomerUser } from "@/services/auth";
 import type { LoyaltyProduct } from "@/services/loyalty-products";
 import { formatPhone } from "@/lib/phone";
 import { Link } from "react-router";
-import { ArrowUpRight, MoveUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 interface CustomerMemberCardProps {
   user: CustomerUser | null | undefined;
@@ -11,9 +11,6 @@ interface CustomerMemberCardProps {
   menus: LoyaltyProduct[] | undefined;
   isMenusError: boolean;
 }
-
-const memberStatLabelClass =
-  "text-xs font-bold tracking-wider text-chocolate/70";
 
 const CustomerMemberCard = ({
   user,

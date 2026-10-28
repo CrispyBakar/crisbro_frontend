@@ -1,4 +1,3 @@
-import crisbarLogo from "@/assets/logo-crisbar-spotlight.png";
 import { useCustomerProfile } from "@/hooks/use-customer-profile";
 import { useRewardMenus } from "@/hooks/use-loyalty-products";
 import BannerSlider from "./BannerSlider";

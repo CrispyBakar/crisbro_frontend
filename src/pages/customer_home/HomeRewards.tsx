@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import crisbarCoin from "@/assets/crisbar_coin.png";
 import productImageFallback from "@/assets/ProductImageFallback.png";
 import { useFeaturedRewardMenus } from "@/hooks/use-loyalty-products";
 import SectionHeader from "./SectionHeader";
