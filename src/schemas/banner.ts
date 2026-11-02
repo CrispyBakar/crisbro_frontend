@@ -11,6 +11,10 @@ export const createBannerSchema = z.object({
   end_date: z.string().optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
+  redirect_type: z
+    .enum(["disable", "internal", "external", "orderulang"])
+    .default("disable"),
+  url: z.string().optional(),
 });
 
 export type CreateBannerValues = z.infer<typeof createBannerSchema>;

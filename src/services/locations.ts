@@ -13,6 +13,7 @@ export interface Location {
   gmap_address: string;
   longitude: string;
   latitude: string;
+  dine_in_url?: string | null;
   sub_brands: {
     sub_brand_id: string;
     runchise_id: number;

@@ -10,6 +10,8 @@ export interface Banner {
   end_date: string | null;
   start_time: string | null;
   end_time: string | null;
+  redirect_type: string;
+  url: string | null;
   created_at: string;
   image_url: string;
 }
@@ -23,7 +25,13 @@ export interface BannerPayload {
   end_date: string;
   start_time: string;
   end_time: string;
+  redirect_type: string;
+  url: string | null;
 }
+
+export type UpdateBannerPayload = Omit<BannerPayload, "image"> & {
+  image?: File;
+};
 
 export const getBanners = async (): Promise<Banner[]> => {
   const res = await fetch(`${API_BASE_URL}/banners`, {
@@ -65,6 +73,8 @@ export const uploadBanner = async (payload: BannerPayload): Promise<Banner> => {
   formData.append("end_date", payload.end_date);
   formData.append("start_time", payload.start_time);
   formData.append("end_time", payload.end_time);
+  formData.append("redirect_type", payload.redirect_type);
+  formData.append("url", payload.url ?? "null");
 
   const res = await fetch(`${API_BASE_URL}/banners/upload`, {
     method: "POST",
@@ -85,6 +95,41 @@ export const uploadBanner = async (payload: BannerPayload): Promise<Banner> => {
   return data.data;
 };
 
+export const updateBanner = async (
+  banner_id: string,
+  payload: UpdateBannerPayload,
+): Promise<Banner> => {
+  const formData = new FormData();
+  formData.append("title", payload.title);
+  if (payload.image) formData.append("image", payload.image);
+  formData.append("status", payload.status);
+  formData.append("type", payload.type);
+  formData.append("start_date", payload.start_date);
+  formData.append("end_date", payload.end_date);
+  formData.append("start_time", payload.start_time);
+  formData.append("end_time", payload.end_time);
+  formData.append("redirect_type", payload.redirect_type);
+  formData.append("url", payload.url ?? "null");
+
+  const res = await fetch(
+    `${API_BASE_URL}/banners/${encodeURIComponent(banner_id)}`,
+    {
+      method: "PUT",
+      headers: { "x-csrf-protection": "1" },
+      credentials: "include",
+      body: formData,
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Gagal mengubah banner");
+  }
+
+  const data = await res.json();
+  return data.data;
+};
+
 export const deleteBanner = async (banner_id: string): Promise<void> => {
   const res = await fetch(
     `${API_BASE_URL}/banners/${encodeURIComponent(banner_id)}`,
@@ -100,5 +145,22 @@ export const deleteBanner = async (banner_id: string): Promise<void> => {
   if (!res.ok) {
     const error = await res.json().catch(() => null);
     throw new Error(error?.message ?? "Gagal menghapus banner");
+  }
+};
+
+export const clickBanner = async (banner_id: string) => {
+  const res = await fetch(`${API_BASE_URL}/banners/click`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-csrf-protection": "1",
+    },
+    credentials: "include",
+    body: JSON.stringify({ banner_id }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.message ?? "Gagal insert banner click");
   }
 };

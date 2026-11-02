@@ -4,6 +4,8 @@ import UploadBannerModal from "@/components/UploadBannerModal";
 import { useBanners, useDeleteBanner } from "@/hooks/use-banner";
 import { getImageBanner } from "@/services/banner";
 import { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
+import type { Banner } from "@/services/banner";
 
 // Render Image Component
 function BannerImage({ bannerId }: { bannerId: string }) {
@@ -55,6 +57,7 @@ const BannerSettings = () => {
   const [search, setSearch] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [bannerToEdit, setBannerToEdit] = useState<Banner | null>(null);
   const itemsPerPage = 25;
   const totalPages = Math.ceil((data?.length as number) / itemsPerPage);
 
@@ -66,6 +69,13 @@ const BannerSettings = () => {
   const handleDelete = (bannerId: string) => {
     if (isDeleting || !confirm("Yakin ingin menghapus banner ini?")) return;
     deleteBanner(bannerId);
+  };
+
+  const handleEdit = (bannerId: string) => {
+    const selectedBanner = data?.find(
+      (banner) => banner.banner_id === bannerId,
+    );
+    if (selectedBanner) setBannerToEdit(selectedBanner);
   };
 
   return (
@@ -204,6 +214,17 @@ const BannerSettings = () => {
             setCurrentPage={setCurrentPage}
             detailHiddenKeys={["image_url", "id"]}
             handleDelete={handleDelete}
+            renderActions={(row) => (
+              <button
+                type="button"
+                onClick={() => handleEdit(row.id)}
+                aria-label={`Edit banner ${String(row.title ?? "")}`}
+                title="Edit banner"
+                className="cursor-pointer rounded-full p-2 text-gray-400 transition-colors hover:bg-cream hover:text-chocolate"
+              >
+                <Pencil size={16} />
+              </button>
+            )}
             canDelete={true}
             canUpdate={false}
             canShow={false}
@@ -214,6 +235,13 @@ const BannerSettings = () => {
 
       {/* Upload Modal */}
       {modalOpen && <UploadBannerModal onClose={setModalOpen} />}
+      {bannerToEdit && (
+        <UploadBannerModal
+          key={bannerToEdit.banner_id}
+          banner={bannerToEdit}
+          onClose={() => setBannerToEdit(null)}
+        />
+      )}
     </main>
   );
 };

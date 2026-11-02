@@ -1,8 +1,51 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getImageBanner, type Banner } from "@/services/banner";
-import { useBanners } from "@/hooks/use-banner";
+import { useBanners, useClickBanner } from "@/hooks/use-banner";
+import { useNavigate } from "react-router";
+import { useCheckLocation } from "@/components/guards/CustomerDistance";
+import LoadingCircle from "@/components/LoadingCircle";
+import { useOutlets } from "@/hooks/use-locations";
+import type { Location } from "@/services/locations";
 
 const AUTOPLAY_MS = 5000;
+const WIB_TIME_ZONE = "Asia/Jakarta";
+
+const parseCampaignDate = (value: string | null, isEndDate = false) => {
+  if (!value) return null;
+
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const normalized = isDateOnly
+    ? `${value}T${isEndDate ? "23:59:59.999" : "00:00:00"}+07:00`
+    : /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
+      ? value
+      : `${value.replace(" ", "T")}+07:00`;
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const parseTimeMinutes = (value: string | null) => {
+  if (!value) return null;
+
+  const match = value.match(/(?:^|T|\s)(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?/);
+  if (!match) return undefined;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return undefined;
+  return hours * 60 + minutes;
+};
+
+const getWibMinutes = (date: Date) => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: WIB_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hours = Number(parts.find((part) => part.type === "hour")?.value);
+  const minutes = Number(parts.find((part) => part.type === "minute")?.value);
+  return hours * 60 + minutes;
+};
 
 const scrollToSlide = (track: HTMLDivElement | null, index: number) => {
   track?.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
@@ -11,10 +54,52 @@ const scrollToSlide = (track: HTMLDivElement | null, index: number) => {
 interface DisplayBanner {
   id: string;
   alt: string;
+  redirect_type: string;
+  url: string | null;
 }
 
-function BannerImage({ bannerId, alt }: { bannerId: string; alt: string }) {
+function BannerImage({
+  bannerId,
+  alt,
+  redirect_type,
+  url,
+  outlets,
+}: {
+  bannerId: string;
+  alt: string;
+  redirect_type: string;
+  url: string | null;
+  outlets: Location[];
+}) {
   const [src, setSrc] = useState<string | null>(null);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const { mutate: clickBanner } = useClickBanner();
+
+  const { check, result, error, loading } = useCheckLocation();
+
+  useEffect(() => {
+    if (!result) return;
+
+    for (const locationResult of result) {
+      if (!locationResult.inRadius) continue;
+      if (!locationResult.dineInUrl) {
+        setLocationMessage("URL pemesanan outlet belum tersedia.");
+        return;
+      }
+      window.location.href = locationResult.dineInUrl;
+      return;
+    }
+
+    setLocationMessage(
+      "Kamu harus berada dalam radius salah satu outlet untuk melanjutkan.",
+    );
+  }, [result]);
+
+  useEffect(() => {
+    if (error) setLocationMessage(error);
+  }, [error]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -41,12 +126,81 @@ function BannerImage({ bannerId, alt }: { bannerId: string; alt: string }) {
 
   if (!src) return <div className="h-full w-full animate-pulse bg-gray-200" />;
 
+  const handleNavigateRedirect = ({
+    redirect_type,
+    url,
+  }: {
+    redirect_type: string;
+    url: string | null;
+  }) => {
+    if (redirect_type === "disable") return;
+
+    if (redirect_type === "internal" && url) {
+      navigate(url as string, { replace: true });
+    }
+
+    if (redirect_type === "external" && url) {
+      window.location.href = url as string;
+    }
+
+    if (redirect_type === "orderulang") {
+      clickBanner(bannerId);
+      setLocationMessage(null);
+      check(outlets);
+    }
+  };
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="aspect-43/25 w-full object-cover object-[50%_67%]"
-    />
+    <>
+      <img
+        src={src}
+        alt={alt}
+        onClick={() => handleNavigateRedirect({ redirect_type, url })}
+        onKeyDown={(event) => {
+          if (
+            redirect_type === "orderulang" &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            check(outlets);
+          }
+        }}
+        role={redirect_type === "orderulang" ? "button" : undefined}
+        tabIndex={redirect_type === "orderulang" ? 0 : undefined}
+        className={`aspect-43/25 w-full object-cover object-[50%_67%] ${
+          redirect_type === "orderulang" ? "cursor-pointer" : ""
+        }`}
+      />
+      {loading && (
+        <div className="fixed inset-0 z-50 bg-black/40">
+          <LoadingCircle className="h-dvh" />
+        </div>
+      )}
+      {locationMessage && !loading && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setLocationMessage(null)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-sm leading-relaxed text-chocolate">
+              {locationMessage}
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocationMessage(null)}
+              className="mt-5 h-11 w-full rounded-full bg-berry-red px-4 text-sm font-bold text-white"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -54,57 +208,60 @@ const BannerSlider = () => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [scheduleTime, setScheduleTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setScheduleTime(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data: rawBanners } = useBanners();
+  const { data: outlets = [] } = useOutlets();
 
   const banners: DisplayBanner[] = useMemo(() => {
-    const now = new Date();
-
-    // helper: ambil menit sejak 00:00 (UTC) dari kolom Time Prisma
-    const toMinutesUTC = (value: string | Date) => {
-      const d = new Date(value);
-      return d.getUTCHours() * 60 + d.getUTCMinutes();
-    };
-
-    // menit sejak 00:00 untuk waktu sekarang, dalam zona yang sama dengan data (UTC)
-    const nowMinutes =
-      (now.getUTCHours() * 60 + now.getUTCMinutes() + 7 * 60) % 1440;
+    const nowMinutes = getWibMinutes(scheduleTime);
 
     return (
       rawBanners?.flatMap((v: Banner) => {
         if (v.status !== "active") return [];
 
-        const parseWIB = (s: string) =>
-          new Date(s.replace(" ", "T").slice(0, 19) + "+07:00");
-
         if (v.type === "campaign") {
-          const start = v.start_date ? parseWIB(v.start_date) : null;
-          const end = v.end_date ? parseWIB(v.end_date) : null;
-          const now = new Date(); // a real instant, no conversion needed
-
-          if (start && now < start) return [];
-          if (end && now > end) return [];
+          const start = parseCampaignDate(v.start_date);
+          const end = parseCampaignDate(v.end_date, true);
+          if (start === undefined || end === undefined) return [];
+          if (start && scheduleTime < start) return [];
+          if (end && scheduleTime >= end) return [];
         } else if (v.type === "default") {
-          // console.log(v);
-          if (v.start_time && v.end_time) {
-            const startMin = toMinutesUTC(v.start_time);
-            const endMin = toMinutesUTC(v.end_time);
+          const startMin = parseTimeMinutes(v.start_time);
+          const endMin = parseTimeMinutes(v.end_time);
+          if (startMin === undefined || endMin === undefined) return [];
 
+          if (startMin !== null && endMin !== null) {
             const inRange =
               startMin <= endMin
-                ? nowMinutes >= startMin && nowMinutes < endMin // contoh 08:00-17:00
-                : nowMinutes >= startMin || nowMinutes < endMin; // lewat tengah malam, contoh 22:00-02:00
-
+                ? nowMinutes >= startMin && nowMinutes < endMin
+                : nowMinutes >= startMin || nowMinutes < endMin;
             if (!inRange) return [];
+          } else if (startMin !== null && nowMinutes < startMin) {
+            return [];
+          } else if (endMin !== null && nowMinutes >= endMin) {
+            return [];
           }
         } else {
           return [];
         }
 
-        return [{ id: String(v.banner_id), alt: v.title }];
+        return [
+          {
+            id: String(v.banner_id),
+            alt: v.title,
+            redirect_type: v.redirect_type,
+            url: v.url,
+          },
+        ];
       }) ?? []
     );
-  }, [rawBanners]);
+  }, [rawBanners, scheduleTime]);
 
   const handleScroll = () => {
     const track = trackRef.current;
@@ -148,7 +305,13 @@ const BannerSlider = () => {
               aria-label={`${index + 1} dari ${banners.length}`}
               className="w-full shrink-0 snap-center"
             >
-              <BannerImage bannerId={banner.id} alt={banner.alt} />
+              <BannerImage
+                bannerId={banner.id}
+                alt={banner.alt}
+                redirect_type={banner.redirect_type}
+                url={banner.url}
+                outlets={outlets}
+              />
             </div>
           ))}
         </div>

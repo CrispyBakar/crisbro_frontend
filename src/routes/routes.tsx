@@ -35,6 +35,7 @@ import CustomerChangePasswordPage from "@/pages/customer_settings/CustomerChange
 import CustomerReferralPage from "@/pages/customer_settings/CustomerReferralPage";
 import CustomerPointHistoryPage from "@/pages/customer_settings/CustomerPointHistoryPage";
 import BannerSettings from "@/pages/admin_settings/banner/BannerSettings";
+import CustomerNotificationPage from "@/pages/customer_notifications/CustomerNotificationPage";
 
 const router = createBrowserRouter([
   {
@@ -145,6 +146,10 @@ const router = createBrowserRouter([
               { index: true, Component: CustomerVouchersPage },
               { path: ":voucher_id", Component: CustomerVoucherDetailPage },
             ],
+          },
+          {
+            path: "notifications",
+            children: [{ index: true, Component: CustomerNotificationPage }],
           },
           {
             path: "settings",

@@ -5,6 +5,7 @@ import HomeOutlets from "./HomeOutlets";
 import HomeRewards from "./HomeRewards";
 import CustomerMemberCard from "@/components/CustomerMemberCard";
 import { Bell } from "lucide-react";
+import { Link } from "react-router";
 
 const CustomerHomePage = () => {
   const { data: user } = useCustomerProfile();
@@ -27,10 +28,13 @@ const CustomerHomePage = () => {
             <span>Hai, {firstName || "Crisbro"}. Yuk, jajan lagi!</span>
           </div>
         </div>
-        <div className="relative p-3 rounded-full flex bg-amber-200">
+        <Link
+          to={"/notifications"}
+          className="relative p-3 rounded-full flex bg-amber-200"
+        >
           <div className="absolute h-2 w-2 rounded-full bg-berry-red right-2.5" />
           <Bell />
-        </div>
+        </Link>
       </header>
 
       <CustomerMemberCard
