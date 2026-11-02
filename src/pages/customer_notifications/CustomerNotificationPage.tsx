@@ -1,8 +1,5 @@
 import CustomerPageHeader from "@/components/CustomerPageHeader";
-import NotificationCardSkeleton from "@/components/NotificationCardSkeleton";
 import { usePageTitle } from "@/hooks/use-page-title";
-import React from "react";
-import { fieldBoxClass } from "../auth/fieldStyles";
 import FilterPill from "@/components/FilterPill";
 
 const CustomerNotificationPage = () => {

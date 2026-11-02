@@ -1,5 +1,3 @@
-import React from "react";
-
 const NotificationCardSkeleton = () => {
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
