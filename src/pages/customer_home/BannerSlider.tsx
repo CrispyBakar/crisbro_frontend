@@ -72,34 +72,37 @@ function BannerImage({
   outlets: Location[];
 }) {
   const [src, setSrc] = useState<string | null>(null);
-  const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const { mutate: clickBanner } = useClickBanner();
 
   const { check, result, error, loading } = useCheckLocation();
+  const [isLocationMessageDismissed, setIsLocationMessageDismissed] =
+    useState(false);
+
+  const locationMessage = useMemo(() => {
+    if (error) return error;
+    if (!result) return null;
+
+    const locationResult = result.find((location) => location.inRadius);
+    if (!locationResult) {
+      return "Kamu harus berada dalam radius salah satu outlet untuk melanjutkan.";
+    }
+    return locationResult.dineInUrl
+      ? null
+      : "URL pemesanan outlet belum tersedia.";
+  }, [error, result]);
 
   useEffect(() => {
     if (!result) return;
 
     for (const locationResult of result) {
       if (!locationResult.inRadius) continue;
-      if (!locationResult.dineInUrl) {
-        setLocationMessage("URL pemesanan outlet belum tersedia.");
-        return;
-      }
+      if (!locationResult.dineInUrl) return;
       window.location.href = locationResult.dineInUrl;
       return;
     }
-
-    setLocationMessage(
-      "Kamu harus berada dalam radius salah satu outlet untuk melanjutkan.",
-    );
   }, [result]);
-
-  useEffect(() => {
-    if (error) setLocationMessage(error);
-  }, [error]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -136,16 +139,18 @@ function BannerImage({
     if (redirect_type === "disable") return;
 
     if (redirect_type === "internal" && url) {
+      clickBanner(bannerId);
       navigate(url as string, { replace: true });
     }
 
     if (redirect_type === "external" && url) {
+      clickBanner(bannerId);
       window.location.href = url as string;
     }
 
     if (redirect_type === "orderulang") {
       clickBanner(bannerId);
-      setLocationMessage(null);
+      setIsLocationMessageDismissed(false);
       check(outlets);
     }
   };
@@ -162,12 +167,13 @@ function BannerImage({
             (event.key === "Enter" || event.key === " ")
           ) {
             event.preventDefault();
+            setIsLocationMessageDismissed(false);
             check(outlets);
           }
         }}
         role={redirect_type === "orderulang" ? "button" : undefined}
         tabIndex={redirect_type === "orderulang" ? 0 : undefined}
-        className={`aspect-43/25 w-full object-cover object-[50%_67%] ${
+        className={`h-52 w-full object-cover object-[50%_67%] ${
           redirect_type === "orderulang" ? "cursor-pointer" : ""
         }`}
       />
@@ -176,10 +182,10 @@ function BannerImage({
           <LoadingCircle className="h-dvh" />
         </div>
       )}
-      {locationMessage && !loading && (
+      {locationMessage && !loading && !isLocationMessageDismissed && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setLocationMessage(null)}
+          onClick={() => setIsLocationMessageDismissed(true)}
         >
           <div
             role="alertdialog"
@@ -192,7 +198,7 @@ function BannerImage({
             </p>
             <button
               type="button"
-              onClick={() => setLocationMessage(null)}
+              onClick={() => setIsLocationMessageDismissed(true)}
               className="mt-5 h-11 w-full rounded-full bg-berry-red px-4 text-sm font-bold text-white"
             >
               Tutup
@@ -295,7 +301,7 @@ const BannerSlider = () => {
           onScroll={handleScroll}
           onPointerEnter={() => setIsPaused(true)}
           onPointerLeave={() => setIsPaused(false)}
-          className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl scrollbar-none [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory overflow-x-auto rounded-3xl scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           {banners.map((banner, index) => (
             <div

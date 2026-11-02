@@ -1,7 +1,10 @@
 // Angka diterima backend sebagai string maupun number
 type NumericValue = string | number;
 
-export type PromoType = "general_promo" | "loyalty_promo";
+export type PromoType =
+  | "general_promo"
+  | "loyalty_promo"
+  | "birthday_promo";
 
 // Mengikuti createPromoSchema di backend (validation/runchise/runchise-validation.js)
 export interface CreatePromoRequest {
@@ -10,6 +13,7 @@ export interface CreatePromoRequest {
   goal: "increase_average_sale" | "increase_number_sale";
   customer_allowed_dine_in: boolean;
   customer_allowed_online_ordering: boolean;
+  applicable_for_ssk?: boolean;
   applicable_for_loyalty: boolean;
   start_date: string; // DD/MM/YYYY
   end_date: string | null; // DD/MM/YYYY
@@ -30,33 +34,48 @@ export interface CreatePromoRequest {
   promo_rule_attributes: {
     order_type_ids: number[];
     member_only: boolean;
+    applicable_for_new_member?: boolean;
+    customer_categories?: unknown[];
     payment_type_ids: number[];
+    bin_promo_codes?: unknown[];
     product_ids: number[];
+    product_min_quantity?: unknown[];
     product_condition: string | null;
     product_category_ids: number[];
+    product_category_min_quantity?: unknown[];
     product_category_condition: string | null;
+    required_purchase_products?: unknown[];
+    required_purchase_product_categories?: unknown[];
     total_min: NumericValue | null;
+    total_min_exclude_categories_ids?: number[];
     maximum_redemption: NumericValue | null;
     maximum_redemption_user: NumericValue | null;
+    user_target?: unknown;
     maximum_qty_applied_to_products: {
       id: number;
       name: string;
       maximum_purchase: NumericValue;
     }[];
+    maximum_qty_applied_to_product_categories?: unknown[];
+    exclude_product_ids?: number[];
+    exclude_product_category_ids?: number[];
     use_promotion_code: boolean;
     promotion_code_usage_type?: string;
     promotion_code_source?: string;
     promotion_code_number_of_generated_code?: NumericValue;
     promotion_code_maximum_usage?: NumericValue;
+    promotion_code_uploaded_file?: string | null;
   };
   promo_reward_attributes: {
     template: string;
+    get_product_type?: string;
+    reward_product_condition?: string;
     get_product_allow_multiple: boolean;
-    discount_is_percentage: boolean;
-    discount_amount: NumericValue;
-    discount_maximum: NumericValue | null;
-    discount_external_cost: NumericValue;
-    discount_in_house_cost: NumericValue;
+    discount_is_percentage?: boolean;
+    discount_amount?: NumericValue;
+    discount_maximum?: NumericValue | null;
+    discount_external_cost?: NumericValue;
+    discount_in_house_cost?: NumericValue;
     get_product_ids: number[];
     get_product_category_ids: number[];
     reward_products: {
@@ -185,6 +204,7 @@ export interface PromoRule {
   promotion_code_source: string | null;
   promotion_code_number_of_generated_code: number | null;
   promotion_code_maximum_usage: number | null;
+  total_min?: string | number | null;
   combine_promo_rule: string | null;
   member_only: boolean | null;
   maximum_redemption_location_setting: string | null;

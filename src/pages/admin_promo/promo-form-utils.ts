@@ -30,6 +30,7 @@ export type PromoFormValues = {
   startDate: string; // YYYY-MM-DD (input date)
   endDate: string; // YYYY-MM-DD, kosong = tanpa batas
   discountValue: string;
+  totalMin: string;
   productRows: ProductRow[];
   applyToOptionSet: boolean;
   ownerLocation: SelectedLocation | null;
@@ -51,6 +52,7 @@ export const emptyPromoFormValues = (): PromoFormValues => ({
   startDate: "",
   endDate: "",
   discountValue: "",
+  totalMin: "",
   productRows: [createProductRow()],
   applyToOptionSet: true,
   ownerLocation: null,
@@ -79,6 +81,7 @@ export const buildPromoPayload = (
   const products = values.productRows.flatMap((row) =>
     row.product ? [{ ...row.product, maxQty: row.maxQty }] : [],
   );
+  const isBirthdayTreat = values.promoType === "birthday_promo";
 
   return {
     channel: "pos",
@@ -86,6 +89,7 @@ export const buildPromoPayload = (
     goal: values.goal as CreatePromoRequest["goal"],
     customer_allowed_dine_in: false,
     customer_allowed_online_ordering: false,
+    ...(isBirthdayTreat && { applicable_for_ssk: false }),
     applicable_for_loyalty: false,
     start_date: toPromoDate(values.startDate),
     end_date: values.endDate ? toPromoDate(values.endDate) : null,
@@ -106,15 +110,30 @@ export const buildPromoPayload = (
     promo_rule_attributes: {
       order_type_ids: values.isOrderTypeEnabled ? values.orderTypeIds : [],
       member_only: false,
+      ...(isBirthdayTreat && {
+        applicable_for_new_member: false,
+        customer_categories: [],
+        bin_promo_codes: [],
+        product_min_quantity: [],
+        product_category_min_quantity: [],
+        required_purchase_products: [],
+        required_purchase_product_categories: [],
+        total_min_exclude_categories_ids: [],
+        user_target: null,
+        maximum_qty_applied_to_product_categories: [],
+        exclude_product_ids: [],
+        exclude_product_category_ids: [],
+        promotion_code_uploaded_file: null,
+      }),
       payment_type_ids: [],
       product_ids: [],
       product_condition: null,
       product_category_ids: [],
       product_category_condition: null,
-      total_min: null,
+      total_min: isBirthdayTreat ? values.totalMin : null,
       maximum_redemption: null,
       maximum_redemption_user: null,
-      // Setiap produk terpilih wajib masuk ke sini (mengikuti payload_promo.json)
+      // Max Qty per Order pada specific products disimpan di rule ini.
       maximum_qty_applied_to_products: products.map((product) => ({
         id: product.id,
         name: product.name,
@@ -130,14 +149,20 @@ export const buildPromoPayload = (
       }),
     },
     promo_reward_attributes: {
-      template: "discount_percentage",
+      template: isBirthdayTreat ? "get_product" : "discount_percentage",
+      ...(isBirthdayTreat && {
+        get_product_type: "reward_product",
+        reward_product_condition: "condition_or",
+      }),
       get_product_allow_multiple: false,
-      discount_is_percentage: true,
-      discount_amount: values.discountValue,
-      discount_maximum: null,
-      // Seluruh biaya diskon ditanggung internal (mengikuti payload_promo.json)
-      discount_external_cost: "0",
-      discount_in_house_cost: "100",
+      ...(!isBirthdayTreat && {
+        discount_is_percentage: true,
+        discount_amount: values.discountValue,
+        discount_maximum: null,
+        // Seluruh biaya diskon ditanggung internal (mengikuti payload_promo.json)
+        discount_external_cost: "0",
+        discount_in_house_cost: "100",
+      }),
       get_product_ids: products.map((product) => product.id),
       get_product_category_ids: [],
       reward_products: products.map((product) => ({
@@ -146,7 +171,7 @@ export const buildPromoPayload = (
         quantity: "1",
       })),
       free_of_charge: false,
-      apply_to_option_set: values.applyToOptionSet,
+      apply_to_option_set: isBirthdayTreat ? true : values.applyToOptionSet,
     },
   };
 };

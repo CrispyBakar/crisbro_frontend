@@ -39,6 +39,13 @@ const DetailItem = ({
 
 const yesNo = (value: boolean | null | undefined) => (value ? "Yes" : "No");
 
+const formatRupiah = (value: string | number | null | undefined) => {
+  if (value == null || value === "") return "-";
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return String(value);
+  return `Rp ${new Intl.NumberFormat("id-ID").format(amount)}`;
+};
+
 type PromoDetailModalProps = {
   promoId: string;
   onClose: () => void;
@@ -303,6 +310,11 @@ const PromoDetailModal = ({
                       ? orderTypes.map((orderType) => orderType.name).join(", ")
                       : "All order types"}
                   </DetailItem>
+                  {promo?.promo_type === "birthday_promo" && (
+                    <DetailItem label="Total Minimal Amount">
+                      {formatRupiah(rule?.total_min)}
+                    </DetailItem>
+                  )}
                   <DetailItem label="Member Only">
                     {yesNo(rule?.member_only)}
                   </DetailItem>

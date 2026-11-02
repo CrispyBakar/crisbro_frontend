@@ -40,6 +40,7 @@ const CreatePromoModal = ({ onClose }: { onClose: () => void }) => {
       subtitle="Buat promo baru untuk customer crisbro."
       submitLabel="Simpan promo"
       initialValues={emptyPromoFormValues()}
+      selectCategoryFirst
       isPending={isPending}
       error={error?.message}
       onSubmit={(values) => {

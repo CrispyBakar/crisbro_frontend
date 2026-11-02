@@ -11,6 +11,7 @@ import {
 import DashboardCard from "@/components/DashboardCard";
 import { ProductChart } from "@/components/ProductChart";
 import { OutletCustomersChart } from "@/components/OutletCustomersChart";
+import { BannerClickedChart } from "@/components/BannerClickedChart";
 import {
   ALL_TIME_PERIOD,
   DASHBOARD_PERIODS,
@@ -193,6 +194,8 @@ const AdminDashboard = () => {
           }
         />
       </div>
+
+      <BannerClickedChart />
 
       <div className="w-full mb-1">
         {recentTransactionsPending ? (

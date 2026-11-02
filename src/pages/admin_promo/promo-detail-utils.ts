@@ -58,4 +58,5 @@ export const PROMO_GOAL_LABELS: Record<string, string> = {
 export const PROMO_TYPE_LABELS: Record<PromoType, string> = {
   general_promo: "General Promo",
   loyalty_promo: "Loyalty Promo",
+  birthday_promo: "Birthday Treat Promo",
 };

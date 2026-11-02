@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Trash2, X } from "lucide-react";
+import { ArrowRight, Cake, Gift, TicketPercent, Trash2, X } from "lucide-react";
 import { useLocations } from "@/hooks/use-locations";
 import ProductSelect from "./ProductSelect";
 import LocationSelect from "./LocationSelect";
 import LocationMultiSelect from "./LocationMultiSelect";
 import OrderTypeSelect from "./OrderTypeSelect";
 import { PROMO_TYPE_LABELS } from "./promo-detail-utils";
+import { createProductRow } from "./promo-form-utils";
 import type {
   ProductRow,
   PromoCodeUsageType,
@@ -14,7 +15,33 @@ import type {
 import type { OrderTypeOption } from "./OrderTypeSelect";
 import type { PromoType } from "@/services/promo";
 
-const PROMO_TYPES: PromoType[] = ["general_promo", "loyalty_promo"];
+const PROMO_TYPES: PromoType[] = [
+  "loyalty_promo",
+  "general_promo",
+  "birthday_promo",
+];
+
+const PROMO_CATEGORY_CARDS = [
+  {
+    type: "loyalty_promo",
+    description: "Buat promo loyalty dengan pengaturan lengkap.",
+    icon: Gift,
+  },
+  {
+    type: "general_promo",
+    description: "Promo umum untuk berbagai kebutuhan promosi.",
+    icon: TicketPercent,
+  },
+  {
+    type: "birthday_promo",
+    description: "Promo spesial untuk customer yang berulang tahun.",
+    icon: Cake,
+  },
+] as const satisfies {
+  type: PromoType;
+  description: string;
+  icon: typeof Gift;
+}[];
 
 // Order type Runchise (belum ada endpoint-nya di backend)
 // TODO: tambahkan "(R) External Order" & "Takeaway" setelah ID Runchise-nya diketahui
@@ -56,6 +83,8 @@ type PromoFormModalProps = {
   promoCodeSection?: React.ReactNode;
   // Wajib memilih minimal satu produk
   requireProducts?: boolean;
+  // Create: pilih kategori sebelum masuk ke form promo
+  selectCategoryFirst?: boolean;
   isPending: boolean;
   error?: string;
   onSubmit: (values: PromoFormValues) => void;
@@ -73,12 +102,17 @@ const PromoFormModal = ({
   showPromoCode = true,
   promoCodeSection,
   requireProducts = true,
+  selectCategoryFirst = false,
   isPending,
   error: submitError,
   onSubmit,
   onClose,
 }: PromoFormModalProps) => {
   const [values, setValues] = useState(initialValues);
+  const isBirthdayTreat = values.promoType === "birthday_promo";
+  const [selectedCategory, setSelectedCategory] = useState<PromoType | null>(
+    selectCategoryFirst ? null : initialValues.promoType || null,
+  );
   // Validasi sisi klien untuk field custom yang tidak bisa memakai `required`
   const [formError, setFormError] = useState<string | null>(null);
   const error = formError ?? submitError;
@@ -132,19 +166,36 @@ const PromoFormModal = ({
     ),
   ];
 
+  const handleSelectCategory = (promoType: PromoType) => {
+    setSelectedCategory(promoType);
+    setField("promoType", promoType);
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (hasExtraProducts) {
+    if (hasExtraProducts && !isBirthdayTreat) {
       setFormError(
         "Promo hanya boleh berisi satu produk. Hapus produk lainnya.",
       );
       return;
     }
-    const hasEmptyRow = productRows.some((row) => !row.product);
     const hasProduct = productRows.some((row) => row.product);
-    if (requireProducts ? hasEmptyRow : hasEmptyRow && hasProduct) {
+    const hasEmptyRow = productRows.some((row) => !row.product);
+    const hasInvalidProductRows = isBirthdayTreat
+      ? !hasProduct || hasEmptyRow
+      : hasEmptyRow && (requireProducts || hasProduct);
+    if (hasInvalidProductRows) {
       setFormError("Pilih produk pada Specific Products.");
+      return;
+    }
+    if (
+      isBirthdayTreat &&
+      (!values.totalMin ||
+        !Number.isFinite(Number(values.totalMin)) ||
+        Number(values.totalMin) <= 0)
+    ) {
+      setFormError("Masukkan total minimal amount yang valid.");
       return;
     }
     if (!values.ownerLocation) {
@@ -178,10 +229,60 @@ const PromoFormModal = ({
           </button>
         </div>
 
+        {selectCategoryFirst && !selectedCategory ? (
+          <div className="p-4 sm:p-6">
+            <h4 className="text-base font-bold text-chocolate">
+              Pilih kategori promo
+            </h4>
+            <p className="mt-1 mb-5 text-sm text-gray-500">
+              Pilih jenis promo yang ingin dibuat.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {PROMO_CATEGORY_CARDS.map(({ type, description, icon: Icon }) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleSelectCategory(type)}
+                  className="group flex min-h-44 flex-col items-start rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-orange hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange/10 text-orange transition-colors group-hover:bg-orange group-hover:text-white">
+                    <Icon size={22} />
+                  </span>
+                  <span className="mt-4 font-bold text-chocolate">
+                    {PROMO_TYPE_LABELS[type]}
+                  </span>
+                  <span className="mt-1 flex-1 text-xs leading-relaxed text-gray-500">
+                    {description}
+                  </span>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange">
+                    Pilih kategori
+                    <ArrowRight size={14} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : selectCategoryFirst &&
+          selectedCategory !== "loyalty_promo" &&
+          selectedCategory !== "birthday_promo" ? (
+          <div className="flex min-h-40 flex-col items-center justify-center gap-4 p-6 text-center">
+            <p className="text-sm font-semibold text-chocolate">
+              Form {selectedCategory ? PROMO_TYPE_LABELS[selectedCategory] : ""}{" "}
+              belum tersedia.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory(null)}
+              className="rounded-3xl border border-gray-200 px-5 py-2 text-sm font-semibold text-chocolate transition-colors hover:bg-cream"
+            >
+              Kembali pilih kategori
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div className="grid max-h-[60dvh] grid-cols-1 gap-4 overflow-y-auto p-4 sm:max-h-[65vh] sm:grid-cols-2 sm:p-6">
             {/* Field form promo */}
-            <div className="col-span-1">
+            {!isBirthdayTreat && <div className="col-span-1">
               <label className="font-semibold text-sm">Channel Selection</label>
               <div className="p-3 border cursor-pointer border-gray-200 rounded-2xl *:focus-within:ring-1 focus-within:ring-orange flex flex-col items-center justify-center">
                 <img
@@ -190,11 +291,11 @@ const PromoFormModal = ({
                 />
                 <span className="text-sm font-bold">POS</span>
               </div>
-            </div>
+            </div>}
             {/* promo_type di backend; diberi label "Promo Category" supaya tidak
                 tertukar dengan "Promotion Type" (jenis diskon). Hanya disimpan di
                 database lokal, tidak dikirim ke Runchise. */}
-            <div className="col-span-1">
+            {!selectCategoryFirst && <div className="col-span-1">
               <label className="font-semibold text-sm">Promo Category</label>
               <div className="flex flex-col gap-2">
                 {PROMO_TYPES.map((promoType) => (
@@ -216,7 +317,7 @@ const PromoFormModal = ({
                   </label>
                 ))}
               </div>
-            </div>
+            </div>}
             <div className="col-span-1 sm:col-span-2">
               <label className="font-semibold text-sm">Promotion Name</label>
               <input
@@ -287,18 +388,20 @@ const PromoFormModal = ({
                   <input
                     type="radio"
                     name="type"
-                    value="discount"
-                    defaultChecked
+                    value={isBirthdayTreat ? "get_product" : "discount"}
+                    checked
+                    readOnly
                     className="w-4 h-4 accent-orange"
-                    required
                   />
-                  <span className="text-sm">Discount (%)</span>
+                  <span className="text-sm">
+                    {isBirthdayTreat ? "Get Product" : "Discount (%)"}
+                  </span>
                 </label>
               </div>
             </div>
 
             {/* Discount Value */}
-            <div className="col-span-1">
+            {!isBirthdayTreat && <div className="col-span-1">
               <label className="font-semibold text-sm">
                 Discount Value (%)
               </label>
@@ -315,8 +418,8 @@ const PromoFormModal = ({
                 className={inputClassName}
                 required
               />
-            </div>
-            <div className="hidden sm:col-span-1 sm:block" />
+            </div>}
+            {!isBirthdayTreat && <div className="hidden sm:col-span-1 sm:block" />}
 
             {/* Promotion Apply to */}
             <div className="col-span-1 sm:col-span-2">
@@ -340,12 +443,12 @@ const PromoFormModal = ({
                   <div
                     className={`hidden gap-3 sm:grid ${productGridClassName}`}
                   >
-                    <span className="text-xs font-semibold uppercase text-gray-500">
-                      Product
-                    </span>
-                    <span className="text-xs font-semibold uppercase text-gray-500">
-                      Max Qty per Order
-                    </span>
+                      <span className="text-xs font-semibold uppercase text-gray-500">
+                        Product
+                      </span>
+                      <span className="text-xs font-semibold uppercase text-gray-500">
+                        Max Qty per Order
+                      </span>
                   </div>
 
                   {productRows.map((row) => (
@@ -388,24 +491,41 @@ const PromoFormModal = ({
                     </div>
                   ))}
 
-                  <p className="text-xs text-gray-500">
-                    Satu promo hanya berlaku untuk satu produk.
-                  </p>
-
-                  <label className="flex w-fit cursor-pointer items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={values.applyToOptionSet}
-                      onChange={(event) =>
-                        setField("applyToOptionSet", event.target.checked)
+                  {isBirthdayTreat ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setField("productRows", [
+                          ...productRows,
+                          createProductRow(),
+                        ])
                       }
-                      className="peer sr-only"
-                    />
-                    <span className={toggleClassName} />
-                    <span className="text-sm">
-                      Promotion also apply to option set and modifier
-                    </span>
-                  </label>
+                      className="w-fit rounded-xl border border-orange px-4 py-2 text-sm font-semibold text-orange transition-colors hover:bg-orange/5"
+                    >
+                      Tambah produk
+                    </button>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500">
+                        Satu promo hanya berlaku untuk satu produk.
+                      </p>
+
+                      <label className="flex w-fit cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={values.applyToOptionSet}
+                          onChange={(event) =>
+                            setField("applyToOptionSet", event.target.checked)
+                          }
+                          className="peer sr-only"
+                        />
+                        <span className={toggleClassName} />
+                        <span className="text-sm">
+                          Promotion also apply to option set and modifier
+                        </span>
+                      </label>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -441,7 +561,7 @@ const PromoFormModal = ({
                 withModeAndSelectAll
               />
             </div>
-            <div className="col-span-1">
+            {!isBirthdayTreat && <div className="col-span-1">
               <LocationMultiSelect
                 label="Exclude Location"
                 value={{
@@ -454,7 +574,7 @@ const PromoFormModal = ({
                 isLoading={isLocationsLoading}
                 disabled={!values.validLocation.selectAll}
               />
-            </div>
+            </div>}
 
             {/* Terms and Conditions */}
             <div className="col-span-1 flex flex-col gap-4 sm:col-span-2">
@@ -509,6 +629,30 @@ const PromoFormModal = ({
                   </div>
                 )}
               </div>
+
+              {isBirthdayTreat && (
+                <div>
+                  <label
+                    htmlFor="birthday-total-min"
+                    className="text-sm font-medium"
+                  >
+                    Total Minimal Amount
+                  </label>
+                  <input
+                    id="birthday-total-min"
+                    type="number"
+                    min={1}
+                    step="1"
+                    value={values.totalMin}
+                    onChange={(event) =>
+                      setField("totalMin", event.target.value)
+                    }
+                    placeholder="Masukkan total minimal amount"
+                    className={inputClassName}
+                    required
+                  />
+                </div>
+              )}
 
               {/* Use Promo Code */}
               {showPromoCode && (
@@ -626,6 +770,7 @@ const PromoFormModal = ({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

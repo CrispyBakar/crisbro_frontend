@@ -75,3 +75,14 @@ export const createPushBroadcast = async (
   const data = await res.json();
   return data.data;
 };
+
+export const getPushUserBroadcasts = async (): Promise<PushBroadcast[]> => {
+  const res = await fetch(`${API_BASE_URL}/push/user/broadcasts`, {
+    method: "GET",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await readError(res, "Gagal memuat broadcast"));
+
+  const data = await res.json();
+  return data.data;
+};

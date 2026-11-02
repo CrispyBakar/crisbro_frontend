@@ -6,7 +6,7 @@ import {
   getPushStatus,
   syncPushSubscription,
 } from "@/lib/push";
-import { createPushBroadcast } from "@/services/push";
+import { createPushBroadcast, getPushUserBroadcasts } from "@/services/push";
 
 const PUSH_STATUS_KEY = ["push", "status"];
 
@@ -47,4 +47,13 @@ export const usePushSync = (isLoggedIn: boolean) => {
       console.warn("Sinkron notifikasi gagal:", error),
     );
   }, [isLoggedIn]);
+};
+
+export const usePushUserBroadcasts = () => {
+  return useQuery({
+    queryKey: ["notifications", "user-broadcasts"],
+    queryFn: getPushUserBroadcasts,
+    staleTime: 1000 * 60 * 5, // 5 menit
+    retry: false,
+  });
 };

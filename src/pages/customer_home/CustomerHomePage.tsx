@@ -32,7 +32,7 @@ const CustomerHomePage = () => {
           to={"/notifications"}
           className="relative p-3 rounded-full flex bg-amber-200"
         >
-          <div className="absolute h-2 w-2 rounded-full bg-berry-red right-2.5" />
+          {/* <div className="absolute h-2 w-2 rounded-full bg-berry-red right-2.5" /> */}
           <Bell />
         </Link>
       </header>
