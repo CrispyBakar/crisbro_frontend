@@ -4,16 +4,22 @@ import BannerSlider from "./BannerSlider";
 import HomeOutlets from "./HomeOutlets";
 import HomeRewards from "./HomeRewards";
 import CustomerMemberCard from "@/components/CustomerMemberCard";
+import BirthdayTreatBadge from "./BirthdayTreatBadge";
 import { Bell } from "lucide-react";
 import { Link } from "react-router";
+import { useBirthdayTreatCheck } from "@/hooks/use-birthday";
 
 const CustomerHomePage = () => {
   const { data: user } = useCustomerProfile();
+  const { data: birthdayTreat } = useBirthdayTreatCheck();
   const rewardMenus = useRewardMenus();
   const firstName = user?.customer?.name.trim().split(/\s+/)[0];
 
   return (
     <div className="flex w-full flex-col gap-6 px-4 pt-5">
+      {/* Floating Birthday Pop-Up: tampil di hari ulang tahun customer */}
+      {birthdayTreat?.has_claimable_treat && <BirthdayTreatBadge />}
+
       <header className="flex justify-between items-center gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex gap-2 items-center justify-start">

@@ -25,3 +25,16 @@ export const formatShortDateTime = (iso: string) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
+
+// Apakah ISO tanggal lahir jatuh pada hari ini (bulan & tanggal sama, tahun
+// berapa pun). dob dibaca sebagai UTC, "hari ini" sebagai waktu lokal — aman
+// untuk zona WIB (UTC+7).
+export const isBirthdayToday = (dob: string) => {
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return false;
+  const today = new Date();
+  return (
+    birth.getUTCMonth() === today.getMonth() &&
+    birth.getUTCDate() === today.getDate()
+  );
+};

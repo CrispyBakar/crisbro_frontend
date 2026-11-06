@@ -25,6 +25,7 @@ import CustomerRootLayout from "@/components/layouts/CustomerRootLayout";
 import CustomerHomePage from "@/pages/customer_home/CustomerHomePage";
 import CustomerRedeemPage from "@/pages/customer_redeem/CustomerRedeemPage";
 import CustomerRedeemDetailPage from "@/pages/customer_redeem/CustomerRedeemDetailPage";
+import CustomerBirthdayClaimPage from "@/pages/customer_birthday/CustomerBirthdayClaimPage";
 import CustomerLocationsPage from "@/pages/customer_locations/CustomerLocationsPage";
 import CustomerRoute from "@/components/guards/CustomerRoute";
 import CustomerVouchersPage from "@/pages/customer_vouchers/CustomerVouchersPage";
@@ -139,6 +140,11 @@ const router = createBrowserRouter([
           {
             path: "redeem/:loyalty_product_id",
             Component: CustomerRedeemDetailPage,
+          },
+          {
+            // Dibuka dari badge birthday di beranda; wajib login
+            path: "birthday-treat/claim",
+            Component: CustomerBirthdayClaimPage,
           },
           {
             path: "vouchers",
