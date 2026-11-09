@@ -9,6 +9,7 @@ import CustomerPageHeader from "@/components/CustomerPageHeader";
 import LoadingCircle from "@/components/LoadingCircle";
 import StateMessage from "@/components/StateMessage";
 import {
+  useBirthdayPromoInformation,
   useBirthdayTreatCheck,
   useClaimBirthdayTreat,
 } from "@/hooks/use-birthday";
@@ -120,10 +121,16 @@ type ClaimDetailProps = {
   treat: NonNullable<BirthdayTreat["treat"]>;
   firstName: string;
   onClaim: () => void;
+  terms: string;
 };
 
 // Kartu ucapan ulang tahun beserta countdown dan tombol klaim
-const ClaimDetail = ({ treat, firstName, onClaim }: ClaimDetailProps) => {
+const ClaimDetail = ({
+  treat,
+  firstName,
+  onClaim,
+  terms,
+}: ClaimDetailProps) => {
   const remaining = useBirthdayTreatCountdown(treat);
 
   return (
@@ -171,9 +178,7 @@ const ClaimDetail = ({ treat, firstName, onClaim }: ClaimDetailProps) => {
         <h2 className={sectionTitleClass}>SYARAT DAN KETENTUAN</h2>
         {/* Belum ada terms dari backend birthday treat; teks sementara di sini */}
         <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted">
-          <li>Hadiah hanya bisa diklaim sekali dan berlaku hari ini saja.</li>
-          <li>Tunjukkan kode voucher ke kasir Crisbro saat memesan.</li>
-          <li>Hadiah tidak dapat diuangkan atau ditukar dengan menu lain.</li>
+          {terms}
         </ul>
       </section>
 
@@ -195,6 +200,9 @@ const CustomerBirthdayClaimPage = () => {
   const { data: user } = useCustomerProfile();
   const check = useBirthdayTreatCheck();
   const claim = useClaimBirthdayTreat();
+  const { data: promo } = useBirthdayPromoInformation(
+    check.data?.treat?.promo_code_id as string,
+  );
   const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
 
   const treat = check.data?.treat ?? null;
@@ -253,6 +261,7 @@ const CustomerBirthdayClaimPage = () => {
       <ClaimDetail
         treat={claimableTreat}
         firstName={firstName}
+        terms={promo?.promo.terms_conditions as string}
         onClaim={() => setIsConfirmOpen(true)}
       />
     );

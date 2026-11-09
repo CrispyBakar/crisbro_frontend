@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   claimBirthdayTreat,
+  getPromoInformation,
   isHasBirthdayTreat,
 } from "@/services/birthday";
 import type { ClaimBirthdayTreatPayload } from "@/services/birthday";
@@ -29,5 +30,13 @@ export const useClaimBirthdayTreat = () => {
       // kadaluarsa); muat ulang supaya alasannya tampil
       queryClient.invalidateQueries({ queryKey: ["birthday-treat-check"] });
     },
+  });
+};
+
+// Mengambil promo information (terms and conditions)
+export const useBirthdayPromoInformation = (promoCodeId: string) => {
+  return useQuery({
+    queryFn: () => getPromoInformation(promoCodeId),
+    queryKey: ["birthday-promo-information", promoCodeId],
   });
 };

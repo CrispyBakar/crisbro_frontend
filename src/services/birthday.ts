@@ -17,6 +17,29 @@ export interface BirthdayTreat {
   } | null;
 }
 
+export interface PromoInformation {
+  promo_code_id: string;
+  usage_type: string;
+  status: string;
+  maximum_usage: number;
+  runchise_id: number;
+  is_claimed: boolean;
+  promo: {
+    promo_id: string;
+    runchise_id: number;
+    name: string;
+    status: string;
+    channel: string;
+    created_at: string;
+    updated_at: string;
+    goal: string;
+    promo_type: string;
+    location_ids: string[];
+    product_ids: string[];
+    terms_conditions: string;
+  };
+}
+
 export const isHasBirthdayTreat = async (): Promise<BirthdayTreat> => {
   const res = await fetch(`${BASE_API_URL}/birthday-treat/me`, {
     method: "GET",
@@ -74,4 +97,26 @@ export const claimBirthdayTreat = async (
 
   const data = await res.json();
   return data.data as ClaimedBirthdayTreat;
+};
+
+export const getPromoInformation = async (
+  promoCodeId: string,
+): Promise<PromoInformation> => {
+  const res = await fetch(
+    `${BASE_API_URL}/birthday-treat/promo/promoCode/${promoCodeId}`,
+    {
+      method: "GET",
+      credentials: "include",
+    },
+  );
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    const message = typeof error?.message === "string" ? error.message : null;
+    throw new Error(message ?? "Gagal mendapatkan promo ifnromation");
+  }
+
+  const data = await res.json();
+
+  return data.data as PromoInformation;
 };
